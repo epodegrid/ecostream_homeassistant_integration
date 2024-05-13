@@ -90,7 +90,13 @@ class ecostream_qset_control_entity(NumberEntity):
 
     async def async_set_value_service(self, call):
         value = call.data.get("value")
-        await self.async_set_native_value(value)
+        try:
+            await self.async_set_native_value(value)
+        except Exception as e:
+            _LOGGER.error(f"Error setting value: {e}")
+            self._api.reconnect()
+            await self.async_set_native_value(value)
+            _LOGGER.info(f"Reconnected after excption: {e}")
 
 
 class ecostream_sensor_fan_eha_speed(Entity):

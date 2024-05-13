@@ -28,15 +28,21 @@ class EcostreamWebsocketsAPI:
         """Initialize the EcostreamWebsocketsAPI class."""
         self.connection = None
         self._data = None
+        self._host = None
         self._update_interval = 10  # Update interval in seconds
         self._update_task = None
 
     async def connect(self, host):
         """Connect to the specified host."""
         _LOGGER.debug("Connecting to %s", host)
+        self._host = host
         self.connection = create_connection(f"ws://{host}")
 
         self._update_task = asyncio.create_task(self._periodic_update())
+
+    async def reconnect(self):
+        """Reconnect to the websocket."""
+        self.connection = create_connection(f"ws://{self._host}")
 
     async def get_data(self):
         """Get the data from the API."""
