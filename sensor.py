@@ -1,7 +1,11 @@
-import json
+"""This module contains the sensor entities for the Ecostream integration."""  # noqa: D404
+
 import logging
 
+import voluptuous as vol
+
 from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.number import NumberEntity
 from homeassistant.const import (
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
@@ -10,21 +14,19 @@ from homeassistant.const import (
     UnitOfTime,
 )
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity,
-    DataUpdateCoordinator,
-    UpdateFailed,
-)
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass, config_entry, async_add_entities) -> None:
+    """Set up the Ecostream sensor entities."""
+
     api = hass.data[DOMAIN][config_entry.entry_id]
     async_add_entities(
         [
+            ecostream_qset_control_entity(api, config_entry.entry_id),
             ecostream_sensor_fan_eha_speed(api, config_entry.entry_id),
             ecostream_sensor_fan_sup_speed(api, config_entry.entry_id),
             ecostream_sensor_eco2_eta(api, config_entry.entry_id),
@@ -39,6 +41,56 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         ],
         True,
     )
+
+
+class ecostream_qset_control_entity(NumberEntity):
+    """Represents the Ecostream Qset Control entity."""
+
+    def __init__(self, api, entry_id):
+        self._api = api
+        self._entry_id = entry_id
+        self.native_min_value = 60
+        self.native_max_value = 150
+        self.native_step = 1
+        self._attr_name = "ecostream_qset_control_entity"
+        self.native_value = 60
+        self.mode = "slider"
+
+    @property
+    def name(self):
+        return "Ecostream Qset Control"
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_ecostream_qset_control_entity"
+
+    async def async_set_native_value(self, value: float) -> None:
+        self.native_value = value
+        await self._api.set_man_override(value)
+
+    async def async_update(self):
+        data = await self._api.get_data()
+        if "status" in data and "qset" in data["status"]:
+            self.native_value = data["status"]["qset"]
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+
+        # Register the service
+        self.hass.services.async_register(
+            DOMAIN,
+            "set_value",
+            self.async_set_value_service,
+            schema=vol.Schema(
+                {
+                    vol.Required("value"): vol.Coerce(int),
+                }
+            ),
+        )
+
+    async def async_set_value_service(self, call):
+        value = call.data.get("value")
+        await self.async_set_native_value(value)
 
 
 class ecostream_sensor_fan_eha_speed(Entity):
