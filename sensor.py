@@ -65,7 +65,7 @@ class ecostream_sensor_fan_eha_speed(Entity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "fan_eha_speed" in data["status"]:
             self._state = data["status"]["fan_eha_speed"]
 
 
@@ -93,7 +93,7 @@ class ecostream_sensor_fan_sup_speed(Entity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "fan_sup_speed" in data["status"]:
             self._state = data["status"]["fan_sup_speed"]
 
 
@@ -121,7 +121,7 @@ class ecostream_sensor_eco2_eta(Entity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "sensor_eco2_eta" in data["status"]:
             self._state = data["status"]["sensor_eco2_eta"]
 
 
@@ -149,7 +149,7 @@ class ecostream_sensor_rh_eta(Entity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "sensor_rh_eta" in data["status"]:
             self._state = data["status"]["sensor_rh_eta"]
 
 
@@ -177,7 +177,7 @@ class ecostream_sensor_temp_eha(Entity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "sensor_temp_eha" in data["status"]:
             self._state = data["status"]["sensor_temp_eha"]
 
 
@@ -205,7 +205,7 @@ class ecostream_sensor_temp_eta(Entity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "sensor_temp_eta" in data["status"]:
             self._state = data["status"]["sensor_temp_eta"]
 
 
@@ -233,7 +233,7 @@ class ecostream_sensor_temp_oda(Entity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "sensor_temp_oda" in data["status"]:
             self._state = data["status"]["sensor_temp_oda"]
 
 
@@ -261,7 +261,7 @@ class ecostream_sensor_tvoc_eta(Entity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "sensor_tvoc_eta" in data["status"]:
             self._state = data["status"]["sensor_tvoc_eta"]
 
 
@@ -285,7 +285,7 @@ class ecostream_frost_protection(BinarySensorEntity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "frost_protection" in data["status"]:
             self._state = data["status"]["frost_protection"]
 
 
@@ -309,7 +309,7 @@ class ecostream_qset(Entity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "qset" in data["status"]:
             self._state = data["status"]["qset"]
 
 
@@ -337,5 +337,5 @@ class ecostream_mode_time_left(Entity):
 
     async def async_update(self):
         data = await self.api.get_data()
-        if "status" in data:
+        if "status" in data and "override_set_time_left" in data["status"]:
             self._state = data["status"]["override_set_time_left"]
