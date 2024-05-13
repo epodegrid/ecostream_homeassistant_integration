@@ -112,6 +112,11 @@ class ecostream_sensor_fan_eha_speed(Entity):
         return self._state
 
     @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:fan"
+
+    @property
     def unit_of_measurement(self):
         return REVOLUTIONS_PER_MINUTE
 
@@ -138,6 +143,11 @@ class ecostream_sensor_fan_sup_speed(Entity):
     @property
     def state(self):
         return self._state
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:fan"
 
     @property
     def unit_of_measurement(self):
@@ -171,6 +181,11 @@ class ecostream_sensor_eco2_eta(Entity):
     def unit_of_measurement(self):
         return CONCENTRATION_PARTS_PER_MILLION
 
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:molecule-co2"
+
     async def async_update(self):
         data = await self.api.get_data()
         if "status" in data and "sensor_eco2_eta" in data["status"]:
@@ -198,6 +213,11 @@ class ecostream_sensor_rh_eta(Entity):
     @property
     def unit_of_measurement(self):
         return "%"
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:molecule-co2"
 
     async def async_update(self):
         data = await self.api.get_data()
@@ -227,6 +247,11 @@ class ecostream_sensor_temp_eha(Entity):
     def unit_of_measurement(self):
         return UnitOfTemperature.CELSIUS
 
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:temperature-celsius"
+
     async def async_update(self):
         data = await self.api.get_data()
         if "status" in data and "sensor_temp_eha" in data["status"]:
@@ -254,6 +279,11 @@ class ecostream_sensor_temp_eta(Entity):
     @property
     def unit_of_measurement(self):
         return UnitOfTemperature.CELSIUS
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:temperature-celsius"
 
     async def async_update(self):
         data = await self.api.get_data()
@@ -283,6 +313,11 @@ class ecostream_sensor_temp_oda(Entity):
     def unit_of_measurement(self):
         return UnitOfTemperature.CELSIUS
 
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:temperature-celsius"
+
     async def async_update(self):
         data = await self.api.get_data()
         if "status" in data and "sensor_temp_oda" in data["status"]:
@@ -311,6 +346,11 @@ class ecostream_sensor_tvoc_eta(Entity):
     def unit_of_measurement(self):
         return CONCENTRATION_PARTS_PER_BILLION
 
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:air-purifier"
+
     async def async_update(self):
         data = await self.api.get_data()
         if "status" in data and "sensor_tvoc_eta" in data["status"]:
@@ -334,6 +374,11 @@ class ecostream_frost_protection(BinarySensorEntity):
     @property
     def is_on(self):
         return self._state
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:snowflake-melt"
 
     async def async_update(self):
         data = await self.api.get_data()
@@ -386,6 +431,11 @@ class ecostream_mode_time_left(Entity):
     @property
     def unit_of_measurement(self):
         return UnitOfTime.SECONDS
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:timer-play"
 
     async def async_update(self):
         data = await self.api.get_data()
