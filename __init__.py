@@ -63,7 +63,7 @@ class EcostreamWebsocketsAPI:
     async def set_man_override(self, value: float):
         """Set the manual override value."""
         _LOGGER.debug("Setting value to %s", value)
-        data = {"config": {"man_override_set": value, "man_override_set_time": 900}}
+        data = {"config": {"man_override_set": value, "man_override_set_time": 1800}}
         self.connection.send(json.dumps(data))
 
 
