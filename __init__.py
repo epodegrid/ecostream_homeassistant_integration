@@ -5,12 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import websockets # type: ignore
 
-from websocket import create_connection
-
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry # type: ignore
+from homeassistant.const import CONF_HOST, Platform # type: ignore
+from homeassistant.core import HomeAssistant # type: ignore
 
 from .const import DOMAIN
 
@@ -20,7 +19,6 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
 ]
 
-
 class EcostreamWebsocketsAPI:
     """Class representing the EcostreamWebsocketsAPI."""
 
@@ -29,20 +27,21 @@ class EcostreamWebsocketsAPI:
         self.connection = None
         self._data = None
         self._host = None
-        self._update_interval = 10  # Update interval in seconds
+        self._update_interval = 60  # Update interval in seconds
         self._update_task = None
 
     async def connect(self, host):
         """Connect to the specified host."""
         _LOGGER.debug("Connecting to %s", host)
         self._host = host
-        self.connection = create_connection(f"ws://{host}")
+        self.connection = await websockets.connect(f"ws://{host}")
 
         self._update_task = asyncio.create_task(self._periodic_update())
 
     async def reconnect(self):
         """Reconnect to the websocket."""
-        self.connection = create_connection(f"ws://{self._host}")
+        _LOGGER.debug("Reconnecting to %s", self._host)
+        self.connection = await websockets.connect(f"ws://{self._host}")
 
     async def get_data(self):
         """Get the data from the API."""
@@ -52,10 +51,18 @@ class EcostreamWebsocketsAPI:
         return self._data
 
     async def _update_data(self):
-        response = self.connection.recv()
-        self._data = json.loads(response)
+        """Update data by receiving from the WebSocket."""
+        try:
+            response = await self.connection.recv()
+            self._data = json.loads(response)
+        except websockets.ConnectionClosed:
+            _LOGGER.error("Connection closed unexpectedly.")
+            await self.reconnect()
+        except Exception as e:
+            _LOGGER.error("Error receiving data: %s", e)
 
     async def _periodic_update(self):
+        """Periodically update data from the WebSocket."""
         while True:
             await self._update_data()
             await asyncio.sleep(self._update_interval)
@@ -64,56 +71,24 @@ class EcostreamWebsocketsAPI:
         """Set the manual override value."""
         _LOGGER.debug("Setting value to %s", value)
         data = {"config": {"man_override_set": value, "man_override_set_time": 1800}}
-        self.connection.send(json.dumps(data))
-
+        await self.connection.send(json.dumps(data))
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up ecostream from a config entry."""
-
-    host = entry.data[CONF_HOST]
-    errors: dict[str, str] = {}
-
-    api = EcostreamWebsocketsAPI()
-
-    try:
-        await api.connect(host)
-        _LOGGER.info("Connected to %s", host)
-    except Exception as e:  # noqa: F841
-        _LOGGER.error("Cannot connect")
-        errors["base"] = "unknown"
-        return False
-
     hass.data.setdefault(DOMAIN, {})
+    api = EcostreamWebsocketsAPI()
+    await api.connect(entry.data[CONF_HOST])
+
     hass.data[DOMAIN][entry.entry_id] = api
-    hass.data[DOMAIN]["api"] = api
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # async def set_man_override_service(call):
-    #     """Handle the service call."""
-    #     value = call.data.get("value")
-    #     api_instance = hass.data[DOMAIN].get("api")
-    #     if api_instance:
-    #         await api_instance.set_man_override(value)
-    #     else:
-    #         _LOGGER.error("API instance is not available")
-
-    # try:
-    #     hass.services.async_register(
-    #         DOMAIN, "set_man_override", set_man_override_service
-    #     )
-    #     _LOGGER.info("Service 'set_man_override' registered successfully")
-    # except Exception as e:
-    #     _LOGGER.error("Failed to register service 'set_man_override': %s", str(e))
-    #     errors["base"] = "service_registration_failed"
-    #     return False
-
     return True
 
-
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+    """Unload an ecostream config entry."""
+    api = hass.data[DOMAIN].pop(entry.entry_id)
+    if api._update_task:
+        api._update_task.cancel()
 
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
