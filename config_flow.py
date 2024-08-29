@@ -54,12 +54,6 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.error("Failed to connect to %s: %s", host, e)
             return False
 
-    async def async_step_import(self, import_data=None) -> FlowResult:
-        """Handle the import step (for configuration.yaml entries)."""
-        if import_data:
-            return await self.async_step_user(user_input=import_data)
-        return self.async_abort(reason="not_supported")
-
     async def async_step_reauth(self, data: dict) -> FlowResult:
         """Handle re-authentication."""
         self.context["title_placeholders"] = {
