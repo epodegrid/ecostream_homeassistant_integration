@@ -2,12 +2,24 @@
 from __future__ import annotations
 
 import logging
+import voluptuous as vol
+from datetime import timedelta  # Import timedelta
 
 from homeassistant.helpers.entity import Entity # type: ignore
+from homeassistant.components.number import NumberEntity
+from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry # type: ignore
 from homeassistant.core import HomeAssistant # type: ignore
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator # type: ignore
 from homeassistant.const import UnitOfTime # type: ignore
+from homeassistant.const import (
+    CONCENTRATION_PARTS_PER_BILLION,
+    CONCENTRATION_PARTS_PER_MILLION,
+    REVOLUTIONS_PER_MINUTE,
+    UnitOfTemperature,
+    UnitOfTime,
+)
+
 
 from .const import DOMAIN
 
@@ -24,7 +36,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         EcostreamFrostProtectionSensor(coordinator, entry),
         EcostreamQsetSensor(coordinator, entry),
         EcostreamModeTimeLeftSensor(coordinator, entry),
-    ]
+        EcostreamFanEHASpeed(coordinator, entry),
+        EcostreamFanSUPSpeed(coordinator, entry),
+        EcostreamEco2EtaSensor(coordinator, entry),
+        EcostreamRhEtaSensor(coordinator, entry),
+        EcostreamTempEhaSensor(coordinator, entry),
+        EcostreamTempEtaSensor(coordinator, entry),
+        EcostreamTempOdaSensor(coordinator, entry),
+        EcostreamTvocEtaSensor(coordinator, entry),
+        ]
 
     async_add_entities(sensors, update_before_add=True)
 
@@ -38,7 +58,7 @@ class EcostreamDataUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=10,  # Refresh interval in seconds
+            update_interval=timedelta(seconds=30)  # Refresh interval in seconds
         )
 
     async def _async_update_data(self):
@@ -67,11 +87,11 @@ class EcostreamFrostProtectionSensor(EcostreamSensorBase):
 
     @property
     def name(self):
-        return "Frost Protection"
+        return "Ecostream Frost Protection"
 
     @property
-    def is_on(self):
-        return self.coordinator.data.get("status", {}).get("frost_protection", False)
+    def state(self):
+        return self.coordinator.data.get("status", {}).get("frost_protection")
 
     @property
     def icon(self):
@@ -87,7 +107,7 @@ class EcostreamQsetSensor(EcostreamSensorBase):
 
     @property
     def name(self):
-        return "Qset"
+        return "Ecostream Qset"
 
     @property
     def state(self):
@@ -102,7 +122,7 @@ class EcostreamModeTimeLeftSensor(EcostreamSensorBase):
 
     @property
     def name(self):
-        return "Mode Time Left"
+        return "Ecostream Mode Time Left"
 
     @property
     def state(self):
@@ -116,3 +136,193 @@ class EcostreamModeTimeLeftSensor(EcostreamSensorBase):
     def icon(self):
         """Return the icon to use in the frontend, if any."""
         return "mdi:timer-play"
+
+class EcostreamFanEHASpeed(EcostreamSensorBase): 
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_fan_eha_speed"
+
+    @property
+    def name(self):
+        return "Ecostream Fan Exhaust Speed"
+
+    @property
+    def state(self):
+        return self.coordinator.data.get("status", {}).get("fan_eha_speed")
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:fan"
+
+    @property
+    def unit_of_measurement(self):
+        return REVOLUTIONS_PER_MINUTE
+    
+class EcostreamFanSUPSpeed(EcostreamSensorBase):
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_fan_sup_speed"
+
+    @property
+    def name(self):
+        return "Ecostream Fan Supply Speed"
+
+    @property
+    def state(self):
+        return self.coordinator.data.get("status", {}).get("fan_sup_speed")
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:fan"
+
+    @property
+    def unit_of_measurement(self):
+        return REVOLUTIONS_PER_MINUTE
+
+class EcostreamEco2EtaSensor(EcostreamSensorBase):
+    """Sensor for eCO2 Return."""
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_eco2_eta"
+
+    @property
+    def name(self):
+        return "Ecostream eCO2 Return"
+
+    @property
+    def state(self):
+        return self.coordinator.data.get("status", {}).get("sensor_eco2_eta")
+
+    @property
+    def unit_of_measurement(self):
+        return CONCENTRATION_PARTS_PER_MILLION
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:molecule-co2"
+
+class EcostreamTempEhaSensor(EcostreamSensorBase):
+    """Sensor for Exhaust Air Temperature."""
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_temp_eha"
+
+    @property
+    def name(self):
+        return "Ecostream Exhaust Air Temperature"
+
+    @property
+    def state(self):
+        return self.coordinator.data.get("status", {}).get("sensor_temp_eha")
+
+    @property
+    def unit_of_measurement(self):
+        return UnitOfTemperature.CELSIUS
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:temperature-celsius"
+    
+class EcostreamTempEtaSensor(EcostreamSensorBase):
+    """Sensor for Return Air Temperature."""
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_temp_eta"
+
+    @property
+    def name(self):
+        return "Ecostream Return Air Temperature"
+
+    @property
+    def state(self):
+        return self.coordinator.data.get("status", {}).get("sensor_temp_eta")
+
+    @property
+    def unit_of_measurement(self):
+        return UnitOfTemperature.CELSIUS
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:temperature-celsius"
+
+class EcostreamTempOdaSensor(EcostreamSensorBase):
+    """Sensor for Outside Air Temperature."""
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_temp_oda"
+
+    @property
+    def name(self):
+        return "Ecostream Outside Air Temperature"
+
+    @property
+    def state(self):
+        return self.coordinator.data.get("status", {}).get("sensor_temp_oda")
+
+    @property
+    def unit_of_measurement(self):
+        return UnitOfTemperature.CELSIUS
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:temperature-celsius"
+    
+class EcostreamTvocEtaSensor(EcostreamSensorBase):
+    """Sensor for Total Volatile Organic Compounds Outside Air."""
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_tvoc_eta"
+
+    @property
+    def name(self):
+        return "Ecostream Total Volatile Organic Compounds Outside Air"
+
+    @property
+    def state(self):
+        return self.coordinator.data.get("status", {}).get("sensor_tvoc_eta")
+
+    @property
+    def unit_of_measurement(self):
+        return CONCENTRATION_PARTS_PER_BILLION
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:air-purifier"
+    
+class EcostreamRhEtaSensor(EcostreamSensorBase):
+    """Sensor for Relative Humidity Return."""
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_rh_eta"
+
+    @property
+    def name(self):
+        return "Ecostream Relative Humidity Return"
+
+    @property
+    def state(self):
+        return self.coordinator.data.get("status", {}).get("sensor_rh_eta")
+
+    @property
+    def unit_of_measurement(self):
+        return "%"
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:molecule-co2"

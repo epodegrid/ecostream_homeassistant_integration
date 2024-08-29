@@ -17,6 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
+    Platform.SWITCH
 ]
 
 class EcostreamWebsocketsAPI:
@@ -67,11 +68,16 @@ class EcostreamWebsocketsAPI:
             await self._update_data()
             await asyncio.sleep(self._update_interval)
 
-    async def set_man_override(self, value: float):
-        """Set the manual override value."""
-        _LOGGER.debug("Setting value to %s", value)
-        data = {"config": {"man_override_set": value, "man_override_set_time": 1800}}
-        await self.connection.send(json.dumps(data))
+    async def send_json(self, payload: dict):
+        """Send a JSON payload through the WebSocket connection."""
+        try:
+            await self.connection.send(json.dumps(payload))
+        except websockets.ConnectionClosed:
+            _LOGGER.error("Connection closed. Reconnecting...")
+            await self.reconnect()
+            await self.connection.send(json.dumps(payload))  # Resend after reconnecting
+        except Exception as e:
+            _LOGGER.error("Failed to send data: %s", e)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up ecostream from a config entry."""
@@ -80,6 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await api.connect(entry.data[CONF_HOST])
 
     hass.data[DOMAIN][entry.entry_id] = api
+    hass.data[DOMAIN]["ws_client"] = api
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
