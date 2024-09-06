@@ -1,8 +1,8 @@
 {
   "domain": "ecostream",
   "name": "Buva Ecostream",
-  "codeowners": ["@epodegrid"],
   "version": "1.0.0",
+  "codeowners": ["@epodegrid"],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://www.home-assistant.io/integrations/ecostream",
