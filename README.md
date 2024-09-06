@@ -17,7 +17,7 @@ This project is not affiliated with or endorsed by Buva.
 #### Start configuration
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=ecostream)
 
-## Usage (Manual)
+## Installation (Manual)
 1. Copy the ecostream folder to custom_components in Home Assistant.
 2. Add the integration in Home Assistant, by configuring your Ecostream IP address
 
