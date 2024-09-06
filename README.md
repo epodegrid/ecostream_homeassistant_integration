@@ -11,7 +11,11 @@ This project is not affiliated with or endorsed by Buva.
 
 ## Installation via HACS:
 
+# Add the repository as a custom repository
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=epodegrid&repository=ecostream_homeassistant_integration&category=integration)
+
+# Start configuration
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=ecostream)
 
 ## Usage (Manual)
 1. Copy the ecostream folder to custom_components in Home Assistant.
