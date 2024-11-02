@@ -3,15 +3,16 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.event import async_track_state_change
 
 from . import EcostreamWebsocketsAPI
 from .const import DOMAIN
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
     """Set up the custom switch entity."""
     ws_client: EcostreamWebsocketsAPI = hass.data[DOMAIN]["ws_client"]
-    switch = EcostreamSwitch(ws_client, hass)
+    switch = EcostreamSwitch(ws_client, hass, entry)
     async_add_entities([switch], True)
 
     sensor_entity_id = "sensor.ecostream_qset" 
@@ -23,11 +24,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 class EcostreamSwitch(SwitchEntity):
     """Representation of a custom switch for the Ecostream integration."""
 
-    def __init__(self, ws_client: EcostreamWebsocketsAPI, hass: HomeAssistant):
+    def __init__(self, ws_client: EcostreamWebsocketsAPI, hass: HomeAssistant, entry: ConfigEntry):
         """Initialize the switch."""
         self._ws_client = ws_client
         self._is_on = False
         self._hass = hass
+        self._entry_id = entry.entry_id
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_max_ventilation_switch"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._ws_client._host)},
+            name="EcoStream",
+            manufacturer="Buva",
+            model="EcoStream",
+        )
 
     @property
     def name(self):
@@ -38,11 +54,6 @@ class EcostreamSwitch(SwitchEntity):
     def is_on(self):
         """Return the state of the switch."""
         return self._is_on
-
-    @property
-    def entity_category(self):
-        """Return the entity category, such as CONFIG or DIAGNOSTIC."""
-        return EntityCategory.CONFIG
 
     async def async_turn_on(self, **kwargs):
         """Turn the switch on and send a payload via WebSocket."""
