@@ -6,6 +6,7 @@ import voluptuous as vol
 from datetime import timedelta  # Import timedelta
 
 from homeassistant.helpers.entity import Entity # type: ignore
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.components.number import NumberEntity
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry # type: ignore
@@ -77,6 +78,16 @@ class EcostreamSensorBase(CoordinatorEntity, Entity):
     def should_poll(self):
         """No polling needed, coordinator will handle updates."""
         return False
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.coordinator.api._host)},
+            name="EcoStream",
+            manufacturer="Buva",
+            model="EcoStream",
+        )
 
 class EcostreamFrostProtectionSensor(EcostreamSensorBase):
     """Sensor for frost protection status."""
