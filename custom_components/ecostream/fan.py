@@ -91,7 +91,7 @@ class EcoStreamFan(FanEntity):
             model="EcoStream",
         )
 
-    async def set_speed(self, speed: int):
+    async def set_speed(self, speed: int, preset_mode: Optional[str] = None):
         """Set the speed of the fan."""
         payload = {
             "config": {
@@ -101,6 +101,7 @@ class EcoStreamFan(FanEntity):
         }
         await self._ws_client.send_json(payload)
         self.current_speed = speed
+        self._preset_mode = preset_mode
 
         self.async_write_ha_state()
 
@@ -143,5 +144,4 @@ class EcoStreamFan(FanEntity):
         if speed is None:
             raise Exception("Unknown preset mode")
 
-        await self.set_speed(speed)
-        self._preset_mode = preset_mode
+        await self.set_speed(speed, preset_mode)
