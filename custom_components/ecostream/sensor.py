@@ -19,6 +19,7 @@ from homeassistant.const import (
     REVOLUTIONS_PER_MINUTE,
     UnitOfTemperature,
     UnitOfTime,
+    UnitOfVolumeFlowRate,
 )
 
 
@@ -146,6 +147,10 @@ class EcostreamQsetSensor(EcostreamSensorBase):
     @property
     def state(self):
         return self.coordinator.data.get("status", {}).get("qset")
+    
+    @property
+    def unit_of_measurement(self):
+        return UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR
 
 class EcostreamModeTimeLeftSensor(EcostreamSensorBase):
     """Sensor for mode time left."""
