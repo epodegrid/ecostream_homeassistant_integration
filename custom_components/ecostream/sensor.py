@@ -34,6 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     await coordinator.async_config_entry_first_refresh()
 
     sensors = [
+        EcostreamFilterReplacementWarningSensor(coordinator, entry),
         EcostreamFrostProtectionSensor(coordinator, entry),
         EcostreamQsetSensor(coordinator, entry),
         EcostreamModeTimeLeftSensor(coordinator, entry),
@@ -108,6 +109,28 @@ class EcostreamFrostProtectionSensor(EcostreamSensorBase):
     def icon(self):
         """Return the icon to use in the frontend, if any."""
         return "mdi:snowflake-melt"
+
+class EcostreamFilterReplacementWarningSensor(EcostreamSensorBase):
+    """Sensor for the filter replacement warning."""
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_filter_replacement_warning"
+
+    @property
+    def name(self):
+        return "Ecostream Filter Replacement"
+
+    @property
+    def state(self):
+        errors = self.coordinator.data.get("status", {}).get("errors", [])
+
+        return any(error["type"] == "ERROR_FILTER" for error in errors)
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:air-filter"
 
 class EcostreamQsetSensor(EcostreamSensorBase):
     """Sensor for Qset status."""
