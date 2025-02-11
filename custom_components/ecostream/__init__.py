@@ -30,12 +30,17 @@ class EcostreamWebsocketsAPI:
         self._host = None
         self._update_interval = 60  # Update interval in seconds
         self._update_task = None
+        self._config = None
 
     async def connect(self, host):
         """Connect to the specified host."""
         _LOGGER.debug("Connecting to %s", host)
         self._host = host
         self.connection = await websockets.connect(f"ws://{host}")
+        
+        initial_response = await self.connection.recv()
+        parsed_initial_response = json.loads(initial_response)
+        self._config = parsed_initial_response.get('config', {})
 
         self._update_task = asyncio.create_task(self._periodic_update())
 
