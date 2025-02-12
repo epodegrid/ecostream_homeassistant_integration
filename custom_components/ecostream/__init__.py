@@ -33,6 +33,7 @@ class EcostreamWebsocketsAPI:
         self._update_interval = 60  # Update interval in seconds
         self._update_task = None
         self._config = None
+        self._device_name = None
 
     async def connect(self, host):
         """Connect to the specified host."""
@@ -43,6 +44,7 @@ class EcostreamWebsocketsAPI:
         initial_response = await self.connection.recv()
         parsed_initial_response = json.loads(initial_response)
         self._config = parsed_initial_response.get('config', {})
+        self._device_name = parsed_initial_response["system"]["system_name"]
 
     async def reconnect(self):
         """Reconnect to the websocket."""
