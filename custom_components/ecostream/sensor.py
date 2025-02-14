@@ -1,17 +1,12 @@
 """Sensor platform for the ecostream integration."""
 from __future__ import annotations
 
-import logging
-import voluptuous as vol
-from datetime import timedelta  # Import timedelta
-
 from homeassistant.helpers.entity import Entity # type: ignore
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.components.number import NumberEntity
-from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry # type: ignore
 from homeassistant.core import HomeAssistant # type: ignore
-from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator # type: ignore
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity # type: ignore
 from homeassistant.const import UnitOfTime # type: ignore
 from homeassistant.const import (
     CONCENTRATION_PARTS_PER_BILLION,
@@ -19,19 +14,19 @@ from homeassistant.const import (
     REVOLUTIONS_PER_MINUTE,
     UnitOfTemperature,
     UnitOfTime,
+    UnitOfVolumeFlowRate,
 )
 
-
+from . import EcostreamDataUpdateCoordinator
 from .const import DOMAIN
 
-_LOGGER = logging.getLogger(__name__)
-
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, 
+    entry: ConfigEntry[EcostreamDataUpdateCoordinator], 
+    async_add_entities: AddEntitiesCallback,
+):
     """Set up ecostream sensors from a config entry."""
-    api = hass.data[DOMAIN][entry.entry_id]
-
-    coordinator = EcostreamDataUpdateCoordinator(hass, api)
-    await coordinator.async_config_entry_first_refresh()
+    coordinator = entry.runtime_data
 
     sensors = [
         EcostreamFilterReplacementWarningSensor(coordinator, entry),
@@ -46,26 +41,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         EcostreamTempEtaSensor(coordinator, entry),
         EcostreamTempOdaSensor(coordinator, entry),
         EcostreamTvocEtaSensor(coordinator, entry),
-        ]
+    ]
 
     async_add_entities(sensors, update_before_add=True)
-
-class EcostreamDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching data from the API."""
-
-    def __init__(self, hass: HomeAssistant, api):
-        """Initialize."""
-        self.api = api
-        super().__init__(
-            hass,
-            _LOGGER,
-            name=DOMAIN,
-            update_interval=timedelta(seconds=30)  # Refresh interval in seconds
-        )
-
-    async def _async_update_data(self):
-        """Fetch data from the API."""
-        return await self.api.get_data()
 
 class EcostreamSensorBase(CoordinatorEntity, Entity):
     """Base class for ecostream sensors."""
@@ -146,6 +124,10 @@ class EcostreamQsetSensor(EcostreamSensorBase):
     @property
     def state(self):
         return self.coordinator.data.get("status", {}).get("qset")
+    
+    @property
+    def unit_of_measurement(self):
+        return UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR
 
 class EcostreamModeTimeLeftSensor(EcostreamSensorBase):
     """Sensor for mode time left."""
