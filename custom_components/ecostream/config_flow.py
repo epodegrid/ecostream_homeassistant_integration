@@ -39,7 +39,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             if valid:
                 # Create a config entry if the connection is valid
-                return self.async_create_entry(title=self.api._device_name, data=user_input)
+                return self.async_create_entry(title=api._device_name, data=user_input)
             else:
                 errors["base"] = "cannot_connect"
 
