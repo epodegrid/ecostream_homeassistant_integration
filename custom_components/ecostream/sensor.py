@@ -1,7 +1,6 @@
 """Sensor platform for the ecostream integration."""
 from __future__ import annotations
 
-from config.custom_components.ecostream import EcostreamDataUpdateCoordinator
 from homeassistant.helpers.entity import Entity # type: ignore
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.config_entries import ConfigEntry # type: ignore
@@ -18,6 +17,7 @@ from homeassistant.const import (
     UnitOfVolumeFlowRate,
 )
 
+from . import EcostreamDataUpdateCoordinator
 from .const import DOMAIN
 
 async def async_setup_entry(

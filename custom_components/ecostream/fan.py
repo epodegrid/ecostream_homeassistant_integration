@@ -4,8 +4,6 @@ import math
 from typing import Any, Optional
 
 from homeassistant.helpers.entity import DeviceInfo
-
-from config.custom_components.ecostream import EcostreamWebsocketsAPI
 from homeassistant.components.fan import (
     FanEntity,
     FanEntityFeature,
