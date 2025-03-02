@@ -1,5 +1,6 @@
 """Sensor platform for the ecostream integration."""
 from __future__ import annotations
+from datetime import datetime
 
 from homeassistant.helpers.entity import Entity # type: ignore
 from homeassistant.helpers.entity import DeviceInfo
@@ -41,6 +42,7 @@ async def async_setup_entry(
         EcostreamTempEtaSensor(coordinator, entry),
         EcostreamTempOdaSensor(coordinator, entry),
         EcostreamTvocEtaSensor(coordinator, entry),
+        EcostreamFilterReplacementDateSensor(coordinator, entry)
     ]
 
     async_add_entities(sensors, update_before_add=True)
@@ -104,6 +106,46 @@ class EcostreamFilterReplacementWarningSensor(EcostreamSensorBase):
         errors = self.coordinator.data.get("status", {}).get("errors", [])
 
         return any(error["type"] == "ERROR_FILTER" for error in errors)
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return "mdi:air-filter"
+
+class EcostreamFilterReplacementDateSensor(EcostreamSensorBase):
+    """Sensor for Filter Replacement Date."""
+
+    def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
+        """Initialize the sensor."""
+        super().__init__(coordinator, entry)
+        self._last_valid_filter_replacement_date = None
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_filter_replacement_date"
+
+    @property
+    def name(self):
+        return "Ecostream Filter Replacement Date"
+
+    @property
+    def state(self):
+
+        # Try to get the timestamp from the received JSON message.
+        # It appears that this isn't sent with every update, but is is there in the initial message and after the filter has been reset
+        timestamp = self.coordinator.data.get("config", {}).get("filter_datetime")
+
+        # Check if we received a valid timestamp, otherwise return the last valid value
+        if timestamp is None:
+            return self._last_valid_filter_replacement_date
+
+        # convert timestamp in unix seconds to usable datetime
+        filter_replacement_date = datetime.fromtimestamp(timestamp)
+
+        # update the last valid value for future use
+        self._last_valid_filter_replacement_date = filter_replacement_date
+
+        return filter_replacement_date
 
     @property
     def icon(self):
