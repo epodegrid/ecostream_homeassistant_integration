@@ -14,7 +14,7 @@
       "websocket-client==1.8.0"
    ],
    "ssdp": [],
-   "version": "1.1",
+   "version": "1.2.0",
    "zeroconf": [
       {
          "type": "_http._tcp.local.",
