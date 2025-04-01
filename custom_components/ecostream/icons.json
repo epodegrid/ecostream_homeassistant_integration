@@ -6,9 +6,9 @@
           "preset_mode": {
             "default": "mdi:fan",
             "state": {
-              "Low": "mdi:fan-speed-1",
-              "Medium": "mdi:fan-speed-2",
-              "High": "mdi:fan-speed-3"
+              "low": "mdi:fan-speed-1",
+              "medium": "mdi:fan-speed-2",
+              "high": "mdi:fan-speed-3"
             }
           }
         }
