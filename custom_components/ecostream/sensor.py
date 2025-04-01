@@ -16,6 +16,7 @@ from homeassistant.const import (
     UnitOfTime,
     UnitOfVolumeFlowRate,
     EntityCategory,
+    PERCENTAGE,
 )
 
 from . import EcostreamDataUpdateCoordinator
@@ -42,6 +43,10 @@ async def async_setup_entry(
         EcostreamTempEtaSensor(coordinator, entry),
         EcostreamTempOdaSensor(coordinator, entry),
         EcostreamTvocEtaSensor(coordinator, entry),
+        EcostreamSummerComfortEnabledSensor(coordinator, entry),
+        EcostreamSummerComfortTemperatureSensor(coordinator, entry),
+        EcostreamBypassPositionSensor(coordinator, entry),
+        EcostreamBypassOverrideTimeLeftSensor(coordinator, entry),
         EcostreamFilterReplacementDateSensor(coordinator, entry),
         EcostreamWifiSSID(coordinator, entry),
         EcostreamWifiRSSI(coordinator, entry),
@@ -364,6 +369,82 @@ class EcostreamTvocEtaSensor(EcostreamSensorBase):
     def icon(self):
         """Return the icon to use in the frontend, if any."""
         return "mdi:air-purifier"
+
+class EcostreamSummerComfortEnabledSensor(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_summer_comfort_enabled"
+    
+    @property
+    def name(self):
+        return "Ecostream Summer Comfort Enabled"
+
+    @property
+    def state(self):
+        return self.coordinator.data["config"]["sum_com_enabled"]
+
+    @property
+    def icon(self):
+        return "mdi:toggle-switch-variant" if self.state else "mdi:toggle-switch-variant-off"
+
+class EcostreamSummerComfortTemperatureSensor(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_summer_comfort_temperature"
+    
+    @property
+    def name(self):
+        return "Ecostream Summer Comfort Temperature"
+
+    @property
+    def state(self):
+        return self.coordinator.data["config"]["sum_com_temp"]
+    
+    @property
+    def unit_of_measurement(self):
+        return UnitOfTemperature.CELSIUS
+
+    @property
+    def icon(self):
+        return "mdi:temperature-celsius"
+
+class EcostreamBypassPositionSensor(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_bypass_pos"
+    
+    @property
+    def name(self):
+        return "Ecostream Bypass Position"
+
+    @property
+    def state(self):
+        return self.coordinator.data["status"]["bypass_pos"]
+    
+    @property
+    def unit_of_measurement(self):
+        return PERCENTAGE
+
+class EcostreamBypassOverrideTimeLeftSensor(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_override_bypass_time_left"
+    
+    @property
+    def name(self):
+        return "Ecostream Bypass Override Time Left"
+
+    @property
+    def state(self):
+        return self.coordinator.data["status"]["override_bypass_time_left"]
+
+    @property
+    def unit_of_measurement(self):
+        return UnitOfTime.SECONDS
+    
+    @property
+    def icon(self):
+        return "mdi:timer-play"
     
 class EcostreamRhEtaSensor(EcostreamSensorBase):
     """Sensor for Relative Humidity Return."""
