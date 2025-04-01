@@ -21,9 +21,9 @@ from homeassistant.util.percentage import (
 from . import EcostreamDataUpdateCoordinator, EcostreamWebsocketsAPI
 from .const import DOMAIN
 
-PRESET_MODE_LOW = "low"
-PRESET_MODE_MID = "mid"
-PRESET_MODE_HIGH = "high"
+PRESET_MODE_LOW = "Low"
+PRESET_MODE_MID = "Medium"
+PRESET_MODE_HIGH = "High"
 
 async def async_setup_entry(
     hass: HomeAssistant, 
@@ -52,6 +52,8 @@ class EcoStreamFan(CoordinatorEntity, FanEntity):
         PRESET_MODE_HIGH,
     ]
     
+    _attr_translation_key = "ecostream_fan"
+
     current_speed: float | None = None
 
     def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
