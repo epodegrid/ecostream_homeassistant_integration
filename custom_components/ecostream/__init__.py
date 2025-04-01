@@ -20,7 +20,8 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.FAN,
-    Platform.BUTTON
+    Platform.BUTTON,
+    Platform.CLIMATE,
 ]
 
 class EcostreamWebsocketsAPI:
@@ -58,10 +59,12 @@ class EcostreamWebsocketsAPI:
         """Update data by receiving from the WebSocket."""
         try:
             response = await self.connection.recv()
+            parsed_response = json.loads(response)
             # The Ecostream sents various kinds of responses and does not always
             # include all values. Keep the values for the missing keys and update
             # the ones that are returned by the ecostream.
-            self._data = self._data | json.loads(response)
+            for key in ["comm_wifi", "system", "config", "status"]:
+                self._data[key] = self._data.get(key, {}) | parsed_response.get(key, {})
         except websockets.ConnectionClosed:
             _LOGGER.error("Connection closed unexpectedly.")
             await self.reconnect()
