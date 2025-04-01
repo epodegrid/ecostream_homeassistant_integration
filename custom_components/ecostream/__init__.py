@@ -29,11 +29,10 @@ class EcostreamWebsocketsAPI:
     def __init__(self) -> None:
         """Initialize the EcostreamWebsocketsAPI class."""
         self.connection = None
-        self._data = None
+        self._data = {}
         self._host = None
         self._update_interval = 60  # Update interval in seconds
         self._update_task = None
-        self._config = None
         self._device_name = None
 
     async def connect(self, host):
@@ -42,10 +41,8 @@ class EcostreamWebsocketsAPI:
         self._host = host
         self.connection = await websockets.connect(f"ws://{host}")
         
-        initial_response = await self.connection.recv()
-        parsed_initial_response = json.loads(initial_response)
-        self._config = parsed_initial_response.get('config', {})
-        self._device_name = parsed_initial_response["system"]["system_name"]
+        await self._update_data()
+        self._device_name = self._data["system"]["system_name"]
 
     async def reconnect(self):
         """Reconnect to the websocket."""
@@ -61,7 +58,10 @@ class EcostreamWebsocketsAPI:
         """Update data by receiving from the WebSocket."""
         try:
             response = await self.connection.recv()
-            self._data = json.loads(response)
+            # The Ecostream sents various kinds of responses and does not always
+            # include all values. Keep the values for the missing keys and update
+            # the ones that are returned by the ecostream.
+            self._data = self._data | json.loads(response)
         except websockets.ConnectionClosed:
             _LOGGER.error("Connection closed unexpectedly.")
             await self.reconnect()

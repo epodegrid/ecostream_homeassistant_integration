@@ -62,14 +62,14 @@ class EcoStreamFan(CoordinatorEntity, FanEntity):
         self.current_speed = self.coordinator.data.get("status", {}).get("qset")
 
         self._speed_range = (
-            self.coordinator.api._config["capacity_min"], 
-            self.coordinator.api._config["capacity_max"],
+            self.coordinator.api._data["config"]["capacity_min"], 
+            self.coordinator.api._data["config"]["capacity_max"],
         )
 
         self._preset_speeds = {
-            PRESET_MODE_LOW: self.coordinator.api._config["setpoint_low"],
-            PRESET_MODE_MID: self.coordinator.api._config["setpoint_mid"],
-            PRESET_MODE_HIGH: self.coordinator.api._config["setpoint_high"],
+            PRESET_MODE_LOW: self.coordinator.api._data["config"]["setpoint_low"],
+            PRESET_MODE_MID: self.coordinator.api._data["config"]["setpoint_mid"],
+            PRESET_MODE_HIGH: self.coordinator.api._data["config"]["setpoint_high"],
         }
     
     @property

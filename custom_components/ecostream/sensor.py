@@ -8,7 +8,6 @@ from homeassistant.config_entries import ConfigEntry # type: ignore
 from homeassistant.core import HomeAssistant # type: ignore
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity # type: ignore
-from homeassistant.const import UnitOfTime # type: ignore
 from homeassistant.const import (
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
@@ -16,6 +15,7 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
     UnitOfVolumeFlowRate,
+    EntityCategory,
 )
 
 from . import EcostreamDataUpdateCoordinator
@@ -43,6 +43,10 @@ async def async_setup_entry(
         EcostreamTempOdaSensor(coordinator, entry),
         EcostreamTvocEtaSensor(coordinator, entry),
         EcostreamFilterReplacementDateSensor(coordinator, entry)
+        EcostreamWifiSSID(coordinator, entry),
+        EcostreamWifiRSSI(coordinator, entry),
+        EcostreamWifiIP(coordinator, entry),
+        EcostreamUptime(coordinator, entry),
     ]
 
     async_add_entities(sensors, update_before_add=True)
@@ -384,3 +388,91 @@ class EcostreamRhEtaSensor(EcostreamSensorBase):
     def icon(self):
         """Return the icon to use in the frontend, if any."""
         return "mdi:molecule-co2"
+
+class EcostreamWifiSSID(EcostreamSensorBase):
+    @property
+    def entity_category(self):
+        return EntityCategory.DIAGNOSTIC
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_wifi_ssid"
+
+    @property
+    def name(self):
+        return "Ecostream Wifi SSID"
+
+    @property
+    def state(self):
+        return self.coordinator.data["comm_wifi"]["ssid"]
+
+    @property
+    def icon(self):
+        return "mdi:wifi"
+
+class EcostreamWifiRSSI(EcostreamSensorBase):
+    @property
+    def entity_category(self):
+        return EntityCategory.DIAGNOSTIC
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_wifi_rssi"
+
+    @property
+    def name(self):
+        return "Ecostream Wifi RSSI"
+
+    @property
+    def state(self):
+        return int(self.coordinator.data["comm_wifi"]["rssi"])
+
+    @property
+    def icon(self):
+        return "mdi:wifi"
+
+class EcostreamWifiIP(EcostreamSensorBase):
+    @property
+    def entity_category(self):
+        return EntityCategory.DIAGNOSTIC
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_wifi_ip"
+
+    @property
+    def name(self):
+        return "Ecostream Wifi IP"
+
+    @property
+    def state(self):
+        return self.coordinator.data["comm_wifi"]["wifi_ip"]
+
+    @property
+    def icon(self):
+        return "mdi:network-outline"
+
+class EcostreamUptime(EcostreamSensorBase):
+    @property
+    def entity_category(self):
+        return EntityCategory.DIAGNOSTIC
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_uptime"
+
+    @property
+    def name(self):
+        return "Ecostream uptime"
+
+    @property
+    def state(self):
+        return self.coordinator.data["system"]["uptime"]
+
+    @property
+    def icon(self):
+        return "mdi:progress-clock"
+    
+    @property
+    def unit_of_measurement(self):
+        return UnitOfTime.SECONDS
