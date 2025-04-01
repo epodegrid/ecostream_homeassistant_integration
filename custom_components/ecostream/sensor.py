@@ -42,7 +42,7 @@ async def async_setup_entry(
         EcostreamTempEtaSensor(coordinator, entry),
         EcostreamTempOdaSensor(coordinator, entry),
         EcostreamTvocEtaSensor(coordinator, entry),
-        EcostreamFilterReplacementDateSensor(coordinator, entry)
+        EcostreamFilterReplacementDateSensor(coordinator, entry),
         EcostreamWifiSSID(coordinator, entry),
         EcostreamWifiRSSI(coordinator, entry),
         EcostreamWifiIP(coordinator, entry),
