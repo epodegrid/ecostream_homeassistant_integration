@@ -46,6 +46,7 @@ async def async_setup_entry(
         EcostreamSummerComfortEnabledSensor(coordinator, entry),
         EcostreamSummerComfortTemperatureSensor(coordinator, entry),
         EcostreamBypassPositionSensor(coordinator, entry),
+        EcostreamBypassOverridePosition(coordinator, entry),
         EcostreamBypassOverrideTimeLeftSensor(coordinator, entry),
         EcostreamFilterReplacementDateSensor(coordinator, entry),
         EcostreamWifiSSID(coordinator, entry),
@@ -420,6 +421,23 @@ class EcostreamBypassPositionSensor(EcostreamSensorBase):
     @property
     def state(self):
         return self.coordinator.data["status"]["bypass_pos"]
+    
+    @property
+    def unit_of_measurement(self):
+        return PERCENTAGE
+
+class EcostreamBypassOverridePosition(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_bypass_override_pos"
+    
+    @property
+    def name(self):
+        return "Ecostream Bypass Override Position"
+
+    @property
+    def state(self):
+        return self.coordinator.data["config"]["man_override_bypass"]
     
     @property
     def unit_of_measurement(self):
