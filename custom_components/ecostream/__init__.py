@@ -22,6 +22,7 @@ PLATFORMS: list[Platform] = [
     Platform.FAN,
     Platform.BUTTON,
     Platform.CLIMATE,
+    Platform.VALVE,
 ]
 
 class EcostreamWebsocketsAPI:

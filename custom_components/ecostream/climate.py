@@ -16,7 +16,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import EcostreamDataUpdateCoordinator, EcostreamWebsocketsAPI
+from . import EcostreamDataUpdateCoordinator
 from .const import DOMAIN
 
 async def async_setup_entry(
@@ -26,11 +26,11 @@ async def async_setup_entry(
 ):
     coordinator = entry.runtime_data
 
-    switches = [
+    climates = [
         EcostreamSummerComfortClimate(coordinator, entry),
     ]
 
-    async_add_entities(switches, update_before_add=True)
+    async_add_entities(climates, update_before_add=True)
 
 class EcostreamSummerComfortClimate(CoordinatorEntity, ClimateEntity):
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.COOL]
