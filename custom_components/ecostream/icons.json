@@ -7,7 +7,7 @@
             "default": "mdi:fan",
             "state": {
               "low": "mdi:fan-speed-1",
-              "medium": "mdi:fan-speed-2",
+              "mid": "mdi:fan-speed-2",
               "high": "mdi:fan-speed-3"
             }
           }

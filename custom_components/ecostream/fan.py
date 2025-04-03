@@ -21,9 +21,9 @@ from homeassistant.util.percentage import (
 from . import EcostreamDataUpdateCoordinator, EcostreamWebsocketsAPI
 from .const import DOMAIN
 
-PRESET_MODE_LOW = "Low"
-PRESET_MODE_MID = "Medium"
-PRESET_MODE_HIGH = "High"
+PRESET_MODE_LOW = "low"
+PRESET_MODE_MID = "mid"
+PRESET_MODE_HIGH = "high"
 
 async def async_setup_entry(
     hass: HomeAssistant, 
