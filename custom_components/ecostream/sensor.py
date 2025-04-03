@@ -8,7 +8,6 @@ from homeassistant.config_entries import ConfigEntry # type: ignore
 from homeassistant.core import HomeAssistant # type: ignore
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity # type: ignore
-from homeassistant.const import UnitOfTime # type: ignore
 from homeassistant.const import (
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
@@ -16,6 +15,8 @@ from homeassistant.const import (
     UnitOfTemperature,
     UnitOfTime,
     UnitOfVolumeFlowRate,
+    EntityCategory,
+    PERCENTAGE,
 )
 
 from . import EcostreamDataUpdateCoordinator
@@ -42,7 +43,16 @@ async def async_setup_entry(
         EcostreamTempEtaSensor(coordinator, entry),
         EcostreamTempOdaSensor(coordinator, entry),
         EcostreamTvocEtaSensor(coordinator, entry),
-        EcostreamFilterReplacementDateSensor(coordinator, entry)
+        EcostreamSummerComfortEnabledSensor(coordinator, entry),
+        EcostreamSummerComfortTemperatureSensor(coordinator, entry),
+        EcostreamBypassPositionSensor(coordinator, entry),
+        EcostreamBypassOverridePosition(coordinator, entry),
+        EcostreamBypassOverrideTimeLeftSensor(coordinator, entry),
+        EcostreamFilterReplacementDateSensor(coordinator, entry),
+        EcostreamWifiSSID(coordinator, entry),
+        EcostreamWifiRSSI(coordinator, entry),
+        EcostreamWifiIP(coordinator, entry),
+        EcostreamUptime(coordinator, entry),
     ]
 
     async_add_entities(sensors, update_before_add=True)
@@ -360,6 +370,99 @@ class EcostreamTvocEtaSensor(EcostreamSensorBase):
     def icon(self):
         """Return the icon to use in the frontend, if any."""
         return "mdi:air-purifier"
+
+class EcostreamSummerComfortEnabledSensor(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_summer_comfort_enabled"
+    
+    @property
+    def name(self):
+        return "Ecostream Summer Comfort Enabled"
+
+    @property
+    def state(self):
+        return self.coordinator.data["config"]["sum_com_enabled"]
+
+    @property
+    def icon(self):
+        return "mdi:toggle-switch-variant" if self.state else "mdi:toggle-switch-variant-off"
+
+class EcostreamSummerComfortTemperatureSensor(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_summer_comfort_temperature"
+    
+    @property
+    def name(self):
+        return "Ecostream Summer Comfort Temperature"
+
+    @property
+    def state(self):
+        return self.coordinator.data["config"]["sum_com_temp"]
+    
+    @property
+    def unit_of_measurement(self):
+        return UnitOfTemperature.CELSIUS
+
+    @property
+    def icon(self):
+        return "mdi:temperature-celsius"
+
+class EcostreamBypassPositionSensor(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_bypass_pos"
+    
+    @property
+    def name(self):
+        return "Ecostream Bypass Position"
+
+    @property
+    def state(self):
+        return self.coordinator.data["status"]["bypass_pos"]
+    
+    @property
+    def unit_of_measurement(self):
+        return PERCENTAGE
+
+class EcostreamBypassOverridePosition(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_bypass_override_pos"
+    
+    @property
+    def name(self):
+        return "Ecostream Bypass Override Position"
+
+    @property
+    def state(self):
+        return self.coordinator.data["config"]["man_override_bypass"]
+    
+    @property
+    def unit_of_measurement(self):
+        return PERCENTAGE
+
+class EcostreamBypassOverrideTimeLeftSensor(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_override_bypass_time_left"
+    
+    @property
+    def name(self):
+        return "Ecostream Bypass Override Time Left"
+
+    @property
+    def state(self):
+        return self.coordinator.data["status"]["override_bypass_time_left"]
+
+    @property
+    def unit_of_measurement(self):
+        return UnitOfTime.SECONDS
+    
+    @property
+    def icon(self):
+        return "mdi:timer-play"
     
 class EcostreamRhEtaSensor(EcostreamSensorBase):
     """Sensor for Relative Humidity Return."""
@@ -384,3 +487,91 @@ class EcostreamRhEtaSensor(EcostreamSensorBase):
     def icon(self):
         """Return the icon to use in the frontend, if any."""
         return "mdi:water-percent"
+
+class EcostreamWifiSSID(EcostreamSensorBase):
+    @property
+    def entity_category(self):
+        return EntityCategory.DIAGNOSTIC
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_wifi_ssid"
+
+    @property
+    def name(self):
+        return "Ecostream Wifi SSID"
+
+    @property
+    def state(self):
+        return self.coordinator.data["comm_wifi"]["ssid"]
+
+    @property
+    def icon(self):
+        return "mdi:wifi"
+
+class EcostreamWifiRSSI(EcostreamSensorBase):
+    @property
+    def entity_category(self):
+        return EntityCategory.DIAGNOSTIC
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_wifi_rssi"
+
+    @property
+    def name(self):
+        return "Ecostream Wifi RSSI"
+
+    @property
+    def state(self):
+        return int(self.coordinator.data["comm_wifi"]["rssi"])
+
+    @property
+    def icon(self):
+        return "mdi:wifi"
+
+class EcostreamWifiIP(EcostreamSensorBase):
+    @property
+    def entity_category(self):
+        return EntityCategory.DIAGNOSTIC
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_wifi_ip"
+
+    @property
+    def name(self):
+        return "Ecostream Wifi IP"
+
+    @property
+    def state(self):
+        return self.coordinator.data["comm_wifi"]["wifi_ip"]
+
+    @property
+    def icon(self):
+        return "mdi:network-outline"
+
+class EcostreamUptime(EcostreamSensorBase):
+    @property
+    def entity_category(self):
+        return EntityCategory.DIAGNOSTIC
+
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_uptime"
+
+    @property
+    def name(self):
+        return "Ecostream uptime"
+
+    @property
+    def state(self):
+        return self.coordinator.data["system"]["uptime"]
+
+    @property
+    def icon(self):
+        return "mdi:progress-clock"
+    
+    @property
+    def unit_of_measurement(self):
+        return UnitOfTime.SECONDS
