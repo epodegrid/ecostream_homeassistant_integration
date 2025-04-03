@@ -15,5 +15,20 @@
                 }
             }
         }
+    },
+    "entity": {
+    "fan": {
+      "ecostream_fan": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "low": "Low",
+              "mid": "Medium",
+              "high": "High"
+            }
+          }
+        }
+      }
     }
+  }
 }

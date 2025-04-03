@@ -52,6 +52,8 @@ class EcoStreamFan(CoordinatorEntity, FanEntity):
         PRESET_MODE_HIGH,
     ]
     
+    _attr_translation_key = "ecostream_fan"
+
     current_speed: float | None = None
 
     def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
