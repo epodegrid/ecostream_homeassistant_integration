@@ -1,0 +1,18 @@
+{
+  "entity": {
+    "fan": {
+      "ecostream_fan": {
+        "state_attributes": {
+          "preset_mode": {
+            "default": "mdi:fan",
+            "state": {
+              "low": "mdi:fan-speed-1",
+              "mid": "mdi:fan-speed-2",
+              "high": "mdi:fan-speed-3"
+            }
+          }
+        }
+      }
+    }
+  }
+}

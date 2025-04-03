@@ -486,7 +486,7 @@ class EcostreamRhEtaSensor(EcostreamSensorBase):
     @property
     def icon(self):
         """Return the icon to use in the frontend, if any."""
-        return "mdi:molecule-co2"
+        return "mdi:water-percent"
 
 class EcostreamWifiSSID(EcostreamSensorBase):
     @property
