@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry # type: ignore
 from homeassistant.core import HomeAssistant # type: ignore
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity # type: ignore
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.const import (
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
@@ -513,6 +514,14 @@ class EcostreamWifiRSSI(EcostreamSensorBase):
     @property
     def entity_category(self):
         return EntityCategory.DIAGNOSTIC
+
+    @property
+    def device_class(self):
+        return SensorDeviceClass.SIGNAL_STRENGTH
+
+    @property
+    def unit_of_measurement(self):
+        return "dBm"
 
     @property
     def unique_id(self):
