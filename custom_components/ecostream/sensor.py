@@ -44,6 +44,7 @@ async def async_setup_entry(
         EcostreamTempEtaSensor(coordinator, entry),
         EcostreamTempOdaSensor(coordinator, entry),
         EcostreamTvocEtaSensor(coordinator, entry),
+        EcostreamScheduledEnabledSensor(coordinator, entry),
         EcostreamSummerComfortEnabledSensor(coordinator, entry),
         EcostreamSummerComfortTemperatureSensor(coordinator, entry),
         EcostreamBypassPositionSensor(coordinator, entry),
@@ -371,6 +372,23 @@ class EcostreamTvocEtaSensor(EcostreamSensorBase):
     def icon(self):
         """Return the icon to use in the frontend, if any."""
         return "mdi:air-purifier"
+
+class EcostreamScheduledEnabledSensor(EcostreamSensorBase):
+    @property
+    def unique_id(self):
+        return f"{self._entry_id}_schedule_enabled"
+    
+    @property
+    def name(self):
+        return "Ecostream Schedule Enabled"
+
+    @property
+    def state(self):
+        return self.coordinator.data["config"]["schedule_enabled"]
+
+    @property
+    def icon(self):
+        return "mdi:toggle-switch-variant" if self.state else "mdi:toggle-switch-variant-off"
 
 class EcostreamSummerComfortEnabledSensor(EcostreamSensorBase):
     @property

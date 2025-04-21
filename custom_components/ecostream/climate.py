@@ -74,7 +74,7 @@ class EcostreamSummerComfortClimate(CoordinatorEntity, ClimateEntity):
             }
         }
 
-        await self.coordinator.api.send_json(payload)
+        await self.coordinator.send_json(payload)
     
     async def async_set_hvac_mode(self, hvac_mode):
         enable_summer_control = hvac_mode == "cool"
@@ -84,7 +84,7 @@ class EcostreamSummerComfortClimate(CoordinatorEntity, ClimateEntity):
                 "sum_com_enabled": enable_summer_control,
             }
         }
-        await self.coordinator.api.send_json(payload)
+        await self.coordinator.send_json(payload)
     
     def _current_hvac_mode(self) -> HVACMode:
         is_summer_control_enabled = self.coordinator.data["config"]["sum_com_enabled"]

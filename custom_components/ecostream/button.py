@@ -90,4 +90,4 @@ class FilterResetButton(EcostreamButtonBase):
                 "filter_datetime": nextReplacementTimestamp
             }
         }
-        await self.coordinator.api.send_json(payload)
+        await self.coordinator.send_json(payload)
