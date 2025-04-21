@@ -93,7 +93,7 @@ class EcostreamBypassValve(CoordinatorEntity, ValveEntity):
         if config["man_override_bypass_time"] > 0:
             target = config["man_override_bypass"]
 
-            if abs(self._attr_current_valve_position - target) < 0.01:
+            if abs(self._attr_current_valve_position - target) < 0.1:
                 # The difference is more likely due to rounding issues. Don't report a current action.
                 pass
             elif self._attr_current_valve_position > target:
