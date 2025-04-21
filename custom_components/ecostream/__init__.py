@@ -23,6 +23,7 @@ PLATFORMS: list[Platform] = [
     Platform.BUTTON,
     Platform.CLIMATE,
     Platform.VALVE,
+    Platform.SWITCH,
 ]
 
 class EcostreamWebsocketsAPI:
@@ -61,6 +62,7 @@ class EcostreamWebsocketsAPI:
         try:
             response = await self.connection.recv()
             parsed_response = json.loads(response)
+
             # The Ecostream sents various kinds of responses and does not always
             # include all values. Keep the values for the missing keys and update
             # the ones that are returned by the ecostream.
@@ -99,6 +101,17 @@ class EcostreamDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Fetch data from the API."""
         return await self.api.get_data()
+
+    async def send_json(self, payload: dict):
+        await self.api.send_json(payload)
+
+        # Immediately refresh the data such that the direct response is persisted
+        await self.async_refresh()
+
+        # In addition, schedule a delayed update such that actions that take a some 
+        # time to be completed (e.g. opening / closing the bypass valve) will be 
+        # updated soon and don't have to wait the polling interval to be updated.
+        await self.async_request_refresh()
     
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up ecostream from a config entry."""

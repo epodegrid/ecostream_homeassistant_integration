@@ -101,7 +101,7 @@ class EcoStreamFan(CoordinatorEntity, FanEntity):
                 "man_override_set_time": 1800
             }
         }
-        await self.coordinator.api.send_json(payload)
+        await self.coordinator.send_json(payload)
         self.current_speed = speed
         self.preset_mode = preset_mode
 

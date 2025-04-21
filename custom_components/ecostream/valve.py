@@ -42,7 +42,6 @@ class EcostreamBypassValve(CoordinatorEntity, ValveEntity):
     def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
         super().__init__(coordinator)
         self._entry_id = entry.entry_id
-        self._attr_current_valve_position = self._current_valve_position()
 
     @property
     def unique_id(self):
@@ -78,12 +77,31 @@ class EcostreamBypassValve(CoordinatorEntity, ValveEntity):
             }
         }
 
-        await self.coordinator.api.send_json(payload)
-    
-    def _current_valve_position(self) -> HVACMode:
-        return self.coordinator.data["status"]["bypass_pos"]
+        await self.coordinator.send_json(payload)
 
     @callback
-    def _handle_coordinator_update(self) -> None:
-        self._attr_current_valve_position = self._current_valve_position()
+    def _handle_coordinator_update(self):
+        self._attr_current_valve_position = self.coordinator.data["status"]["bypass_pos"]
+        
+        config = self.coordinator.data["config"]
+
+        # Most of the time, there is no movement in the bypass valve. Not are we able to determine
+        #  the current action when the bypass is not currently in override mode.
+        self._attr_is_closing = False
+        self._attr_is_opening = False
+
+        if config["man_override_bypass_time"] > 0:
+            target = config["man_override_bypass"]
+
+            if abs(self._attr_current_valve_position - target) < 0.01:
+                # The difference is more likely due to rounding issues. Don't report a current action.
+                pass
+            elif self._attr_current_valve_position > target:
+                self._attr_is_closing = True
+            elif self._attr_current_valve_position < target:
+                self._attr_is_opening = True
+        elif not config["sum_com_enabled"] and self._attr_current_valve_position > 0:
+            # If summer comfort is not enabled and the bypass is currently open, it will be closing
+            self._attr_is_closing = True
+
         self.async_write_ha_state()
