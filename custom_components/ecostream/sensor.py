@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry # type: ignore
 from homeassistant.core import HomeAssistant # type: ignore
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity # type: ignore
-from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity,SensorStateClass
 from homeassistant.const import (
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
@@ -59,7 +59,7 @@ async def async_setup_entry(
 
     async_add_entities(sensors, update_before_add=True)
 
-class EcostreamSensorBase(CoordinatorEntity, Entity):
+class EcostreamSensorBase(CoordinatorEntity, SensorEntity):
     """Base class for ecostream sensors."""
 
     def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
@@ -96,6 +96,10 @@ class EcostreamFrostProtectionSensor(EcostreamSensorBase):
     @property
     def state(self):
         return self.coordinator.data.get("status", {}).get("frost_protection")
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
 
     @property
     def icon(self):
@@ -180,6 +184,10 @@ class EcostreamQsetSensor(EcostreamSensorBase):
         return self.coordinator.data.get("status", {}).get("qset")
     
     @property
+    def device_class(self):
+        return SensorDeviceClass.VOLUME_FLOW_RATE
+
+    @property
     def unit_of_measurement(self):
         return UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR
 
@@ -229,6 +237,11 @@ class EcostreamFanEHASpeed(EcostreamSensorBase):
     @property
     def unit_of_measurement(self):
         return REVOLUTIONS_PER_MINUTE
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
+
     
 class EcostreamFanSUPSpeed(EcostreamSensorBase):
 
@@ -253,6 +266,10 @@ class EcostreamFanSUPSpeed(EcostreamSensorBase):
     def unit_of_measurement(self):
         return REVOLUTIONS_PER_MINUTE
 
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
+
 class EcostreamEco2EtaSensor(EcostreamSensorBase):
     """Sensor for eCO2 Return."""
 
@@ -269,8 +286,16 @@ class EcostreamEco2EtaSensor(EcostreamSensorBase):
         return self.coordinator.data.get("status", {}).get("sensor_eco2_eta")
 
     @property
+    def device_class(self):
+        return SensorDeviceClass.CO2
+
+    @property
     def unit_of_measurement(self):
         return CONCENTRATION_PARTS_PER_MILLION
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
 
     @property
     def icon(self):
@@ -293,8 +318,16 @@ class EcostreamTempEhaSensor(EcostreamSensorBase):
         return self.coordinator.data.get("status", {}).get("sensor_temp_eha")
 
     @property
+    def device_class(self):
+        return SensorDeviceClass.TEMPERATURE
+
+    @property
     def unit_of_measurement(self):
         return UnitOfTemperature.CELSIUS
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
 
     @property
     def icon(self):
@@ -316,9 +349,17 @@ class EcostreamTempEtaSensor(EcostreamSensorBase):
     def state(self):
         return self.coordinator.data.get("status", {}).get("sensor_temp_eta")
 
+    @property   
+    def device_class(self):
+        return SensorDeviceClass.TEMPERATURE
+
     @property
     def unit_of_measurement(self):
         return UnitOfTemperature.CELSIUS
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
 
     @property
     def icon(self):
@@ -340,9 +381,17 @@ class EcostreamTempOdaSensor(EcostreamSensorBase):
     def state(self):
         return self.coordinator.data.get("status", {}).get("sensor_temp_oda")
 
+    @property   
+    def device_class(self):
+        return SensorDeviceClass.TEMPERATURE
+
     @property
     def unit_of_measurement(self):
         return UnitOfTemperature.CELSIUS
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
 
     @property
     def icon(self):
@@ -364,9 +413,17 @@ class EcostreamTvocEtaSensor(EcostreamSensorBase):
     def state(self):
         return self.coordinator.data.get("status", {}).get("sensor_tvoc_eta")
 
+    @property   
+    def device_class(self):
+        return SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS_PARTS
+
     @property
     def unit_of_measurement(self):
         return CONCENTRATION_PARTS_PER_BILLION
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
 
     @property
     def icon(self):
@@ -420,9 +477,17 @@ class EcostreamSummerComfortTemperatureSensor(EcostreamSensorBase):
     def state(self):
         return self.coordinator.data["config"]["sum_com_temp"]
     
+    @property   
+    def device_class(self):
+        return SensorDeviceClass.TEMPERATURE
+
     @property
     def unit_of_measurement(self):
         return UnitOfTemperature.CELSIUS
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
 
     @property
     def icon(self):
@@ -445,6 +510,10 @@ class EcostreamBypassPositionSensor(EcostreamSensorBase):
     def unit_of_measurement(self):
         return PERCENTAGE
 
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
+
 class EcostreamBypassOverridePosition(EcostreamSensorBase):
     @property
     def unique_id(self):
@@ -461,6 +530,10 @@ class EcostreamBypassOverridePosition(EcostreamSensorBase):
     @property
     def unit_of_measurement(self):
         return PERCENTAGE
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
 
 class EcostreamBypassOverrideTimeLeftSensor(EcostreamSensorBase):
     @property
@@ -498,9 +571,17 @@ class EcostreamRhEtaSensor(EcostreamSensorBase):
     def state(self):
         return self.coordinator.data.get("status", {}).get("sensor_rh_eta")
 
+    @property   
+    def device_class(self):
+        return SensorDeviceClass.HUMIDITY
+
     @property
     def unit_of_measurement(self):
-        return "%"
+        return PERCENTAGE
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
 
     @property
     def icon(self):
@@ -540,6 +621,10 @@ class EcostreamWifiRSSI(EcostreamSensorBase):
     @property
     def unit_of_measurement(self):
         return "dBm"
+
+    @property
+    def state_class(self) -> SensorStateClass:
+        return SensorStateClass.MEASUREMENT
 
     @property
     def unique_id(self):
