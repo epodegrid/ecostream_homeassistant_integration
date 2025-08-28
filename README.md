@@ -1,5 +1,7 @@
 # Buva Ecostream Home Assistant Integration
 
+[![Validate with hassfest](https://github.com/epodegrid/ecostream_homeassistant_integration/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/epodegrid/ecostream_homeassistant_integration/actions/workflows/hassfest.yaml)
+
 This integration allows you to control your Buva Ecostream HRV unit, from Home Assistant. It connects to your local unit, 
 using Python WebSockets.
 
