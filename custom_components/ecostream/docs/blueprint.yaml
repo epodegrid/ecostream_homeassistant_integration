@@ -3,7 +3,7 @@ blueprint:
   description: >
     PID-achtige regeling voor BUVA EcoStream op basis van CO₂, RV%, TVOC,
     met dag/nachtprofielen en ramping (60–300 m³/h). Boost/override heeft
-    altijd prioriteit. Ontworpen voor jouw EcoStream integratie.
+    altijd prioriteit. 
   domain: automation
 
   input:
