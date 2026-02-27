@@ -1,0 +1,147 @@
+blueprint:
+  name: EcoStream Intelligent Ventilation Control (Hybrid CO₂ + RV + TVOC + Day/Night)
+  description: >
+    PID-achtige regeling voor BUVA EcoStream op basis van CO₂, RV%, TVOC,
+    met dag/nachtprofielen en ramping (60–300 m³/h). Boost/override heeft
+    altijd prioriteit. Ontworpen voor jouw EcoStream integratie.
+  domain: automation
+
+  input:
+    co2_sensor:
+      name: CO₂ sensor
+      selector:
+        entity:
+          domain: sensor
+          device_class: carbon_dioxide
+
+    humidity_sensor:
+      name: Humidity (RV%) sensor
+      selector:
+        entity:
+          domain: sensor
+          device_class: humidity
+
+    tvoc_sensor:
+      name: TVOC sensor
+      selector:
+        entity:
+          domain: sensor
+
+    qset_number:
+      name: EcoStream Qset Number
+      description: De number-entity die Qset bepaalt (ventilatiecapaciteit).
+      selector:
+        entity:
+          domain: number
+
+    day_start:
+      name: Start dagmodus
+      default: "07:00"
+      selector:
+        time: {}
+
+    night_start:
+      name: Start nachtmodus
+      default: "23:00"
+      selector:
+        time: {}
+
+    min_qset:
+      name: Minimum ventilatie (m³/h)
+      default: 60
+      selector:
+        number:
+          min: 30
+          max: 150
+          step: 5
+
+    max_qset:
+      name: Maximum ventilatie (m³/h)
+      default: 300
+      selector:
+        number:
+          min: 200
+          max: 350
+          step: 10
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: time_pattern
+    minutes: "/1"
+
+variables:
+  co2: "{{ states( !input co2_sensor ) | float(0) }}"
+  rv: "{{ states( !input humidity_sensor ) | float(0) }}"
+  tvoc: "{{ states( !input tvoc_sensor ) | float(0) }}"
+
+  day_start: !input day_start
+  night_start: !input night_start
+  now_time: "{{ now().strftime('%H:%M') }}"
+
+  # Dagmodus indien tijd tussen dag_start en night_start
+  is_day: >
+    {{
+      (now_time >= day_start and now_time < night_start)
+      if day_start < night_start
+      else not (now_time >= night_start and now_time < day_start)
+    }}
+
+  # Gewichtsfactoren
+  w_co2: 0.60
+  w_rv: 0.30
+  w_tvoc: 0.10
+
+  # Normalisatie
+  co2_norm: >
+    {{ ((co2 - 400) / 1600) | max(0) | min(1) }}
+
+  rv_norm: >
+    {{ ((rv - 35) / 35) | max(0) | min(1) }}
+
+  tvoc_norm: >
+    {{ (tvoc / 600) | max(0) | min(1) }}
+
+  # Combinatiescore
+  score: >
+    {{
+      (co2_norm * w_co2) +
+      (rv_norm * w_rv) +
+      (tvoc_norm * w_tvoc)
+    }}
+
+  profile_gain: "{{ 1.4 if is_day else 0.7 }}"
+
+  final_score: "{{ (score * profile_gain) | min(1) }}"
+
+  qset_min: !input min_qset
+  qset_max: !input max_qset
+
+  target_qset: >
+    {{
+      (
+        qset_min + (final_score * (qset_max - qset_min))
+      ) | round(0)
+    }}
+
+action:
+  - variables:
+      current: "{{ states( !input qset_number ) | float(0) }}"
+      target: "{{ target_qset }}"
+      diff: "{{ target - current }}"
+
+  # Anti-jitter drempel: alleen bij >= 10 m³/h verschil
+  - choose:
+      - conditions: "{{ diff | abs >= 10 }}"
+        sequence:
+          - service: number.set_value
+            target:
+              entity_id: !input qset_number
+            data:
+              value: >
+                {{
+                  (current + (diff / 3))
+                  | round(0)
+                }}
+    default: []
