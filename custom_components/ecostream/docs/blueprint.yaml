@@ -1,5 +1,5 @@
 blueprint:
-  name: EcoStream Intelligent Ventilation Control (Hybrid CO₂ + RV + TVOC + Day/Night)
+  name: EcoStream Intelligent Ventilation Control
   description: >
     PID-achtige regeling voor BUVA EcoStream op basis van CO₂, RV%, TVOC,
     met dag/nachtprofielen en ramping (60–300 m³/h). Boost/override heeft
