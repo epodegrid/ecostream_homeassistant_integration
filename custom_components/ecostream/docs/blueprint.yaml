@@ -1,5 +1,5 @@
 blueprint:
-  name: EcoStream Intelligent Ventilation Control
+  name: EcoStream Intelligent Ventilation Control (Hybrid CO₂ + RV + TVOC + Day/Night)
   description: >
     PID-achtige regeling voor BUVA EcoStream op basis van CO₂, RV%, TVOC,
     met dag/nachtprofielen en ramping (60–300 m³/h). Boost/override heeft
@@ -71,7 +71,7 @@ trigger:
     minutes: "/1"
 
 variables:
-  # Mapping inputs naar variabelen (NO templates!)
+  # Input mapping (geen templates)
   co2_sensor_entity: !input co2_sensor
   humidity_sensor_entity: !input humidity_sensor
   tvoc_sensor_entity: !input tvoc_sensor
@@ -81,14 +81,13 @@ variables:
   qset_min: !input min_qset
   qset_max: !input max_qset
 
-  # Sensordata (TEMPLATES)
+  # Sensorwaarden
   co2: "{{ states(co2_sensor_entity) | float(0) }}"
   rv: "{{ states(humidity_sensor_entity) | float(0) }}"
   tvoc: "{{ states(tvoc_sensor_entity) | float(0) }}"
 
   now_time: "{{ now().strftime('%H:%M') }}"
 
-  # Dagmodus logica
   is_day: >
     {{
       (now_time >= day_start_val and now_time < night_start_val)
@@ -96,15 +95,14 @@ variables:
       else not (now_time >= night_start_val and now_time < day_start_val)
     }}
 
-  # Gewichtsfactoren
   w_co2: 0.60
   w_rv: 0.30
   w_tvoc: 0.10
 
-  # Normalisatie
-  co2_norm: "{{ ((co2 - 400) / 1600) | max(0) | min(1) }}"
-  rv_norm: "{{ ((rv - 35) / 35) | max(0) | min(1) }}"
-  tvoc_norm: "{{ (tvoc / 600) | max(0) | min(1) }}"
+  # Normalisatie met correcte HA min/max syntax
+  co2_norm: "{{ [[(co2 - 400) / 1600, 0] | max, 1] | min }}"
+  rv_norm: "{{ [[(rv - 35) / 35, 0] | max, 1] | min }}"
+  tvoc_norm: "{{ [(tvoc / 600), 1] | min }}"
 
   score: >
     {{
@@ -114,12 +112,13 @@ variables:
     }}
 
   profile_gain: "{{ 1.4 if is_day else 0.7 }}"
-  final_score: "{{ (score * profile_gain) | min(1) }}"
+
+  final_score: "{{ [score * profile_gain, 1] | min }}"
 
   target_qset: >
     {{
       (qset_min + final_score * (qset_max - qset_min))
-      | round(0)
+      | round(0) | int
     }}
 
 action:
@@ -135,4 +134,5 @@ action:
             target:
               entity_id: "{{ qset_entity }}"
             data:
-              value: "{{ (current + diff / 3) | round(0) }}"
+              value: "{{ (current + diff / 3) | round(0) | int }}"
+    default: []
