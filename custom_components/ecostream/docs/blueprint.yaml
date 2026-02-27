@@ -13,39 +13,33 @@ blueprint:
         entity:
           domain: sensor
           device_class: carbon_dioxide
-
     humidity_sensor:
       name: Humidity (RV%) sensor
       selector:
         entity:
           domain: sensor
           device_class: humidity
-
     tvoc_sensor:
       name: TVOC sensor
       selector:
         entity:
           domain: sensor
-
     qset_number:
       name: EcoStream Qset Number
       description: De number-entity die Qset bepaalt (ventilatiecapaciteit).
       selector:
         entity:
           domain: number
-
     day_start:
       name: Start dagmodus
       default: "07:00"
       selector:
         time: {}
-
     night_start:
       name: Start nachtmodus
       default: "23:00"
       selector:
         time: {}
-
     min_qset:
       name: Minimum ventilatie (m³/h)
       default: 60
@@ -54,7 +48,6 @@ blueprint:
           min: 30
           max: 150
           step: 5
-
     max_qset:
       name: Maximum ventilatie (m³/h)
       default: 300
@@ -72,38 +65,35 @@ trigger:
     minutes: "/1"
 
 variables:
-  co2: "{{ states( !input co2_sensor ) | float(0) }}"
-  rv: "{{ states( !input humidity_sensor ) | float(0) }}"
-  tvoc: "{{ states( !input tvoc_sensor ) | float(0) }}"
+  # Hier laden we de inputs eerst in variabelen zodat ze in templates gebruikt kunnen worden
+  co2_ent: !input co2_sensor
+  rv_ent: !input humidity_sensor
+  tvoc_ent: !input tvoc_sensor
+  qset_ent: !input qset_number
+  
+  co2: "{{ states(co2_ent) | float(0) }}"
+  rv: "{{ states(rv_ent) | float(0) }}"
+  tvoc: "{{ states(tvoc_ent) | float(0) }}"
 
-  day_start: !input day_start
-  night_start: !input night_start
+  day_start_val: !input day_start
+  night_start_val: !input night_start
   now_time: "{{ now().strftime('%H:%M') }}"
 
-  # Dagmodus indien tijd tussen dag_start en night_start
   is_day: >
     {{
-      (now_time >= day_start and now_time < night_start)
-      if day_start < night_start
-      else not (now_time >= night_start and now_time < day_start)
+      (now_time >= day_start_val and now_time < night_start_val)
+      if day_start_val < night_start_val
+      else not (now_time >= night_start_val and now_time < day_start_val)
     }}
 
-  # Gewichtsfactoren
   w_co2: 0.60
   w_rv: 0.30
   w_tvoc: 0.10
 
-  # Normalisatie
-  co2_norm: >
-    {{ ((co2 - 400) / 1600) | max(0) | min(1) }}
+  co2_norm: "{{ ((co2 - 400) / 1600) | max(0) | min(1) }}"
+  rv_norm: "{{ ((rv - 35) / 35) | max(0) | min(1) }}"
+  tvoc_norm: "{{ (tvoc / 600) | max(0) | min(1) }}"
 
-  rv_norm: >
-    {{ ((rv - 35) / 35) | max(0) | min(1) }}
-
-  tvoc_norm: >
-    {{ (tvoc / 600) | max(0) | min(1) }}
-
-  # Combinatiescore
   score: >
     {{
       (co2_norm * w_co2) +
@@ -112,7 +102,6 @@ variables:
     }}
 
   profile_gain: "{{ 1.4 if is_day else 0.7 }}"
-
   final_score: "{{ (score * profile_gain) | min(1) }}"
 
   qset_min: !input min_qset
@@ -127,11 +116,11 @@ variables:
 
 action:
   - variables:
-      current: "{{ states( !input qset_number ) | float(0) }}"
+      # Gebruik de eerder gedefinieerde qset_ent variabele
+      current: "{{ states(qset_ent) | float(0) }}"
       target: "{{ target_qset }}"
       diff: "{{ target - current }}"
 
-  # Anti-jitter drempel: alleen bij >= 10 m³/h verschil
   - choose:
       - conditions: "{{ diff | abs >= 10 }}"
         sequence:
@@ -139,9 +128,5 @@ action:
             target:
               entity_id: !input qset_number
             data:
-              value: >
-                {{
-                  (current + (diff / 3))
-                  | round(0)
-                }}
+              value: "{{ (current + (diff / 3)) | round(0) }}"
     default: []
