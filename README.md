@@ -1,32 +1,168 @@
-# Buva Ecostream Home Assistant Integration
+# BUVA EcoStream — Home Assistant Integration  
+![HA Compatibility](https://img.shields.io/badge/Home%20Assistant-2024.12+-blue.svg)  
+![HACS Default](https://img.shields.io/badge/HACS-Custom-orange.svg)  
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-[![Validate with hassfest](https://github.com/epodegrid/ecostream_homeassistant_integration/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/epodegrid/ecostream_homeassistant_integration/actions/workflows/hassfest.yaml)
+A **full-featured, modern and high-performance** Home Assistant integration for the  
+**BUVA EcoStream** balanced ventilation unit.
 
-This integration allows you to control your Buva Ecostream HRV unit, from Home Assistant. It connects to your local unit, 
-using Python WebSockets.
+Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,  
+*diagnostics*, *WiFi info*, and an **Apple Home-style dashboard**.
 
-More controls are to be added later.
+---
 
-## Disclaimer
+## ✨ Features
 
-This project is not affiliated with or endorsed by Buva.
+### 🔧 Core Functionality
+- Local push updates (no polling required)
+- Automatic WebSocket reconnect
+- Eco-friendly throttled update model
+- 1 unified device in the device registry
+- Full diagnostics + debug logging
 
-## Installation via HACS:
+### 🌬 Ventilation Control
+- Modern HA FanEntity API  
+- Percentage-based control (Qset)
+- Fast-mode when adjusting ventilation  
+- Automatic restoration after Boost mode  
 
-#### Add the repository as a custom repository
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=epodegrid&repository=ecostream_homeassistant_integration&category=integration)
+### 🚀 Advanced Boost Mode
+- Configurable duration (5/10/15/30 min)  
+- Automatic CO₂-based cancellation  
+- Countdown sensor (`boost_time_remaining`)  
+- Visual dashboard tile (optional Apple-style card)
 
-#### Start configuration
-[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=ecostream)
+### 🔁 Bypass Valve
+- Supports:
+  - `OPEN`
+  - `CLOSE`
+  - `SET_POSITION (0–100%)`  
+- Reports exact valve position
 
-## Installation (Manual)
-1. Copy the ecostream folder to custom_components in Home Assistant.
-2. Add the integration in Home Assistant, by configuring your Ecostream IP address
+### 🌡 Sensors (rounded & refined)
+- CO₂ (ppm, whole numbers)
+- TVOC (ppb, whole numbers)
+- Humidity (%)
+- ETA, EHA, ODA temperature (1 decimal)
+- RPM supply/exhaust
+- Qset (%)
+- Uptime (`Xd Yh Zm`)
+- WiFi RSSI / SSID / IP
 
-## Notice
+### 🔘 Buttons
+- Reset filter timer  
 
-The use of this Project is subject to the following terms:
+---
 
-- The project is provided on an "as-is" basis, without any warranties or conditions, express or implied.
-- The user of the project assumes all responsibility and risk for its use.
-- The project contributors disclaim all liability for any damages, direct or indirect, resulting from the use of the project.
+## 🏡 Screenshots
+
+> *(Replace these with your actual screenshots)*
+
+### Dashboard Example  
+![Dashboard Example](docs/dashboard_example.png)
+
+### Device Page  
+![Device](docs/device.png)
+
+---
+
+## 📦 Installation
+
+### 🔹 Option A — HACS (Custom Repository)
+1. Go to **HACS → Integrations → Custom repositories**
+2. Add:  https://github.com/epodegrid/ecostream_homeassistant_integration
+3. Category: **Integration**
+4. Install & restart Home Assistant
+
+### 🔹 Option B — Manual
+Copy the folder: custom_components/ecostream/
+Into: /config/custom_components/ecostream/
+
+Restart Home Assistant.
+
+---
+
+## 🚀 Adding the Integration
+
+### 🔍 Discovery
+Home Assistant will automatically find the device via:
+- Zeroconf (`_http._tcp`)
+- DHCP hostname patterns
+- MAC address prefix
+
+- When a BUVA EcoStream is detected on the network:
+  - Home Assistant will show a “BUVA EcoStream discovered” notification.
+  - The config flow opens with the IP address pre-filled.
+  - You only need to click Submit.
+- If auto-discovery doesn't work, unplug youre Ecostream unit for 10 seconds and then plug it in. 
+  Home Assistant should discover it within 2 minutes. Of you're handi and know (how to find) the IP-adres,
+  then fill it in manually. Fixed IP is prefered! But since the Ecostream will normally never disconnect
+  longer than 1 hour on the netwoork, the IP-adreess will always be the same. 
+
+Click the discovered device → **the IP address will now be pre-filled automatically** (see section below).
+
+### 🧩 Manual setup
+1. Go to **Settings → Devices & Services**
+2. Click **Add Integration**
+3. Search for **EcoStream**
+4. Enter the **IP address**, if not discovered automatically
+
+---
+
+## ⚙️ Options
+
+### Update intervals
+You can adjust:
+- Normal push interval
+- Fast push interval during manual control
+
+These settings are available in **Options → Integration settings**.
+
+---
+
+## 🛠 Diagnostics
+A full snapshot is available under:
+**Device → … → Download Diagnostics**
+
+This includes:
+- Current data
+- Connection state
+- Push intervals
+- Metadata
+- Sanitized WiFi info (password removed)
+
+## 🐛 Debugging
+
+Enable debug logging for this integration:
+
+logger:
+  default: info
+  logs:
+    custom_components.ecostream: debug
+
+
+You can also use the built-in diagnostics from:
+Settings → Devices & Services → BUVA EcoStream → Diagnostics
+
+---
+
+## 📑 Known Limitations
+- The unit does **not** expose a real WebSocket endpoint  
+  → the integration uses a safe emulated stream model  
+- Some older firmware versions may omit TVOC data  
+
+---
+
+## ❤️ Credits
+- Original integration engineering: @epodegrid   
+- Rewrite, optimizations, and Apple-style UI: @Uber1337NL  
+- Special thanks to the HA community for guidance
+
+---
+
+## 📜 License
+MIT License — see LICENSE file
+
+
+
+

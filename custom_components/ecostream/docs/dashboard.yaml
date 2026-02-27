@@ -1,0 +1,251 @@
+title: EcoStream
+type: sections
+cards: []
+sections:
+  - type: grid
+    cards:
+      - type: horizontal-stack
+        cards:
+          - type: custom:button-card
+            entity: fan.ecostream_ventilation
+            name: Ventilation
+            icon: mdi:fan
+            show_state: true
+            tap_action:
+              action: toggle
+            hold_action:
+              action: more-info
+            state:
+              - value: "On"
+                spin: true
+                styles:
+                  card:
+                    - background: linear-gradient(145deg,#e8f0ff,#f5f5f7)
+                  icon:
+                    - color: "#007aff"
+            styles:
+              card:
+                - border-radius: 22px
+                - padding: 18px
+                - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
+              icon:
+                - width: 40px
+                - height: 40px
+              name:
+                - font-weight: 600
+          - type: custom:button-card
+            entity: switch.ecostream_boost
+            name: Boost
+            icon: mdi:rocket-launch
+            show_state: true
+            show_label: true
+            tap_action:
+              action: toggle
+            state:
+              - value: "on"
+                styles:
+                  card:
+                    - background: linear-gradient(145deg,#e1f0ff,#f5f5f7)
+                    - box-shadow: 0 8px 20px rgba(0,122,255,0.35)
+                  icon:
+                    - color: "#007aff"
+            styles:
+              card:
+                - border-radius: 22px
+                - padding: 18px
+                - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
+              icon:
+                - width: 40px
+                - height: 40px
+                - color: "#007aff"
+              name:
+                - font-weight: 600
+          - type: custom:button-card
+            entity: valve.ecostream_bypass_valve
+            name: Bypass
+            icon: mdi:valve
+            show_label: true
+            label: |
+              [[[
+                const v = entity?.attributes.current_position;
+                return (v === null) ? "Uit" : (v + "%");
+              ]]]
+            tap_action:
+              action: more-info
+            styles:
+              card:
+                - border-radius: 22px
+                - padding: 18px
+                - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
+              icon:
+                - width: 40px
+                - height: 40px
+                - color: "#ff9f0a"
+              name:
+                - font-weight: 600
+      - type: horizontal-stack
+        cards:
+          - type: custom:button-card
+            entity: sensor.ecostream_fan_supply_speed
+            name: Aanvoer
+            icon: mdi:fan
+            show_state: true
+            state:
+              - value: "on"
+                spin: true
+                styles:
+                  card:
+                    - background: linear-gradient(145deg,#e8f0ff,#f5f5f7)
+                  icon:
+                    - color: "#007aff"
+            styles:
+              card:
+                - border-radius: 22px
+                - padding: 18px
+                - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
+              icon:
+                - width: 40px
+                - height: 40px
+                - color: "#007aff"
+              name:
+                - font-size: 1.2rem
+                - font-weight: 600
+          - type: custom:button-card
+            entity: sensor.ecostream_fan_exhaust_speed
+            name: Afvoer
+            icon: mdi:fan
+            show_state: true
+            state:
+              - value: "on"
+                spin: true
+                styles:
+                  card:
+                    - background: linear-gradient(145deg,#e8f0ff,#f5f5f7)
+                  icon:
+                    - color: "#007aff"
+            styles:
+              card:
+                - border-radius: 22px
+                - padding: 18px
+                - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
+              icon:
+                - width: 40px
+                - height: 40px
+                - color: "#007aff"
+              name:
+                - font-size: 1.2rem
+                - font-weight: 600
+      - type: horizontal-stack
+        cards:
+          - type: gauge
+            entity: sensor.ecostream_temperature_eta
+            name: ETA
+            min: 0
+            max: 30
+          - type: gauge
+            entity: sensor.ecostream_temperature_eha
+            name: EHA
+            min: 0
+            max: 30
+          - type: gauge
+            entity: sensor.ecostream_temperature_oda
+            name: ODA
+            min: -10
+            max: 35
+      - type: tile
+        entity: sensor.ecostream_schedule_enabled
+        name: Schema actief
+        icon: mdi:fan-clock
+        hide_state: false
+        vertical: true
+        features_position: bottom
+      - type: tile
+        entity: sensor.ecostream_filter_replacement_date
+        name: "Filter vervangen op:"
+        icon: mdi:air-filter
+        hide_state: false
+        vertical: true
+        features_position: bottom
+      - type: tile
+        entity: sensor.ecostream_summer_comfort_enabled
+        name: Zomercomfort
+        icon: far:sun
+        vertical: true
+        features_position: bottom
+      - type: tile
+        entity: sensor.ecostream_frost_protection_active
+        name: Vorstbescherming
+        icon: mdi:snowflake-thermometer
+        hide_state: false
+        vertical: true
+        features_position: bottom
+  - type: grid
+    cards:
+      - type: custom:mini-graph-card
+        name: eCO₂ (ppm)
+        icon: mdi:molecule-co2
+        entities:
+          - sensor.ecostream_eco2_return
+        hours_to_show: 24
+        line_width: 3
+        points_per_hour: 4
+        color_thresholds:
+          - value: 800
+            color: "#34c759"
+          - value: 1200
+            color: "#ffcc00"
+          - value: 1500
+            color: "#ff3b30"
+      - type: custom:mini-graph-card
+        name: TVOC (ppb)
+        icon: mdi:chemical-weapon
+        entities:
+          - sensor.ecostream_tvoc_return
+        hours_to_show: 24
+        line_width: 3
+        points_per_hour: 4
+        color: "#5856d6"
+      - type: custom:mini-graph-card
+        name: Humidity (%)
+        icon: mdi:water-percent
+        entities:
+          - sensor.ecostream_humidity_return
+        hours_to_show: 24
+        line_width: 3
+        points_per_hour: 4
+        color: "#32ade6"
+  - type: grid
+    cards:
+      - type: markdown
+        content: "## 🛠 Efficiency"
+      - type: custom:mini-graph-card
+        name: Efficiency
+        icon: mdi:percent
+        entities:
+          - sensor.ecostream_efficiency
+        hours_to_show: 24
+        line_width: 3
+        points_per_hour: 4
+        color_thresholds:
+          - value: 85
+            color: "#34c759"
+          - value: 75
+            color: "#ffcc00"
+          - value: 0
+            color: "#ff3b30"
+      - type: markdown
+        content: "## 🛠 Systeemstatus"
+      - type: entities
+        entities:
+          - entity: sensor.ecostream_uptime
+          - entity: sensor.ecostream_wifi_ssid
+          - entity: sensor.ecostream_wifi_ip
+          - entity: sensor.ecostream_wifi_rssi
+          - entity: sensor.shellyplug_s_80646f816c28_power
+            name: Opgenomen vermogen (stroom)
+header:
+  layout: responsive
+  badges_position: bottom
+  badges_wrap: wrap
+max_columns: 3
+icon: mdi:fan

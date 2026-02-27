@@ -1,107 +1,145 @@
 from __future__ import annotations
 
-import math
+import logging
 from typing import Any, Optional
 
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.components.valve import (
-    ValveDeviceClass,
     ValveEntity,
     ValveEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.core import callback
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import EcostreamDataUpdateCoordinator
-from .const import DOMAIN
+from .const import DOMAIN, DEVICE_NAME, DEVICE_MODEL
+from .coordinator import EcostreamDataUpdateCoordinator
 
-async def async_setup_entry(
-    hass: HomeAssistant, 
-    entry: ConfigEntry[EcostreamDataUpdateCoordinator], 
-    async_add_entities: AddEntitiesCallback,
-):
-    coordinator = entry.runtime_data
+_LOGGER = logging.getLogger(__name__)
 
-    valves = [
+
+async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities):
+    coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
+    entities = [
         EcostreamBypassValve(coordinator, entry),
     ]
+    async_add_entities(entities, update_before_add=True)
 
-    async_add_entities(valves, update_before_add=True)
 
 class EcostreamBypassValve(CoordinatorEntity, ValveEntity):
-    reports_position = True
+    """EcoStream Bypass Valve (0–100%)."""
 
+    _attr_has_entity_name = True
+    _attr_name = "Bypass Valve"
     _attr_supported_features = (
-        ValveEntityFeature.CLOSE 
-        | ValveEntityFeature.OPEN 
-        | ValveEntityFeature.SET_POSITION
+        ValveEntityFeature.OPEN |
+        ValveEntityFeature.CLOSE |
+        ValveEntityFeature.SET_POSITION
     )
+
+    #
+    # Required since HA 2024+: May NOT be None
+    #
+    _attr_reports_position = True  # FIX FOR YOUR EXCEPTION
 
     def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
         super().__init__(coordinator)
-        self._entry_id = entry.entry_id
+        self._entry = entry
 
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_bypass_valve"
+        self._attr_unique_id = f"{entry.entry_id}_bypass_valve"
 
-    @property
-    def name(self):
-        return "Ecostream Bypass Valve"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.api._host)},
-            name="EcoStream",
-            manufacturer="Buva",
-            model="EcoStream",
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.host)},
+            manufacturer="BUVA",
+            name=DEVICE_NAME,
+            model=DEVICE_MODEL,
         )
-    
-    async def async_set_valve_position(self, position: int):
-        man_override_bypass_time = 24 * 3600
 
-        if position == 0:
-            # When the valve is closed, also disable the override to ensure
-            #  other processes like summer comfort control can control the
-            #  bypass valve again.
-            man_override_bypass_time = 0
+        # Track local state
+        self._position: Optional[int] = None
 
-        payload = {
-            "config": {
-                "man_override_bypass": position,
-                "man_override_bypass_time": man_override_bypass_time,  
-            }
-        }
+        # These may remain False unless you want animations
+        self._is_opening = False
+        self._is_closing = False
 
-        await self.coordinator.send_json(payload)
+    #
+    # Mandatory properties for ValveEntity
+    #
 
+    @property
+    def reports_position(self) -> bool:
+        """HA requires a fixed boolean — not optional."""
+        return True
+
+    @property
+    def current_valve_position(self) -> Optional[int]:
+        """Return 0–100%."""
+        return self._position
+
+    @property
+    def is_open(self) -> Optional[bool]:
+        """Open if > 0%."""
+        if self._position is None:
+            return None
+        return self._position > 0
+
+    @property
+    def is_closed(self) -> Optional[bool]:
+        if self._position is None:
+            return None
+        return self._position == 0
+
+    @property
+    def is_opening(self) -> bool:
+        return self._is_opening
+
+    @property
+    def is_closing(self) -> bool:
+        return self._is_closing
+
+    #
+    # Incoming updates from coordinator (WS push)
+    #
     @callback
-    def _handle_coordinator_update(self):
-        self._attr_current_valve_position = self.coordinator.data["status"]["bypass_pos"]
-        
-        config = self.coordinator.data["config"]
+    def _handle_coordinator_update(self) -> None:
+        data = self.coordinator.data or {}
+        status = data.get("status", {})
 
-        # Most of the time, there is no movement in the bypass valve. Not are we able to determine
-        #  the current action when the bypass is not currently in override mode.
-        self._attr_is_closing = False
-        self._attr_is_opening = False
-
-        if config["man_override_bypass_time"] > 0:
-            target = config["man_override_bypass"]
-
-            if abs(self._attr_current_valve_position - target) < 0.1:
-                # The difference is more likely due to rounding issues. Don't report a current action.
+        new_pos = status.get("bypass_pos")
+        if new_pos is not None:
+            try:
+                self._position = int(round(float(new_pos)))
+            except Exception:
                 pass
-            elif self._attr_current_valve_position > target:
-                self._attr_is_closing = True
-            elif self._attr_current_valve_position < target:
-                self._attr_is_opening = True
-        elif not config["sum_com_enabled"] and self._attr_current_valve_position > 0:
-            # If summer comfort is not enabled and the bypass is currently open, it will be closing
-            self._attr_is_closing = True
 
+        self.async_write_ha_state()
+
+    #
+    # Commands to the EcoStream unit
+    #
+
+    async def async_open_valve(self, **kwargs: Any) -> None:
+        await self.async_set_valve_position(100)
+
+    async def async_close_valve(self, **kwargs: Any) -> None:
+        await self.async_set_valve_position(0)
+
+    async def async_set_valve_position(self, position: int) -> None:
+        """Send bypass override command."""
+        pos = max(0, min(100, int(position)))
+
+        if not self.coordinator.ws:
+            _LOGGER.error("Bypass valve: WS not connected")
+            return
+
+        self.coordinator.mark_control_action()
+
+        payload = {"config": {"man_override_bypass": pos}}
+
+        _LOGGER.debug("EcoStream → Set bypass to %s%%", pos)
+
+        await self.coordinator.ws.send_json(payload)
+
+        # Reflect temporary state while awaiting next WS push
+        self._position = pos
         self.async_write_ha_state()

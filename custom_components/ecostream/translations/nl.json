@@ -1,0 +1,142 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BUVA EcoStream",
+        "description": "Vul het IP-adres van je EcoStream ventilatie-unit in.",
+        "data": {
+          "host": "IP-adres van het apparaat"
+        }
+      },
+      "confirm": {
+        "title": "EcoStream-apparaat toevoegen",
+        "description": "EcoStream-apparaat \"{name}\" is gevonden op {host}. Wil je dit apparaat toevoegen?"
+      }
+    },
+    "error": {
+      "cannot_connect": "Kan geen verbinding maken met de EcoStream-unit.",
+      "unknown": "Er is een onverwachte fout opgetreden."
+    },
+    "abort": {
+      "already_configured": "Deze EcoStream-unit is al geconfigureerd."
+    }
+  },
+
+  "options": {
+    "step": {
+      "init": {
+        "title": "EcoStream Opties",
+        "description": "Pas geavanceerde instellingen aan voor de EcoStream-integratie.",
+        "data": {
+          "push_interval": "Normaal update-interval (seconden)",
+          "fast_push_interval": "Snel update-interval (seconden)"
+        }
+      }
+    }
+  },
+
+  "entity": {
+    "fan": {
+      "ecostream_ventilation": {
+        "name": "Ventilatie",
+        "icon": "mdi:fan"
+      }
+    },
+
+    "switch": {
+      "ecostream_schedule_enabled": {
+        "name": "Schema ingeschakeld",
+        "icon": "mdi:calendar-clock"
+      },
+      "ecostream_summer_comfort": {
+        "name": "Zomercomfort",
+        "icon": "mdi:weather-sunny"
+      },
+      "ecostream_boost": {
+        "name": "Boost",
+        "icon": "mdi:weather-windy"
+      }
+    },
+
+    "select": {
+      "ecostream_boost_duration": {
+        "name": "Boostduur",
+        "state": {
+          "5": "5 minuten",
+          "10": "10 minuten",
+          "15": "15 minuten",
+          "30": "30 minuten"
+        }
+      }
+    },
+
+    "sensor": {
+      "ecostream_boost_time_left": {
+        "name": "Resterende boosttijd"
+      },
+      "ecostream_eco2_return": {
+        "name": "eCO₂ Retour",
+        "icon": "mdi:molecule-co2"
+      },
+      "ecostream_tvoc_return": {
+        "name": "TVOC Retour",
+        "icon": "mdi:chemical-weapon"
+      },
+      "ecostream_humidity_return": {
+        "name": "Vochtigheid Retour",
+        "icon": "mdi:water-percent"
+      },
+      "ecostream_temperature_eta": {
+        "name": "Temperatuur ETA",
+        "icon": "mdi:thermometer"
+      },
+      "ecostream_temperature_eha": {
+        "name": "Temperatuur EHA",
+        "icon": "mdi:thermometer"
+      },
+      "ecostream_temperature_oda": {
+        "name": "Temperatuur ODA",
+        "icon": "mdi:thermometer"
+      },
+      "ecostream_fan_exhaust_speed": {
+        "name": "Afvoerventilator snelheid"
+      },
+      "ecostream_fan_supply_speed": {
+        "name": "Toevoerventilator snelheid"
+      },
+      "ecostream_qset": {
+        "name": "Qset"
+      },
+      "ecostream_uptime": {
+        "name": "Uptime",
+        "icon": "mdi:timer-outline"
+      },
+      "ecostream_wifi_ip": {
+        "name": "WiFi IP-adres",
+        "icon": "mdi:wifi"
+      },
+      "ecostream_wifi_ssid": {
+        "name": "WiFi SSID",
+        "icon": "mdi:wifi"
+      },
+      "ecostream_wifi_rssi": {
+        "name": "WiFi RSSI",
+        "icon": "mdi:wifi-strength-2"
+      }
+    },
+
+    "valve": {
+      "ecostream_bypass_valve": {
+        "name": "Bypassklep",
+        "icon": "mdi:valve"
+      }
+    },
+
+    "button": {
+      "ecostream_reset_filter": {
+        "name": "Filter resetten",
+        "icon": "mdi:restart"
+      }
+    }
+  }
+}

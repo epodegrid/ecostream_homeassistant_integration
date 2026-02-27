@@ -1,85 +1,245 @@
 from __future__ import annotations
 
+import asyncio
+import json
+import logging
+from typing import Any
+
 import voluptuous as vol
+from aiohttp import ClientError, WSMsgType
+
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
 
+_LOGGER = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------------------------
+
+class CannotConnect(HomeAssistantError):
+    """Error to indicate we cannot connect."""
+
+
+# ---------------------------------------------------------------------------
+# Config Flow
+# ---------------------------------------------------------------------------
 
 class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle the config flow for Ecostream."""
+    """Handles the EcoStream configuration flow."""
 
     VERSION = 1
 
-    async def async_step_user(self, user_input=None) -> FlowResult:
-        """Handle manual configuration."""
-        errors = {}
+    def __init__(self) -> None:
+        self._host: str | None = None
+        self._discovered_name: str | None = None
+
+    # ======================================================================
+    # USER STEP
+    # ======================================================================
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> config_entries.FlowResult:
+
+        errors: dict[str, str] = {}
 
         if user_input is not None:
-            host = user_input[CONF_HOST]
+            host = user_input[CONF_HOST].strip()
+            self._host = host
 
-            # If device already configured → abort
-            await self.async_set_unique_id(host)
-            self._abort_if_unique_id_configured()
+            try:
+                info = await self._probe_ecostream(host)
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Unexpected error during EcoStream validation")
+                errors["base"] = "unknown"
+            else:
+                system_name = info.get("system_name") or f"EcoStream ({host})"
 
-            return self.async_create_entry(title=f"Ecostream ({host})", data={CONF_HOST: host})
+                await self.async_set_unique_id(system_name)
+                self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+
+                return self.async_create_entry(
+                    title=system_name,
+                    data={CONF_HOST: host},
+                )
+
+        # Show form
+        data_schema = vol.Schema({
+            vol.Required(CONF_HOST, default=self._host or ""): str,
+        })
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({vol.Required(CONF_HOST): str}),
             errors=errors,
+            data_schema=data_schema,
         )
 
-    async def async_step_zeroconf(self, discovery_info) -> FlowResult:
-        """Handle automatic discovery via Zeroconf / mDNS."""
-        # HA 2023.8+ → ZeroconfServiceInfo object
-        if hasattr(discovery_info, "host"):
-            host = discovery_info.host
-        else:
-            # Older HA — expected dict
-            host = discovery_info.get("host")
+    # ======================================================================
+    # ZEROCONF STEP
+    # ======================================================================
+    async def async_step_zeroconf(
+        self, discovery_info: dict[str, Any],
+    ) -> config_entries.FlowResult:
 
-        # Use host as temporary unique_id (will be replaced by system_name later)
-        await self.async_set_unique_id(host)
-        self._abort_if_unique_id_configured()
-
-        # Suggest configuration flow to the user instead of auto-adding
-        return self.async_show_form(
-            step_id="user",
-            description_placeholders={"host": host},
-            data_schema=vol.Schema({vol.Required(CONF_HOST, default=host): str}),
-        )
-
-
-        # Use host as temporary unique_id (will be replaced by system_name later)
-        await self.async_set_unique_id(host)
-        self._abort_if_unique_id_configured()
-
-        # Suggest configuration flow to the user instead of auto-adding
-        return self.async_show_form(
-            step_id="user",
-            description_placeholders={"host": host},
-            data_schema=vol.Schema({vol.Required(CONF_HOST, default=host): str}),
-        )
-
-    async def async_step_ssdp(self, discovery_info) -> FlowResult:
-        """Handle SSDP discovery (if present)."""
         host = discovery_info.get("host")
+        name = discovery_info.get("name", "EcoStream")
 
-        await self.async_set_unique_id(host)
-        self._abort_if_unique_id_configured()
+        if not host:
+            return self.async_abort(reason="unknown")
 
-        return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema({vol.Required(CONF_HOST, default=host): str}),
+        system_name = name.split(".")[0]
+
+        _LOGGER.info(
+            "EcoStream discovered via Zeroconf: host=%s, name=%s",
+            host, name,
         )
 
-    async def async_step_reconfigure(self, entry_data) -> FlowResult:
-        """Allow reconfiguration if needed."""
-        host = entry_data.get(CONF_HOST)
-        return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema({vol.Required(CONF_HOST, default=host): str}),
+        self._host = host
+        self._discovered_name = system_name
+
+        await self.async_set_unique_id(system_name)
+        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+
+        return await self.async_step_confirm()
+
+    # ======================================================================
+    # DHCP STEP
+    # ======================================================================
+    async def async_step_dhcp(
+        self, discovery_info: dict[str, Any],
+    ) -> config_entries.FlowResult:
+
+        host = discovery_info.get("ip")
+        hostname = discovery_info.get("hostname", "EcoStream")
+
+        if not host:
+            return self.async_abort(reason="unknown")
+
+        system_name = hostname.split(".")[0]
+
+        _LOGGER.info(
+            "EcoStream discovered via DHCP: host=%s hostname=%s",
+            host, hostname,
         )
+
+        self._host = host
+        self._discovered_name = system_name
+
+        await self.async_set_unique_id(system_name)
+        self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+
+        return await self.async_step_confirm()
+
+    # ======================================================================
+    # CONFIRMATION
+    # ======================================================================
+    async def async_step_confirm(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> config_entries.FlowResult:
+
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+
+            try:
+                info = await self._probe_ecostream(self._host)
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Unexpected error while validating EcoStream")
+                errors["base"] = "unknown"
+            else:
+                system_name = (
+                    info.get("system_name")
+                    or self._discovered_name
+                    or f"EcoStream ({self._host})"
+                )
+
+                await self.async_set_unique_id(system_name)
+                self._abort_if_unique_id_configured(updates={CONF_HOST: self._host})
+
+                return self.async_create_entry(
+                    title=system_name,
+                    data={CONF_HOST: self._host},
+                )
+
+        return self.async_show_form(
+            step_id="confirm",
+            data_schema=vol.Schema({}),  # alleen OK knop
+            errors=errors,
+            description_placeholders={
+                "host": self._host or "",
+                "name": self._discovered_name or "EcoStream",
+            },
+        )
+
+    # ======================================================================
+    # REAUTH STEP
+    # ======================================================================
+    async def async_step_reauth(
+        self, entry_data: dict[str, Any],
+    ) -> config_entries.FlowResult:
+        self._host = entry_data.get(CONF_HOST)
+        return await self.async_step_user()
+
+    # ======================================================================
+    # HELPER: Probe device
+    # ======================================================================
+    async def _probe_ecostream(self, host: str) -> dict[str, Any]:
+        """Open a temporary WebSocket and read one message."""
+        session = async_get_clientsession(self.hass)
+        url = self._build_ws_url(host)
+
+        _LOGGER.debug("Probing EcoStream via %s", url)
+
+        try:
+            async with session.ws_connect(url, heartbeat=None) as ws:
+                msg = await ws.receive(timeout=5)
+
+                if msg.type != WSMsgType.TEXT:
+                    raise CannotConnect("Unexpected WS message type")
+
+                try:
+                    payload = json.loads(msg.data)
+                except json.JSONDecodeError as err:
+                    raise CannotConnect("Invalid JSON") from err
+
+                if not isinstance(payload, dict):
+                    raise CannotConnect("Invalid payload")
+
+                system = payload.get("system", {})
+                system_name = system.get("system_name")
+
+                return {"system_name": system_name}
+
+        except (ClientError, asyncio.TimeoutError) as err:
+            raise CannotConnect from err
+        except CannotConnect:
+            raise
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("Probe error: %s", err)
+            raise CannotConnect from err
+
+    def _build_ws_url(self, host: str) -> str:
+        """Always connect to / over HTTP."""
+        host = host.strip().rstrip("/")
+        if "://" in host:
+            return f"{host}/"
+        return f"http://{host}/"
+
+    # ======================================================================
+    # OPTIONS FLOW
+    # ======================================================================
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        from .options_flow import EcostreamOptionsFlow
+        return EcostreamOptionsFlow(config_entry)
