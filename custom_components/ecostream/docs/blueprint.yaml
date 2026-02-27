@@ -13,33 +13,38 @@ blueprint:
         entity:
           domain: sensor
           device_class: carbon_dioxide
+
     humidity_sensor:
       name: Humidity (RV%) sensor
       selector:
         entity:
           domain: sensor
           device_class: humidity
+
     tvoc_sensor:
       name: TVOC sensor
       selector:
         entity:
           domain: sensor
+
     qset_number:
-      name: EcoStream Qset Number
-      description: De number-entity die Qset bepaalt (ventilatiecapaciteit).
+      name: EcoStream Qset Number (number)
       selector:
         entity:
           domain: number
+
     day_start:
       name: Start dagmodus
       default: "07:00"
       selector:
         time: {}
+
     night_start:
       name: Start nachtmodus
       default: "23:00"
       selector:
         time: {}
+
     min_qset:
       name: Minimum ventilatie (m³/h)
       default: 60
@@ -48,6 +53,7 @@ blueprint:
           min: 30
           max: 150
           step: 5
+
     max_qset:
       name: Maximum ventilatie (m³/h)
       default: 300
@@ -65,20 +71,24 @@ trigger:
     minutes: "/1"
 
 variables:
-  # Hier laden we de inputs eerst in variabelen zodat ze in templates gebruikt kunnen worden
-  co2_ent: !input co2_sensor
-  rv_ent: !input humidity_sensor
-  tvoc_ent: !input tvoc_sensor
-  qset_ent: !input qset_number
-  
-  co2: "{{ states(co2_ent) | float(0) }}"
-  rv: "{{ states(rv_ent) | float(0) }}"
-  tvoc: "{{ states(tvoc_ent) | float(0) }}"
-
+  # Mapping inputs naar variabelen (NO templates!)
+  co2_sensor_entity: !input co2_sensor
+  humidity_sensor_entity: !input humidity_sensor
+  tvoc_sensor_entity: !input tvoc_sensor
+  qset_entity: !input qset_number
   day_start_val: !input day_start
   night_start_val: !input night_start
+  qset_min: !input min_qset
+  qset_max: !input max_qset
+
+  # Sensordata (TEMPLATES)
+  co2: "{{ states(co2_sensor_entity) | float(0) }}"
+  rv: "{{ states(humidity_sensor_entity) | float(0) }}"
+  tvoc: "{{ states(tvoc_sensor_entity) | float(0) }}"
+
   now_time: "{{ now().strftime('%H:%M') }}"
 
+  # Dagmodus logica
   is_day: >
     {{
       (now_time >= day_start_val and now_time < night_start_val)
@@ -86,10 +96,12 @@ variables:
       else not (now_time >= night_start_val and now_time < day_start_val)
     }}
 
+  # Gewichtsfactoren
   w_co2: 0.60
   w_rv: 0.30
   w_tvoc: 0.10
 
+  # Normalisatie
   co2_norm: "{{ ((co2 - 400) / 1600) | max(0) | min(1) }}"
   rv_norm: "{{ ((rv - 35) / 35) | max(0) | min(1) }}"
   tvoc_norm: "{{ (tvoc / 600) | max(0) | min(1) }}"
@@ -104,20 +116,15 @@ variables:
   profile_gain: "{{ 1.4 if is_day else 0.7 }}"
   final_score: "{{ (score * profile_gain) | min(1) }}"
 
-  qset_min: !input min_qset
-  qset_max: !input max_qset
-
   target_qset: >
     {{
-      (
-        qset_min + (final_score * (qset_max - qset_min))
-      ) | round(0)
+      (qset_min + final_score * (qset_max - qset_min))
+      | round(0)
     }}
 
 action:
   - variables:
-      # Gebruik de eerder gedefinieerde qset_ent variabele
-      current: "{{ states(qset_ent) | float(0) }}"
+      current: "{{ states(qset_entity) | float(0) }}"
       target: "{{ target_qset }}"
       diff: "{{ target - current }}"
 
@@ -126,7 +133,6 @@ action:
         sequence:
           - service: number.set_value
             target:
-              entity_id: !input qset_number
+              entity_id: "{{ qset_entity }}"
             data:
-              value: "{{ (current + (diff / 3)) | round(0) }}"
-    default: []
+              value: "{{ (current + diff / 3) | round(0) }}"
