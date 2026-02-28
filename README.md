@@ -1,8 +1,6 @@
 # BUVA EcoStream — Home Assistant Integration  
 
-![HA Compatibility](https://img.shields.io/badge/Home%20Assistant-2024.12+-blue.svg)  
-![HACS Default](https://img.shields.io/badge/HACS-Custom-orange.svg)  
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+![HA Compatibility](https://img.shields.io/badge/Home%20Assistant-2024.12+-blue.svg)  ![HACS Default](https://img.shields.io/badge/HACS-Custom-orange.svg)  ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 A **full-featured, modern and high-performance** Home Assistant integration for the **BUVA EcoStream** balanced ventilation unit.
 Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*, *diagnostics*, *WiFi info*, and an **Apple Home-style dashboard**.
