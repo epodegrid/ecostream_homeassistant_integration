@@ -12,7 +12,7 @@
 - [X] `config-flow` - Integration needs to be able to be set up via the UI
   - [ ] Uses `data_description` to give context to fields
   - [ ] Uses `ConfigEntry.data` and `ConfigEntry.options` correctly
-- [X] `dependency-transparency` - Dependency transparency
+- [X] `dependency-transparency` - Dependency transparenc
 - [-] `docs-actions` - The documentation describes the provided service actions that can be used
 - [X] `docs-high-level-description` - The documentation includes a high-level description of the integration brand, product, or service
 - [X] `docs-installation-instructions` - The documentation provides step-by-step installation instructions for the integration, including, if needed, prerequisites
