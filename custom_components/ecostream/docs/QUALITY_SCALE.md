@@ -8,7 +8,7 @@
 - [-] `appropriate-polling` - If it's a polling integration, set an appropriate polling interval
 - [ ] `brands` - Has branding assets available for the integration
 - [X] `common-modules` - Place common patterns in common modules
-- [ ] `config-flow-test-coverage` - Full test coverage for the config flow
+- [X] `config-flow-test-coverage` - Full test coverage for the config flow
 - [X] `config-flow` - Integration needs to be able to be set up via the UI
   - [ ] Uses `data_description` to give context to fields
   - [ ] Uses `ConfigEntry.data` and `ConfigEntry.options` correctly
@@ -16,7 +16,7 @@
 - [-] `docs-actions` - The documentation describes the provided service actions that can be used
 - [X] `docs-high-level-description` - The documentation includes a high-level description of the integration brand, product, or service
 - [X] `docs-installation-instructions` - The documentation provides step-by-step installation instructions for the integration, including, if needed, prerequisites
-- [ ] `docs-removal-instructions` - The documentation provides removal instructions
+- [X] `docs-removal-instructions` - The documentation provides removal instructions
 - [X] `entity-event-setup` - Entity events are subscribed in the correct lifecycle methods
 - [X] `entity-unique-id` - Entities have a unique ID
 - [X] `has-entity-name` - Entities use has_entity_name = True
@@ -24,10 +24,6 @@
 - [X] `test-before-configure` - Test a connection in the config flow
 - [X] `test-before-setup` - Check during integration initialization if we are able to set it up correctly
 - [X] `unique-config-entry` - Don't allow the same device or service to be able to be set up twice
-
-action-setup: exempt
-appropriate-polling: exempt
-docs-actions: exempt
 
 exempt — 3 regels niet van toepassing (geen polling, geen service actions)
 todo — 1 regel nog open: brands (echte logo/icon assets ontbreken in de brand/ map). Even kijken hoe dat gaat na HA2026.3 en de brand map die geintroduceerd is. Anders via de oude weg (brands repo
