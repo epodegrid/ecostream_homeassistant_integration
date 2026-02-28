@@ -47,7 +47,7 @@ Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,
 - RPM supply/exhaust
 - Qset (%)
 - Uptime (`Xd Yh Zm`)
-- WiFi RSSI / SSID / IP
+- WIFI RSSI / SSID / IP
 
 ### 🔘 Buttons
 - Reset filter timer  
@@ -56,7 +56,7 @@ Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,
 
 ## 🏡 Screenshots
 
-> *(Replace these with your actual screenshots)*
+> *(Replace these with your actual screenshots) *
 
 ### Dashboard Example  
 ![Dashboard Example](docs/dashboard_example.png)
@@ -94,10 +94,10 @@ Home Assistant will automatically find the device via:
   - Home Assistant will show a “BUVA EcoStream discovered” notification.
   - The config flow opens with the IP address pre-filled.
   - You only need to click Submit.
-- If auto-discovery doesn't work, unplug youre Ecostream unit for 10 seconds and then plug it in. 
-  Home Assistant should discover it within 2 minutes. Of you're handi and know (how to find) the IP-adres,
-  then fill it in manually. Fixed IP is prefered! But since the Ecostream will normally never disconnect
-  longer than 1 hour on the netwoork, the IP-adreess will always be the same. 
+- If auto-discovery doesn't work, unplug your Ecostream unit for 10 seconds and then plug it in. 
+  Home Assistant should discover it within 2 minutes. If you're handy and know (how to find) the IP-address,
+  then fill it in manually. Fixed IP is preferred! But since the Ecostream will normally never disconnect
+  longer than 1 hour on the network, the IP-address will always be the same. 
 
 Click the discovered device → **the IP address will now be pre-filled automatically** (see section below).
 
@@ -166,3 +166,4 @@ MIT License — see LICENSE file
 
 
 
+<img width="454" height="695" alt="image" src="https://github.com/user-attachments/assets/b1850b84-d2c7-4b38-bfae-0a0cc11c6033" />
