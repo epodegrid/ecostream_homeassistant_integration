@@ -63,10 +63,6 @@ Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,
 
 ---
 
-## 🏡 Screenshots
-
-> *(Replace these with your actual screenshots)*
-
 ### Dashboard Example  
 
 ![Dashboard Example](docs/dashboard_example.png)
