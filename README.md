@@ -63,16 +63,6 @@ Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,
 
 ---
 
-### Dashboard Example  
-
-![Dashboard Example](docs/dashboard_example.png)
-
-### Device Page  
-
-![Device](docs/device.png)
-
----
-
 ## 📦 Installation
 
 ### 🔹 Option A — HACS (Custom Repository)
