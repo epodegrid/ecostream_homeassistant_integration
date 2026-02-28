@@ -185,7 +185,7 @@ Settings → Devices & Services → BUVA EcoStream → Diagnostics
 ## ❤️ Credits
 
 - Original integration engineering: @epodegrid
-- Rewrite, optimizations, and Apple-style UI: @Uber1337NL
+- Rewrite to Bronze level and Apple-style UI: @Uber1337NL
 - Thanks to contributers: @ricohageman and @jelle514
 - Special thanks to the HA community for guidance
 
