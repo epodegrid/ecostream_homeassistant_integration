@@ -10,6 +10,8 @@ A **full-featured, modern and high-performance** Home Assistant integration for 
 Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,  
 *diagnostics*, *WiFi info*, and an **Apple Home-style dashboard**.
 
+![dashboard](https://github.com/Uber1337NL/ecostream_homeassistant_integration/blob/v2.0/custom_components/ecostream/docs/dashboard.png)
+
 ---
 
 ## ✨ Features
