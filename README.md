@@ -140,7 +140,6 @@ logger:
   logs:
     custom_components.ecostream: debug
 
-
 You can also use the built-in diagnostics from:
 Settings → Devices & Services → BUVA EcoStream → Diagnostics
 
@@ -155,7 +154,8 @@ Settings → Devices & Services → BUVA EcoStream → Diagnostics
 
 ## ❤️ Credits
 - Original integration engineering: @epodegrid   
-- Rewrite, optimizations, and Apple-style UI: @Uber1337NL  
+- Rewrite, optimizations, and Apple-style UI: @Uber1337NL
+- Thanks to contributers: @ricohageman and @jelle514
 - Special thanks to the HA community for guidance
 
 ---
@@ -163,7 +163,3 @@ Settings → Devices & Services → BUVA EcoStream → Diagnostics
 ## 📜 License
 MIT License — see LICENSE file
 
-
-
-
-<img width="454" height="695" alt="image" src="https://github.com/user-attachments/assets/b1850b84-d2c7-4b38-bfae-0a0cc11c6033" />
