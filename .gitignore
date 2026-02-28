@@ -1,1 +1,4 @@
 **/.DS_Store
+.vscode/**
+custom_components/ecostream/__pycache__/**
+tests/__pycache__/**

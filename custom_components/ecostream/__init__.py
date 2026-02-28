@@ -4,9 +4,12 @@ import asyncio
 import logging
 from typing import Any
 
+from aiohttp import ClientError, WSMsgType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -22,6 +25,23 @@ from .coordinator import EcostreamDataUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
+async def _probe_host(hass: HomeAssistant, host: str) -> None:
+    """Try a single WebSocket receive to verify the device is reachable."""
+    session = async_get_clientsession(hass)
+    url = f"http://{host}/" if "://" not in host else f"{host}/"
+    try:
+        async with session.ws_connect(url, heartbeat=None) as ws:
+            msg = await ws.receive(timeout=5)
+            if msg.type not in (WSMsgType.TEXT, WSMsgType.BINARY):
+                raise ConfigEntryNotReady(f"Unexpected WebSocket message type: {msg.type}")
+    except ConfigEntryNotReady:
+        raise
+    except (ClientError, asyncio.TimeoutError) as err:
+        raise ConfigEntryNotReady(f"Cannot connect to EcoStream at {host}: {err}") from err
+    except Exception as err:
+        raise ConfigEntryNotReady(f"Unexpected error connecting to EcoStream at {host}: {err}") from err
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """(Unused) configuration.yaml setup."""
     return True
@@ -32,6 +52,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     host: str = entry.data[CONF_HOST]
+
+    await _probe_host(hass, host)
 
     # Merge options
     options: dict[str, Any] = dict(entry.options or {})
@@ -50,20 +72,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data = coordinator
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    # ------------------------------------------
-    # Platform loading (HA 2025+ API compatible)
-    # ------------------------------------------
-    if hasattr(hass.config_entries, "async_forward_entry_setups"):
-        # New HA API (2025+)
-        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    else:
-        # Fallback for older HA versions
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_setup(entry, platform)
-                for platform in PLATFORMS
-            ]
-        )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     _LOGGER.info(
         "EcoStream entry %s set up for host %s (push=%ss fast=%ss)",
