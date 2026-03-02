@@ -1,0 +1,88 @@
+rules:
+  # Bronze
+  action-setup: 
+    status: exempt
+    comment: This integration does not provide additional actions.
+  appropriate-polling: 
+    status: exempt
+    comment: This integration is push-based.
+  brands: todo
+    comment: WHo's into GIMP or PhotoShop and has time to make a logo? The integration currently uses the default Home Assistant puzzle piece icon, but a custom icon would be a nice touch.
+  common-modules: done
+  config-flow-test-coverage: done
+  config-flow: done
+  dependency-transparency: done
+  docs-actions: 
+    status: exempt
+    comment: This integration does not provide additional actions.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
+  entity-event-setup: done
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure: done
+  test-before-setup: done
+  unique-config-entry: done
+
+  # Silver
+  action-exceptions: todo
+    comment: The websocket_api.py logs every reconnection attempt in the backoff loop. This must be restricted to a single log entry when the connection is lost and a single entry when it is restored.
+  config-entry-unloading: done
+  docs-configuration-parameters: done
+  docs-installation-parameters: done
+  entity-unavailable: done
+  integration-owner: done
+  log-when-unavailable: todo
+    comment: The websocket_api.py logs every reconnection attempt in the backoff loop. This must be restricted to a single log entry when the connection is lost and a single entry when it is restored.
+  parallel-updates: todo
+    comment: PARALLEL_UPDATES is missing from the platform files. For a push-based integration using CoordinatorEntity, this should be set to 0 to indicate that the coordinator manages updates. 
+  reauthentication-flow: done
+  test-coverage: todo
+    comment: Current testing is limited to the config flow. To meet Silver standards, test coverage must be expanded to >95% across all modules, including the coordinator, websocket API, and all entity platforms.
+
+  # Gold
+  devices: done
+  diagnostics: done
+  discovery-update-info: done
+  discovery: done
+  docs-data-update: todo
+    comment: README mentions “local push” but doesn’t explain the WebSocket mechanism, update cadence, or throttling.
+  docs-examples: todo
+    commment: No automation examples in the README.
+  docs-known-limitations: done
+  docs-supported-devices: todo
+    comment: No list of supported/unsupported devices or firmware versions.
+  docs-supported-functions: todo
+    comment: No structured table of entities/platforms and what they do.
+  docs-troubleshooting: todo
+    comment: Only debug logging is covered; no real troubleshooting guidance.
+  docs-use-cases: todo
+    comment: No described use cases (e.g., “boost on high CO₂”, “night schedule”).
+  dynamic-devices: exempt
+    comment: Not applicable (single fixed device), but formally unimplemented.
+  entity-category: todo
+    comment: No entities use EntityCategory.DIAGNOSTIC or CONFIG (RSSI, uptime, filter date are clear diagnostic candidates).
+  entity-device-class: done
+  entity-disabled-by-default: todo
+    comment: Low-value entities (WiFi SSID/RSSI, uptime, efficiency) aren’t disabled by default via entity_registry_enabled_default = False.
+  entity-translations: todo
+    comment: Entity names are hardcoded; use translation_key with entries in en.json.
+  exception-translations: todo
+    comment: Entity names are hardcoded; use translation_key with entries in en.json.
+  icon-translations: todo
+    comment:
+  reconfiguration-flow: todo
+    comment: Missing async_step_reconfigure in config_flow.py.
+  repair-issues: todo
+    comment: No use of homeassistant.helpers.issue_registry for recoverable issues (e.g., lost connection, overdue filter).
+  stale-devices: todo
+    comment: No cleanup of stale devices on reconfigure.
+
+  # Platinum
+  async-dependency: done
+  inject-websession: todo
+    comment: Not met — websocket_api.py:39 fetches the session internally via async_get_clientsession(hass). The class doesn't accept a session parameter — it takes hass and creates the session itself. For Platinum, the session must be injectable from outside so HA has full control over the HTTP session lifecycle.
+  strict-typing: todo
+    comment: Multiple, type ignore annotations present in fan.py-23, type ignore[name-defined] in fan.py-40, type ignore[name-defined] in switch.py-185, type ignore[attr-defined], Additionally, no mypy.ini or pyrightconfig.json with strict mode configured, and no py.typed marker present.
