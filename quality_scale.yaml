@@ -6,7 +6,8 @@ rules:
   appropriate-polling: 
     status: exempt
     comment: This integration is push-based.
-  brands: todo
+  brands:
+    status: todo
     comment: WHo's into GIMP or PhotoShop and has time to make a logo? The integration currently uses the default Home Assistant puzzle piece icon, but a custom icon would be a nice touch.
   common-modules: done
   config-flow-test-coverage: done
@@ -36,11 +37,13 @@ rules:
   entity-unavailable: done
   integration-owner: done
   log-when-unavailable: todo
-    comment: The websocket_api.py logs every reconnection attempt in the backoff loop. This must be restricted to a single log entry when the connection is lost and a single entry when it is restored.
-  parallel-updates: todo
-    comment: PARALLEL_UPDATES is missing from the platform files. For a push-based integration using CoordinatorEntity, this should be set to 0 to indicate that the coordinator manages updates. 
+  comment: Restrict websocket_api.py to log only a single entry when the connection is lost and another single entry when it is restored, avoiding multiple log entries during the backoff loop.
+  parallel-updates:
+    status: todo
+    comment: Ensure that PARALLEL_UPDATES is explicitly set to 0 in all platform files for push-based integrations using CoordinatorEntity, as the coordinator manages updates
   reauthentication-flow: done
-  test-coverage: todo
+  test-coverage:
+    status: todo
     comment: Current testing is limited to the config flow. To meet Silver standards, test coverage must be expanded to >95% across all modules, including the coordinator, websocket API, and all entity platforms.
 
   # Gold
@@ -48,42 +51,58 @@ rules:
   diagnostics: done
   discovery-update-info: done
   discovery: done
-  docs-data-update: todo
+  docs-data-update:
+    status: todo
     comment: README mentions “local push” but doesn’t explain the WebSocket mechanism, update cadence, or throttling.
-  docs-examples: todo
-    commment: No automation examples in the README.
+  docs-examples:
+    status: todo
+    comment: No automation examples in the README.
   docs-known-limitations: done
-  docs-supported-devices: todo
+  docs-supported-devices: 
+    status: todo
     comment: No list of supported/unsupported devices or firmware versions.
-  docs-supported-functions: todo
+  docs-supported-functions: 
+    status: todo
     comment: No structured table of entities/platforms and what they do.
-  docs-troubleshooting: todo
+  docs-troubleshooting: 
+    status: todo
     comment: Only debug logging is covered; no real troubleshooting guidance. Tough there is a Diagnostics and Debugging section... Don't know.
-  docs-use-cases: todo
+  docs-use-cases: 
+    status: todo
     comment: No described use cases (e.g., “boost on high CO₂”, “night schedule”).
-  dynamic-devices: exempt
+  dynamic-devices: 
+    status: exempt
     comment: Not applicable (single fixed device), but formally unimplemented.
-  entity-category: todo
+  entity-category: 
+    status: todo
     comment: No entities use EntityCategory.DIAGNOSTIC or CONFIG (RSSI, uptime, filter date are clear diagnostic candidates).
   entity-device-class: done
-  entity-disabled-by-default: todo
+  entity-disabled-by-default: 
+    status: todo
     comment: Low-value entities (WiFi SSID/RSSI, uptime, efficiency) aren’t disabled by default via entity_registry_enabled_default = False.
-  entity-translations: todo
+  entity-translations: 
+    status: todo
     comment: Entity names are hardcoded; use translation_key with entries in en.json.
-  exception-translations: todo
+  exception-translations: 
+    status: todo
     comment: Entity names are hardcoded; use translation_key with entries in en.json.
-  icon-translations: todo
+  icon-translations: 
+    status: todo
     comment:
-  reconfiguration-flow: todo
+  reconfiguration-flow: 
+    status: todo
     comment: Missing async_step_reconfigure in config_flow.py.
-  repair-issues: todo
+  repair-issues: 
+    status: todo
     comment: No use of homeassistant.helpers.issue_registry for recoverable issues (e.g., lost connection, overdue filter).
-  stale-devices: todo
+  stale-devices:
+    status: todo
     comment: No cleanup of stale devices on reconfigure.
 
   # Platinum
   async-dependency: done
-  inject-websession: todo
-    comment: Not met — websocket_api.py:39 fetches the session internally via async_get_clientsession(hass). The class doesn't accept a session parameter — it takes hass and creates the session itself. For Platinum, the session must be injectable from outside so HA has full control over the HTTP session lifecycle.
-  strict-typing: todo
+  inject-websession:
+    status: todo
+  strict-typing: 
+    status: todo
     comment: Multiple, type ignore annotations present in fan.py-23, type ignore[name-defined] in fan.py-40, type ignore[name-defined] in switch.py-185, type ignore[attr-defined], Additionally, no mypy.ini or pyrightconfig.json with strict mode configured, and no py.typed marker present.
