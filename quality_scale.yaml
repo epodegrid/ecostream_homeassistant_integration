@@ -27,8 +27,9 @@ rules:
   unique-config-entry: done
 
   # Silver
-  action-exceptions: todo
-    comment: The websocket_api.py logs every reconnection attempt in the backoff loop. This must be restricted to a single log entry when the connection is lost and a single entry when it is restored.
+  action-exceptions: 
+    status: exempt
+    comment: This integration does not provide additional actions.
   config-entry-unloading: done
   docs-configuration-parameters: done
   docs-installation-parameters: done
@@ -57,7 +58,7 @@ rules:
   docs-supported-functions: todo
     comment: No structured table of entities/platforms and what they do.
   docs-troubleshooting: todo
-    comment: Only debug logging is covered; no real troubleshooting guidance.
+    comment: Only debug logging is covered; no real troubleshooting guidance. Tough there is a Diagnostics and Debugging section... Don't know.
   docs-use-cases: todo
     comment: No described use cases (e.g., “boost on high CO₂”, “night schedule”).
   dynamic-devices: exempt
