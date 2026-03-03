@@ -34,7 +34,9 @@ async def async_get_config_entry_diagnostics(
 
     if isinstance(last_update, datetime):
         last_update_utc = last_update.astimezone(UTC).isoformat()
-        age_seconds = int((datetime.now(UTC) - last_update).total_seconds())
+        age_seconds = int(
+            (datetime.now(UTC) - last_update).total_seconds()
+        )
     else:
         last_update_utc = None
         age_seconds = None

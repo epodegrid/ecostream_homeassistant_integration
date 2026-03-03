@@ -1,23 +1,20 @@
 from __future__ import annotations
 
+from homeassistant import config_entries
+from homeassistant.const import CONF_HOST
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 from pathlib import Path
 import sys
 from unittest.mock import AsyncMock, patch
 
-from homeassistant import config_entries
-from homeassistant.const import CONF_HOST
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResultType
-
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from custom_components.ecostream.const import DOMAIN
 import custom_components.ecostream.config_flow as config_flow
 import custom_components.ecostream.const as const
 
-
 MOCK_HOST = "192.168.1.100"
-MOCK_SYSTEM_NAME = "EcoStream-Test"
+MOCK_SYSTEM_NAME = "ecostream-test"
 
 
 def _patch_probe(return_value=None, side_effect=None):
@@ -25,7 +22,9 @@ def _patch_probe(return_value=None, side_effect=None):
     if side_effect:
         mock.side_effect = side_effect
     else:
-        mock.return_value = return_value or {"system_name": MOCK_SYSTEM_NAME}
+        mock.return_value = return_value or {
+            "system_name": MOCK_SYSTEM_NAME
+        }
     return patch(
         "custom_components.ecostream.config_flow.EcostreamConfigFlow._probe_ecostream",
         mock,
@@ -35,6 +34,7 @@ def _patch_probe(return_value=None, side_effect=None):
 # ---------------------------------------------------------------------------
 # USER STEP
 # ---------------------------------------------------------------------------
+
 
 async def test_user_step_success(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
@@ -87,7 +87,9 @@ async def test_user_step_unknown_error(hass: HomeAssistant) -> None:
     assert result2.get("errors") == {"base": "unknown"}
 
 
-async def test_user_step_already_configured(hass: HomeAssistant) -> None:
+async def test_user_step_already_configured(
+    hass: HomeAssistant,
+) -> None:
     with _patch_probe():
         result = await hass.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -116,11 +118,15 @@ async def test_user_step_already_configured(hass: HomeAssistant) -> None:
 # ZEROCONF STEP
 # ---------------------------------------------------------------------------
 
+
 async def test_zeroconf_step_success(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data={"host": MOCK_HOST, "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local."},
+        data={
+            "host": MOCK_HOST,
+            "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
+        },
     )
     assert result.get("type") == FlowResultType.FORM
     assert result.get("step_id") == "confirm"
@@ -136,7 +142,9 @@ async def test_zeroconf_step_success(hass: HomeAssistant) -> None:
     assert result2.get("data") == {CONF_HOST: MOCK_HOST}
 
 
-async def test_zeroconf_step_no_host_aborts(hass: HomeAssistant) -> None:
+async def test_zeroconf_step_no_host_aborts(
+    hass: HomeAssistant,
+) -> None:
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
@@ -146,7 +154,9 @@ async def test_zeroconf_step_no_host_aborts(hass: HomeAssistant) -> None:
     assert result.get("reason") == "unknown"
 
 
-async def test_zeroconf_step_already_configured(hass: HomeAssistant) -> None:
+async def test_zeroconf_step_already_configured(
+    hass: HomeAssistant,
+) -> None:
     with _patch_probe():
         r1 = await hass.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -160,7 +170,10 @@ async def test_zeroconf_step_already_configured(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data={"host": MOCK_HOST, "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local."},
+        data={
+            "host": MOCK_HOST,
+            "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
+        },
     )
     assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "already_configured"
@@ -169,6 +182,7 @@ async def test_zeroconf_step_already_configured(hass: HomeAssistant) -> None:
 # ---------------------------------------------------------------------------
 # DHCP STEP
 # ---------------------------------------------------------------------------
+
 
 async def test_dhcp_step_success(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
@@ -200,7 +214,9 @@ async def test_dhcp_step_no_ip_aborts(hass: HomeAssistant) -> None:
     assert result.get("reason") == "unknown"
 
 
-async def test_dhcp_step_already_configured(hass: HomeAssistant) -> None:
+async def test_dhcp_step_already_configured(
+    hass: HomeAssistant,
+) -> None:
     with _patch_probe():
         r1 = await hass.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -224,11 +240,15 @@ async def test_dhcp_step_already_configured(hass: HomeAssistant) -> None:
 # CONFIRM STEP
 # ---------------------------------------------------------------------------
 
+
 async def test_confirm_step_cannot_connect(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data={"host": MOCK_HOST, "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local."},
+        data={
+            "host": MOCK_HOST,
+            "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
+        },
     )
     assert result.get("step_id") == "confirm"
     flow_id = result.get("flow_id")
@@ -247,7 +267,10 @@ async def test_confirm_step_unknown_error(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data={"host": MOCK_HOST, "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local."},
+        data={
+            "host": MOCK_HOST,
+            "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
+        },
     )
     assert result.get("step_id") == "confirm"
     flow_id = result.get("flow_id")
@@ -266,7 +289,10 @@ async def test_confirm_step_unknown_error(hass: HomeAssistant) -> None:
 # REAUTH STEP
 # ---------------------------------------------------------------------------
 
-async def test_reauth_step_redirects_to_user(hass: HomeAssistant) -> None:
+
+async def test_reauth_step_redirects_to_user(
+    hass: HomeAssistant,
+) -> None:
     with _patch_probe():
         init = await hass.config_entries.flow.async_init(
             const.DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -283,7 +309,10 @@ async def test_reauth_step_redirects_to_user(hass: HomeAssistant) -> None:
 
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
-        context={"source": config_entries.SOURCE_REAUTH, "entry_id": entry_id},
+        context={
+            "source": config_entries.SOURCE_REAUTH,
+            "entry_id": entry_id,
+        },
         data={CONF_HOST: MOCK_HOST},
     )
     assert result.get("type") == FlowResultType.FORM

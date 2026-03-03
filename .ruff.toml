@@ -23,7 +23,8 @@ select = [
 ignore = [
     "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
     "COM812", # incompatible with formatter
-    "D100", # Missing docstring in pyblic module
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
     "D102", # Missing docstring in public method
     "D103", # Missing docstring in public function
     "D104", # from __future__ import annotations

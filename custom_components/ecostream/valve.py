@@ -17,7 +17,9 @@ from .coordinator import EcostreamDataUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities):
+async def async_setup_entry(
+    hass, entry: ConfigEntry, async_add_entities
+):
     coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
     entities = [
         EcostreamBypassValve(coordinator, entry),
@@ -25,13 +27,17 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities):
     async_add_entities(entities, update_before_add=True)
 
 
-class EcostreamBypassValve(CoordinatorEntity[EcostreamDataUpdateCoordinator], ValveEntity):
-    """EcoStream Bypass Valve (0–100%)."""
+class EcostreamBypassValve(
+    CoordinatorEntity[EcostreamDataUpdateCoordinator], ValveEntity
+):
+    """EcoStream Bypass Valve (0-100%)."""
 
     _attr_has_entity_name = True
     _attr_name = "Bypass Valve"
     _attr_supported_features = (
-        ValveEntityFeature.OPEN | ValveEntityFeature.CLOSE | ValveEntityFeature.SET_POSITION
+        ValveEntityFeature.OPEN
+        | ValveEntityFeature.CLOSE
+        | ValveEntityFeature.SET_POSITION
     )
 
     #
@@ -39,7 +45,17 @@ class EcostreamBypassValve(CoordinatorEntity[EcostreamDataUpdateCoordinator], Va
     #
     _attr_reports_position = True  # FIX FOR YOUR EXCEPTION
 
-    def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ):
+        """Initialize the EcoStream bypass valve entity.
+
+        Args:
+            coordinator: The data update coordinator.
+            entry: The config entry.
+        """
         super().__init__(coordinator)
         self._entry = entry
 
@@ -75,7 +91,7 @@ class EcostreamBypassValve(CoordinatorEntity[EcostreamDataUpdateCoordinator], Va
 
     @property
     def current_valve_position(self) -> int | None:
-        """Return 0–100%."""
+        """Return 0-100%."""
         return self._position
 
     @property
@@ -110,7 +126,7 @@ class EcostreamBypassValve(CoordinatorEntity[EcostreamDataUpdateCoordinator], Va
         new_pos = status.get("bypass_pos")
         if new_pos is not None:
             try:
-                self._position = int(round(float(new_pos)))
+                self._position = round(float(new_pos))
             except Exception:
                 pass
 

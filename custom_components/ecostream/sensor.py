@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
+from functools import cached_property
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -37,7 +38,10 @@ _LOGGER = logging.getLogger(__name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _deep_get(data: Mapping[str, Any], path: list[str], default: Any = None) -> Any:
+
+def _deep_get(
+    data: Mapping[str, Any], path: list[str], default: Any = None
+) -> Any:
     cur: Any = data
     for key in path:
         if not isinstance(cur, Mapping) or key not in cur:
@@ -69,6 +73,7 @@ def _format_uptime(seconds: int) -> str:
 # Extended EntityDescription
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class EcostreamSensorDescription(SensorEntityDescription):
     value_fn: Callable[[Mapping[str, Any]], Any] | None = None
@@ -99,7 +104,10 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         icon=ICON_CO2,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["status", "sensor_eco2_eta"])) is None else round(float(v))
+            None
+            if (v := _deep_get(d, ["status", "sensor_eco2_eta"]))
+            is None
+            else round(float(v))
         ),
     ),
     EcostreamSensorDescription(
@@ -109,7 +117,10 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         icon=ICON_TVOC,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["status", "sensor_tvoc_eta"])) is None else round(float(v))
+            None
+            if (v := _deep_get(d, ["status", "sensor_tvoc_eta"]))
+            is None
+            else round(float(v))
         ),
     ),
     EcostreamSensorDescription(
@@ -120,7 +131,9 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         icon=ICON_HUMIDITY,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["status", "sensor_rh_eta"])) is None else round(float(v))
+            None
+            if (v := _deep_get(d, ["status", "sensor_rh_eta"])) is None
+            else round(float(v))
         ),
     ),
     EcostreamSensorDescription(
@@ -131,7 +144,10 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         icon=ICON_TEMP,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["status", "sensor_temp_eha"])) is None else round(float(v), 1)
+            None
+            if (v := _deep_get(d, ["status", "sensor_temp_eha"]))
+            is None
+            else round(float(v), 1)
         ),
     ),
     EcostreamSensorDescription(
@@ -142,7 +158,10 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         icon=ICON_TEMP,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["status", "sensor_temp_eta"])) is None else round(float(v), 1)
+            None
+            if (v := _deep_get(d, ["status", "sensor_temp_eta"]))
+            is None
+            else round(float(v), 1)
         ),
     ),
     EcostreamSensorDescription(
@@ -153,7 +172,10 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         icon=ICON_TEMP,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["status", "sensor_temp_oda"])) is None else round(float(v), 1)
+            None
+            if (v := _deep_get(d, ["status", "sensor_temp_oda"]))
+            is None
+            else round(float(v), 1)
         ),
     ),
     EcostreamSensorDescription(
@@ -162,7 +184,9 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         native_unit_of_measurement="rpm",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["status", "fan_eha_speed"])) is None else round(float(v))
+            None
+            if (v := _deep_get(d, ["status", "fan_eha_speed"])) is None
+            else round(float(v))
         ),
     ),
     EcostreamSensorDescription(
@@ -171,7 +195,9 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         native_unit_of_measurement="rpm",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["status", "fan_sup_speed"])) is None else round(float(v))
+            None
+            if (v := _deep_get(d, ["status", "fan_sup_speed"])) is None
+            else round(float(v))
         ),
     ),
     EcostreamSensorDescription(
@@ -180,7 +206,9 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         native_unit_of_measurement="m³/h",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["status", "qset"])) is None else round(float(v))
+            None
+            if (v := _deep_get(d, ["status", "qset"])) is None
+            else round(float(v))
         ),
     ),
     EcostreamSensorDescription(
@@ -188,15 +216,19 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         name="Mode Time Left",
         native_unit_of_measurement="s",
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["status", "override_set_time_left"])) is None else int(v)
+            None
+            if (v := _deep_get(d, ["status", "override_set_time_left"]))
+            is None
+            else int(v)
         ),
     ),
     EcostreamSensorDescription(
         key="frost_protection_active",
         name="Frost Protection Active",
-        value_fn=lambda d: bool(_deep_get(d, ["status", "frost_protection"], False)),
+        value_fn=lambda d: bool(
+            _deep_get(d, ["status", "frost_protection"], False)
+        ),
     ),
-
     # -------------------------------------------------------------------
     # HEAT RECOVERY EFFICIENCY (NEW)
     # -------------------------------------------------------------------
@@ -208,19 +240,22 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: _calc_efficiency(d),
     ),
-
     # -------------------------------------------------------------------
     # CONFIG
     # -------------------------------------------------------------------
     EcostreamSensorDescription(
         key="schedule_enabled",
         name="Schedule Enabled",
-        value_fn=lambda d: bool(_deep_get(d, ["config", "schedule_enabled"], False)),
+        value_fn=lambda d: bool(
+            _deep_get(d, ["config", "schedule_enabled"], False)
+        ),
     ),
     EcostreamSensorDescription(
         key="summer_comfort_enabled",
         name="Summer Comfort Enabled",
-        value_fn=lambda d: bool(_deep_get(d, ["config", "sum_com_enabled"], False)),
+        value_fn=lambda d: bool(
+            _deep_get(d, ["config", "sum_com_enabled"], False)
+        ),
     ),
     EcostreamSensorDescription(
         key="summer_comfort_temp",
@@ -230,7 +265,9 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         icon=ICON_TEMP,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["config", "sum_com_temp"])) is None else round(float(v), 1)
+            None
+            if (v := _deep_get(d, ["config", "sum_com_temp"])) is None
+            else round(float(v), 1)
         ),
     ),
     EcostreamSensorDescription(
@@ -243,9 +280,10 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
     EcostreamSensorDescription(
         key="filter_replacement_warning",
         name="Filter Replacement Warning",
-        value_fn=lambda d: bool(_deep_get(d, ["config", "filter_datetime"], 0)),
+        value_fn=lambda d: bool(
+            _deep_get(d, ["config", "filter_datetime"], 0)
+        ),
     ),
-
     # -------------------------------------------------------------------
     # SYSTEM
     # -------------------------------------------------------------------
@@ -255,7 +293,6 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         icon=ICON_UPTIME,
         value_fn=lambda d: _deep_get(d, ["system", "uptime"]),
     ),
-
     # -------------------------------------------------------------------
     # WIFI
     # -------------------------------------------------------------------
@@ -279,7 +316,9 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         icon=ICON_RSSI,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda d: (
-            None if (v := _deep_get(d, ["comm_wifi", "rssi"])) is None else int(v)
+            None
+            if (v := _deep_get(d, ["comm_wifi", "rssi"])) is None
+            else int(v)
         ),
     ),
 )
@@ -289,8 +328,9 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
 # Efficiency calculation function
 # ---------------------------------------------------------------------------
 
+
 def _calc_efficiency(data: Mapping[str, Any]) -> float | None:
-    """η = (ETA - EHA) / (ETA - ODA) × 100"""
+    """η = (ETA - EHA) / (ETA - ODA) x 100."""
 
     try:
         eta = float(_deep_get(data, ["status", "sensor_temp_eta"]))
@@ -319,9 +359,9 @@ def _calc_efficiency(data: Mapping[str, Any]) -> float | None:
 # Sensor entity implementation
 # ---------------------------------------------------------------------------
 
+
 class EcostreamBaseSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
-    entity_description: EcostreamSensorDescription
 
     def __init__(
         self,
@@ -329,6 +369,13 @@ class EcostreamBaseSensor(CoordinatorEntity, SensorEntity):
         entry: ConfigEntry,
         description: EcostreamSensorDescription,
     ) -> None:
+        """Initialize the Ecostream base sensor.
+
+        Args:
+            coordinator: The data update coordinator.
+            entry: The config entry.
+            description: The sensor entity description.
+        """
         super().__init__(coordinator)
 
         self.entity_description = description
@@ -348,9 +395,15 @@ class EcostreamBaseSensor(CoordinatorEntity, SensorEntity):
         status = data.get("status") or {}
         return bool(status.get("connect_status", 1) == 1)
 
-    @property
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        # Invalidate cached_property when data updates
+        vars(self).pop("native_value", None)
+        self.async_write_ha_state()
+
+    @cached_property
     def native_value(self) -> Any:
-        desc = self.entity_description
+        desc: EcostreamSensorDescription = self.entity_description  # type: ignore[assignment]
         data = self.coordinator.data or {}
 
         try:
@@ -382,14 +435,11 @@ class EcostreamBaseSensor(CoordinatorEntity, SensorEntity):
 
         return raw
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        self.async_write_ha_state()
-
 
 # ---------------------------------------------------------------------------
 # Setup
 # ---------------------------------------------------------------------------
+
 
 async def async_setup_entry(
     hass: HomeAssistant,

@@ -35,7 +35,9 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
     _attr_name = "Ventilation"
     _attr_should_poll = False
     _attr_supported_features = (
-        FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF | FanEntityFeature.SET_SPEED
+        FanEntityFeature.TURN_ON
+        | FanEntityFeature.TURN_OFF
+        | FanEntityFeature.SET_SPEED
     )
 
     def __init__(
@@ -155,7 +157,9 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
         coordinator = cast(Any, self.coordinator)
 
         if not coordinator.ws:
-            _LOGGER.error("EcoStream WebSocket not connected → cannot set fan")
+            _LOGGER.error(
+                "EcoStream WebSocket not connected → cannot set fan"
+            )
             return
 
         payload = {

@@ -7,7 +7,9 @@ from homeassistant.const import (
     EVENT_HOMEASSISTANT_STOP,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+)
 import logging
 import random
 import time
@@ -31,7 +33,9 @@ RECONNECT_JITTER = 300
 RECONNECT_MIN_SLEEP = 60
 
 
-class EcostreamDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+class EcostreamDataUpdateCoordinator(
+    DataUpdateCoordinator[dict[str, Any]]
+):
     """Manages EcoStream WebSocket data & push scheduling (pure push model)."""
 
     def __init__(
@@ -55,7 +59,9 @@ class EcostreamDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.options.get(CONF_PUSH_INTERVAL, DEFAULT_PUSH_INTERVAL)
         )
         self._fast_push_interval: float = float(
-            self.options.get(CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL)
+            self.options.get(
+                CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL
+            )
         )
 
         self._last_push: float = 0.0
@@ -140,8 +146,12 @@ class EcostreamDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Reconnect hourly with jitter."""
         try:
             while not self._stopping:
-                jitter = random.uniform(-RECONNECT_JITTER, RECONNECT_JITTER)
-                sleep_s = max(RECONNECT_MIN_SLEEP, RECONNECT_INTERVAL + jitter)
+                jitter = random.uniform(
+                    -RECONNECT_JITTER, RECONNECT_JITTER
+                )
+                sleep_s = max(
+                    RECONNECT_MIN_SLEEP, RECONNECT_INTERVAL + jitter
+                )
 
                 await asyncio.sleep(sleep_s)
 
@@ -213,7 +223,9 @@ class EcostreamDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         has_slow = any(k in message for k in SLOW_KEYS)
 
         in_fast = now < self._fast_mode_until
-        interval = self._fast_push_interval if in_fast else self._push_interval
+        interval = (
+            self._fast_push_interval if in_fast else self._push_interval
+        )
 
         should_push = False
 
@@ -221,7 +233,9 @@ class EcostreamDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             should_push = True
         elif has_fast and (now - self._last_push >= interval):
             should_push = True
-        elif has_slow and (now - self._last_slow_push >= RECONNECT_INTERVAL):
+        elif has_slow and (
+            now - self._last_slow_push >= RECONNECT_INTERVAL
+        ):
             should_push = True
 
         if not should_push:
@@ -251,7 +265,9 @@ class EcostreamDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def _merge_payload(self, incoming: dict[str, Any]) -> None:
         base = self.data
         for key, value in incoming.items():
-            if isinstance(base.get(key), dict) and isinstance(value, dict):
+            if isinstance(base.get(key), dict) and isinstance(
+                value, dict
+            ):
                 base[key] = {**base[key], **value}
             else:
                 base[key] = value

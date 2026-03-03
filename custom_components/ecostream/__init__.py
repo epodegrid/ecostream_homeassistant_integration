@@ -33,11 +33,15 @@ async def _probe_host(hass: HomeAssistant, host: str) -> None:
         async with session.ws_connect(url, heartbeat=None) as ws:
             msg = await ws.receive(timeout=5)
             if msg.type not in (WSMsgType.TEXT, WSMsgType.BINARY):
-                raise ConfigEntryNotReady(f"Unexpected WebSocket message type: {msg.type}")
+                raise ConfigEntryNotReady(
+                    f"Unexpected WebSocket message type: {msg.type}"
+                )
     except ConfigEntryNotReady:
         raise
     except (TimeoutError, ClientError) as err:
-        raise ConfigEntryNotReady(f"Cannot connect to EcoStream at {host}: {err}") from err
+        raise ConfigEntryNotReady(
+            f"Cannot connect to EcoStream at {host}: {err}"
+        ) from err
     except Exception as err:
         raise ConfigEntryNotReady(
             f"Unexpected error connecting to EcoStream at {host}: {err}"
@@ -49,7 +53,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> bool:
     """Set up BUVA EcoStream from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
@@ -60,7 +66,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Merge options
     options: dict[str, Any] = dict(entry.options or {})
     options.setdefault(CONF_PUSH_INTERVAL, DEFAULT_PUSH_INTERVAL)
-    options.setdefault(CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL)
+    options.setdefault(
+        CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL
+    )
 
     coordinator = EcostreamDataUpdateCoordinator(
         hass=hass,
@@ -74,7 +82,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data = coordinator
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(
+        entry, PLATFORMS
+    )
 
     _LOGGER.info(
         "EcoStream entry %s set up for host %s (push=%ss fast=%ss)",
@@ -87,7 +97,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> bool:
     """Unload BUVA EcoStream config entry."""
     coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
 
@@ -96,11 +108,15 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Platform unloading (HA 2025+ safe)
     if hasattr(hass.config_entries, "async_unload_platforms"):
-        unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+        unload_ok = await hass.config_entries.async_unload_platforms(
+            entry, PLATFORMS
+        )
     else:
         unload_results = await asyncio.gather(
             *[
-                hass.config_entries.async_forward_entry_unload(entry, platform)
+                hass.config_entries.async_forward_entry_unload(
+                    entry, platform
+                )
                 for platform in PLATFORMS
             ],
             return_exceptions=False,

@@ -7,7 +7,9 @@ from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from homeassistant.helpers.service_info.zeroconf import (
+    ZeroconfServiceInfo,
+)
 import json
 import logging
 from typing import Any
@@ -63,13 +65,19 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
-                _LOGGER.exception("Unexpected error during EcoStream validation")
+                _LOGGER.exception(
+                    "Unexpected error during EcoStream validation"
+                )
                 errors["base"] = "unknown"
             else:
-                system_name = info.get("system_name") or f"EcoStream ({host})"
+                system_name = (
+                    info.get("system_name") or f"EcoStream ({host})"
+                )
 
                 await self.async_set_unique_id(system_name)
-                self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+                self._abort_if_unique_id_configured(
+                    updates={CONF_HOST: host}
+                )
 
                 return self.async_create_entry(
                     title=system_name,
@@ -168,7 +176,9 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 except CannotConnect:
                     errors["base"] = "cannot_connect"
                 except Exception:
-                    _LOGGER.exception("Unexpected error while validating EcoStream")
+                    _LOGGER.exception(
+                        "Unexpected error while validating EcoStream"
+                    )
                     errors["base"] = "unknown"
                 else:
                     system_name = (
@@ -178,7 +188,9 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
 
                     await self.async_set_unique_id(system_name)
-                    self._abort_if_unique_id_configured(updates={CONF_HOST: self._host})
+                    self._abort_if_unique_id_configured(
+                        updates={CONF_HOST: self._host}
+                    )
 
                     return self.async_create_entry(
                         title=system_name,

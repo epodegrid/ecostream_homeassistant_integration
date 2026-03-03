@@ -21,7 +21,9 @@ _LOGGER = logging.getLogger(__name__)
 class EcostreamOptionsFlow(config_entries.OptionsFlow):
     """Handle EcoStream configuration options."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(
+        self, config_entry: config_entries.ConfigEntry
+    ) -> None:
         """Initialize EcoStream options flow."""
         self._entry = config_entry
         self._options = dict(config_entry.options)
@@ -38,8 +40,12 @@ class EcostreamOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             # validate numeric values
             try:
-                push_interval = float(user_input.get(CONF_PUSH_INTERVAL, 0))
-                fast_push_interval = float(user_input.get(CONF_FAST_PUSH_INTERVAL, 0))
+                push_interval = float(
+                    user_input.get(CONF_PUSH_INTERVAL, 0)
+                )
+                fast_push_interval = float(
+                    user_input.get(CONF_FAST_PUSH_INTERVAL, 0)
+                )
 
                 if push_interval < 30:
                     errors["base"] = "push_interval_too_short"
@@ -48,7 +54,9 @@ class EcostreamOptionsFlow(config_entries.OptionsFlow):
                 else:
                     # Update options
                     self._options[CONF_PUSH_INTERVAL] = push_interval
-                    self._options[CONF_FAST_PUSH_INTERVAL] = fast_push_interval
+                    self._options[CONF_FAST_PUSH_INTERVAL] = (
+                        fast_push_interval
+                    )
 
                     return self.async_create_entry(
                         title="EcoStream Options",
@@ -66,16 +74,18 @@ class EcostreamOptionsFlow(config_entries.OptionsFlow):
             CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL
         )
 
-        schema = vol.Schema({
-            vol.Required(
-                CONF_PUSH_INTERVAL,
-                default=current_push,
-            ): vol.Coerce(float),
-            vol.Required(
-                CONF_FAST_PUSH_INTERVAL,
-                default=current_fast,
-            ): vol.Coerce(float),
-        })
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_PUSH_INTERVAL,
+                    default=current_push,
+                ): vol.Coerce(float),
+                vol.Required(
+                    CONF_FAST_PUSH_INTERVAL,
+                    default=current_fast,
+                ): vol.Coerce(float),
+            }
+        )
 
         return self.async_show_form(
             step_id="init",

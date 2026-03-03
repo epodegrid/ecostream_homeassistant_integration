@@ -3,7 +3,9 @@ from __future__ import annotations
 from homeassistant.config_entries import SOURCE_DHCP, SOURCE_ZEROCONF
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from homeassistant.helpers.service_info.zeroconf import (
+    ZeroconfServiceInfo,
+)
 import logging
 
 from .const import DOMAIN
@@ -34,7 +36,9 @@ async def async_process_zeroconf(
     # Check if already configured
     for entry in hass.config_entries.async_entries(DOMAIN):
         if entry.data.get("host") == str(ip):
-            _LOGGER.debug("EcoStream already configured for host %s", ip)
+            _LOGGER.debug(
+                "EcoStream already configured for host %s", ip
+            )
             return
 
     # Start config flow
@@ -70,7 +74,9 @@ async def async_process_dhcp(
     # Avoid duplicates
     for entry in hass.config_entries.async_entries(DOMAIN):
         if entry.data.get("host") == str(ip):
-            _LOGGER.debug("EcoStream already configured for host %s", ip)
+            _LOGGER.debug(
+                "EcoStream already configured for host %s", ip
+            )
             return
 
     hass.async_create_task(
