@@ -19,11 +19,15 @@
   "zeroconf": [
     {
       "type": "_http._tcp.local.",
-      "name": "EcoStream*"
+      "name": "ecostream*"
     }
   ],
   "dhcp": [
-    { "hostname": "ecostream*" },
-    { "macaddress": "F0:AD:4E:*:*:*" }
+    {
+      "hostname": "ecostream*"
+    },
+    {
+      "macaddress": "F0:AD:4E:*:*:*"
+    }
   ]
 }
