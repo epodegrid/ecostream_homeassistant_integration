@@ -1,7 +1,7 @@
 {
   "name": "Buva Ecostream",
   "homeassistant": "2026.01.1",
-  "hacs": "2.02.3 or higher",
+  "hacs": ">=2.2.3",
   "content_in_root": false,
   "country": [
     "NL",
