@@ -9,7 +9,6 @@ from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
 
 from .const import (
-    DOMAIN,
     CONF_PUSH_INTERVAL,
     CONF_FAST_PUSH_INTERVAL,
     DEFAULT_PUSH_INTERVAL,
@@ -39,8 +38,8 @@ class EcostreamOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             # validate numeric values
             try:
-                push_interval = int(user_input[CONF_PUSH_INTERVAL])
-                fast_push_interval = int(user_input[CONF_FAST_PUSH_INTERVAL])
+                push_interval = float(user_input.get(CONF_PUSH_INTERVAL, 0))
+                fast_push_interval = float(user_input.get(CONF_FAST_PUSH_INTERVAL, 0))
 
                 if push_interval < 30:
                     errors["base"] = "push_interval_too_short"
@@ -71,11 +70,11 @@ class EcostreamOptionsFlow(config_entries.OptionsFlow):
             vol.Required(
                 CONF_PUSH_INTERVAL,
                 default=current_push,
-            ): int,
+            ): vol.Coerce(float),
             vol.Required(
                 CONF_FAST_PUSH_INTERVAL,
                 default=current_fast,
-            ): int,
+            ): vol.Coerce(float),
         })
 
         return self.async_show_form(

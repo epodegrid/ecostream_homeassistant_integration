@@ -36,7 +36,7 @@ async def test_async_step_init_shows_form_with_existing_defaults():
     )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = AsyncMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
+    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
 
     result = await flow.async_step_init()
 
@@ -57,7 +57,7 @@ async def test_async_step_init_shows_form_with_hardcoded_defaults_when_missing()
     entry = _make_entry(data={}, options={})
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = AsyncMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
+    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
 
     result = await flow.async_step_init()
 
@@ -79,7 +79,7 @@ async def test_async_step_init_valid_input_creates_entry_and_updates_options():
     )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_create_entry = AsyncMock(side_effect=lambda **kwargs: {"type": "create_entry", **kwargs})
+    flow.async_create_entry = MagicMock(side_effect=lambda **kwargs: {"type": "create_entry", **kwargs})
 
     result = await flow.async_step_init(
         {
@@ -100,7 +100,7 @@ async def test_async_step_init_push_interval_too_short_returns_error():
     entry = _make_entry(options={CONF_PUSH_INTERVAL: 100, CONF_FAST_PUSH_INTERVAL: 20})
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = AsyncMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
+    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
 
     result = await flow.async_step_init(
         {
@@ -120,7 +120,7 @@ async def test_async_step_init_fast_interval_too_short_returns_error():
     entry = _make_entry(options={CONF_PUSH_INTERVAL: 100, CONF_FAST_PUSH_INTERVAL: 20})
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = AsyncMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
+    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
 
     result = await flow.async_step_init(
         {
@@ -140,7 +140,7 @@ async def test_async_step_init_invalid_number_returns_error():
     entry = _make_entry(options={})
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = AsyncMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
+    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
 
     result = await flow.async_step_init(
         {
