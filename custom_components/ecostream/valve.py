@@ -9,7 +9,7 @@ from homeassistant.components.valve import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, DEVICE_NAME, DEVICE_MODEL
@@ -26,7 +26,7 @@ async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities):
     async_add_entities(entities, update_before_add=True)
 
 
-class EcostreamBypassValve(CoordinatorEntity, ValveEntity):
+class EcostreamBypassValve(CoordinatorEntity[EcostreamDataUpdateCoordinator], ValveEntity):
     """EcoStream Bypass Valve (0–100%)."""
 
     _attr_has_entity_name = True

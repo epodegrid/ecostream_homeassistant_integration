@@ -6,7 +6,7 @@ from typing import Any
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, DEVICE_NAME, DEVICE_MODEL
@@ -30,7 +30,7 @@ async def async_setup_entry(
     async_add_entities(entities, update_before_add=True)
 
 
-class EcostreamQsetNumber(CoordinatorEntity, NumberEntity):
+class EcostreamQsetNumber(CoordinatorEntity[EcostreamDataUpdateCoordinator], NumberEntity):
     """Writeable Qset control for ventilation capacity."""
 
     _attr_has_entity_name = True

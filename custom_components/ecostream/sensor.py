@@ -13,7 +13,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -69,7 +69,7 @@ def _format_uptime(seconds: int) -> str:
 # Extended EntityDescription
 # ---------------------------------------------------------------------------
 
-@dataclass
+@dataclass(frozen=True)
 class EcostreamSensorDescription(SensorEntityDescription):
     value_fn: Callable[[Mapping[str, Any]], Any] | None = None
     is_date: bool = False
@@ -321,6 +321,7 @@ def _calc_efficiency(data: Mapping[str, Any]) -> float | None:
 
 class EcostreamBaseSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
+    entity_description: EcostreamSensorDescription
 
     def __init__(
         self,

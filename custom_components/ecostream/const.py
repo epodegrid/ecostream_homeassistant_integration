@@ -55,10 +55,14 @@ ICON_TVOC = "mdi:chemical-weapon"
 ICON_HUMIDITY = "mdi:water-percent"
 
 icons_path = Path(__file__).parent / "icons.json"
+icon_map = {}
 
 try:
     icons_json = load_json(str(icons_path))
-    icon_map = icons_json.get("icons", {})
+    if isinstance(icons_json, dict):
+        icon_map = icons_json.get("icons", {})
+    else:
+        _LOGGER.warning("icons.json does not contain a valid dictionary")
 
 except Exception as err:
     _LOGGER.warning("Could not load icons.json: %s", err)

@@ -8,7 +8,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -54,10 +54,11 @@ async def async_setup_entry(
 # ============================================================================
 
 
-class EcostreamBaseEntity(CoordinatorEntity):
+class EcostreamBaseEntity(CoordinatorEntity[EcostreamDataUpdateCoordinator]):
     """Shared device info for EcoStream entities."""
 
     _attr_has_entity_name = True
+    coordinator: EcostreamDataUpdateCoordinator
 
     def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
@@ -233,6 +234,8 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         """Boost is 'aan' zolang override_set_time_left > 0 is."""
         status = self._get_status()
         val = status.get("override_set_time_left")
+        if val is None:
+            return False
         try:
             return int(val) > 0
         except (TypeError, ValueError):

@@ -31,7 +31,7 @@ RECONNECT_JITTER = 300
 RECONNECT_MIN_SLEEP = 60
 
 
-class EcostreamDataUpdateCoordinator(DataUpdateCoordinator[Mapping[str, Any]]):
+class EcostreamDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Manages EcoStream WebSocket data & push scheduling (pure push model)."""
 
     def __init__(
@@ -240,8 +240,8 @@ class EcostreamDataUpdateCoordinator(DataUpdateCoordinator[Mapping[str, Any]]):
     # Fallback
     # ==========================================================
 
-    async def _async_update_data(self) -> Mapping[str, Any]:
-        return dict(self.data)
+    async def _async_update_data(self) -> dict[str, Any]:
+        return self.data  # ensure this is a dict
 
     # ==========================================================
     # Merge helper

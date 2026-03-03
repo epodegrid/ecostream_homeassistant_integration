@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.zeroconf import ZeroconfServiceInfo
-from homeassistant.components.dhcp import DhcpServiceInfo
+from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from homeassistant.config_entries import SOURCE_ZEROCONF, SOURCE_DHCP
 from homeassistant.core import HomeAssistant
 

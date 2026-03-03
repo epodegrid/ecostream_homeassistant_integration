@@ -9,6 +9,7 @@ import voluptuous as vol
 from aiohttp import ClientError, WSMsgType
 
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
@@ -45,7 +46,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ======================================================================
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None,
-    ) -> config_entries.FlowResult:
+    ) -> ConfigFlowResult:
 
         errors: dict[str, str] = {}
 
@@ -87,7 +88,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ======================================================================
     async def async_step_zeroconf(
         self, discovery_info: dict[str, Any],
-    ) -> config_entries.FlowResult:
+    ) -> ConfigFlowResult:
 
         host = discovery_info.get("host")
         name = discovery_info.get("name", "EcoStream")
@@ -115,7 +116,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ======================================================================
     async def async_step_dhcp(
         self, discovery_info: dict[str, Any],
-    ) -> config_entries.FlowResult:
+    ) -> ConfigFlowResult:
 
         host = discovery_info.get("ip")
         hostname = discovery_info.get("hostname", "EcoStream")
@@ -143,25 +144,27 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ======================================================================
     async def async_step_confirm(
         self, user_input: dict[str, Any] | None = None,
-    ) -> config_entries.FlowResult:
+    ) -> ConfigFlowResult:
 
         errors: dict[str, str] = {}
 
         if user_input is not None:
-
-            try:
-                info = await self._probe_ecostream(self._host)
-            except CannotConnect:
+            if not self._host:
                 errors["base"] = "cannot_connect"
-            except Exception:  # noqa: BLE001
-                _LOGGER.exception("Unexpected error while validating EcoStream")
-                errors["base"] = "unknown"
             else:
-                system_name = (
-                    info.get("system_name")
-                    or self._discovered_name
-                    or f"EcoStream ({self._host})"
-                )
+                try:
+                    info = await self._probe_ecostream(self._host)
+                except CannotConnect:
+                    errors["base"] = "cannot_connect"
+                except Exception:  # noqa: BLE001
+                    _LOGGER.exception("Unexpected error while validating EcoStream")
+                    errors["base"] = "unknown"
+                else:
+                    system_name = (
+                        info.get("system_name")
+                        or self._discovered_name
+                        or f"EcoStream ({self._host})"
+                    )
 
                 await self.async_set_unique_id(system_name)
                 self._abort_if_unique_id_configured(updates={CONF_HOST: self._host})
@@ -186,7 +189,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ======================================================================
     async def async_step_reauth(
         self, entry_data: dict[str, Any],
-    ) -> config_entries.FlowResult:
+    ) -> ConfigFlowResult:
         self._host = entry_data.get(CONF_HOST)
         return await self.async_step_user()
 
