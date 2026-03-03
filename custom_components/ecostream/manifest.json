@@ -1,33 +1,33 @@
 {
   "domain": "ecostream",
   "name": "BUVA EcoStream",
-  "version": "2.0",
-  "documentation": "https://github.com/epodegrid/ecostream_homeassistant_integration",
-  "issue_tracker": "https://github.com/epodegrid/ecostream_homeassistant_integration/issues",
   "codeowners": [
     "@epodegrid",
     "@Uber1337NL"
   ],
-  "quality_scale": "bronze",
-  "iot_class": "local_push",
-  "integration_type": "hub",
   "config_flow": true,
-  "requirements": [],
-  "loggers": [
-    "custom_components.ecostream"
-  ],
-  "zeroconf": [
-    {
-      "type": "_http._tcp.local.",
-      "name": "ecostream*"
-    }
-  ],
   "dhcp": [
     {
       "hostname": "ecostream*"
     },
     {
       "macaddress": "F0:AD:4E:*:*:*"
+    }
+  ],
+  "documentation": "https://github.com/epodegrid/ecostream_homeassistant_integration",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/epodegrid/ecostream_homeassistant_integration/issues",
+  "loggers": [
+    "custom_components.ecostream"
+  ],
+  "quality_scale": "bronze",
+  "requirements": [],
+  "version": "2.0",
+  "zeroconf": [
+    {
+      "type": "_http._tcp.local.",
+      "name": "ecostream*"
     }
   ]
 }
