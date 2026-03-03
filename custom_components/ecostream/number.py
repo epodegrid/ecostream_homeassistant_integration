@@ -28,7 +28,9 @@ async def async_setup_entry(
     async_add_entities(entities, update_before_add=True)
 
 
-class EcostreamQsetNumber(CoordinatorEntity[EcostreamDataUpdateCoordinator], NumberEntity):
+class EcostreamQsetNumber(
+    CoordinatorEntity[EcostreamDataUpdateCoordinator], NumberEntity
+):
     """Writeable Qset control for ventilation capacity."""
 
     _attr_has_entity_name = True
@@ -41,6 +43,12 @@ class EcostreamQsetNumber(CoordinatorEntity[EcostreamDataUpdateCoordinator], Num
         coordinator: EcostreamDataUpdateCoordinator,
         entry: ConfigEntry,
     ) -> None:
+        """Initialize the EcoStream Qset number entity.
+
+        Args:
+            coordinator: The data update coordinator.
+            entry: The config entry.
+        """
         super().__init__(coordinator)
         self._entry = entry
 
@@ -58,27 +66,27 @@ class EcostreamQsetNumber(CoordinatorEntity[EcostreamDataUpdateCoordinator], Num
         self._attr_native_max_value = 350
         self._attr_native_step = 1
 
-    #
-    # VALUE FROM DEVICE
-    #
     @property
-    def native_value(self) -> float | None:
-        data = self.coordinator.data or {}
-        status = data.get("status", {})
-        qset = status.get("qset")
-
-        try:
-            return float(qset) if qset is not None else None
-        except Exception:
-            return None
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return self.coordinator.last_update_success
 
     #
-    # UPDATE MIN/MAX FROM DEVICE CONFIG
+    # UPDATE MIN/MAX FROM DEVICE CONFIG AND VALUE FROM DEVICE
     #
     @callback
     def _handle_coordinator_update(self) -> None:
         data = self.coordinator.data or {}
+        status = data.get("status", {})
         config = data.get("config") or {}
+
+        qset = status.get("qset")
+        try:
+            self._attr_native_value = (
+                float(qset) if qset is not None else None
+            )
+        except Exception:
+            self._attr_native_value = None
 
         cap_min = config.get("capacity_min")
         cap_max = config.get("capacity_max")
