@@ -29,7 +29,7 @@ async def async_setup_entry(
     )
 
 
-class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
+class EcostreamVentilationFan(CoordinatorEntity, FanEntity):  # type: ignore[misc]
     """EcoStream main ventilation fan."""
 
     _attr_has_entity_name = True
@@ -58,14 +58,9 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
             model=DEVICE_MODEL,
         )
 
-    @cached_property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        return self.coordinator.last_update_success
-
     @callback
     def _handle_coordinator_update(self) -> None:
-        vars(self).pop("available", None)
+        vars(self).pop("percentage", None)
         self.async_write_ha_state()
 
     # ------------------------------------------------------------------
@@ -112,7 +107,7 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
     def is_on(self) -> bool:
         return self._get_qset() > 0
 
-    @property
+    @cached_property
     def percentage(self) -> int | None:
         data = self.coordinator.data or {}
         if "status" not in data:
