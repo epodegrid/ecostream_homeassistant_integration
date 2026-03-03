@@ -21,7 +21,6 @@
       "already_configured": "Deze EcoStream-unit is al geconfigureerd."
     }
   },
-
   "options": {
     "step": {
       "init": {
@@ -34,30 +33,23 @@
       }
     }
   },
-
   "entity": {
     "fan": {
       "ecostream_ventilation": {
-        "name": "Ventilatie",
-        "icon": "mdi:fan"
+        "name": "Ventilatie"
       }
     },
-
     "switch": {
       "ecostream_schedule_enabled": {
-        "name": "Schema ingeschakeld",
-        "icon": "mdi:calendar-clock"
+        "name": "Schema ingeschakeld"
       },
       "ecostream_summer_comfort": {
-        "name": "Zomercomfort",
-        "icon": "mdi:weather-sunny"
+        "name": "Zomercomfort"
       },
       "ecostream_boost": {
-        "name": "Boost",
-        "icon": "mdi:weather-windy"
+        "name": "Boost"
       }
     },
-
     "select": {
       "ecostream_boost_duration": {
         "name": "Boostduur",
@@ -69,34 +61,27 @@
         }
       }
     },
-
     "sensor": {
       "ecostream_boost_time_left": {
         "name": "Resterende boosttijd"
       },
       "ecostream_eco2_return": {
-        "name": "eCO₂ Retour",
-        "icon": "mdi:molecule-co2"
+        "name": "eCO₂ Retour"
       },
       "ecostream_tvoc_return": {
-        "name": "TVOC Retour",
-        "icon": "mdi:chemical-weapon"
+        "name": "TVOC Retour"
       },
       "ecostream_humidity_return": {
-        "name": "Vochtigheid Retour",
-        "icon": "mdi:water-percent"
+        "name": "Vochtigheid Retour"
       },
       "ecostream_temperature_eta": {
-        "name": "Temperatuur ETA",
-        "icon": "mdi:thermometer"
+        "name": "Temperatuur ETA"
       },
       "ecostream_temperature_eha": {
-        "name": "Temperatuur EHA",
-        "icon": "mdi:thermometer"
+        "name": "Temperatuur EHA"
       },
       "ecostream_temperature_oda": {
-        "name": "Temperatuur ODA",
-        "icon": "mdi:thermometer"
+        "name": "Temperatuur ODA"
       },
       "ecostream_fan_exhaust_speed": {
         "name": "Afvoerventilator snelheid"
@@ -108,34 +93,26 @@
         "name": "Qset"
       },
       "ecostream_uptime": {
-        "name": "Uptime",
-        "icon": "mdi:timer-outline"
+        "name": "Uptime"
       },
       "ecostream_wifi_ip": {
-        "name": "WiFi IP-adres",
-        "icon": "mdi:wifi"
+        "name": "WiFi IP-adres"
       },
       "ecostream_wifi_ssid": {
-        "name": "WiFi SSID",
-        "icon": "mdi:wifi"
+        "name": "WiFi SSID"
       },
       "ecostream_wifi_rssi": {
-        "name": "WiFi RSSI",
-        "icon": "mdi:wifi-strength-2"
+        "name": "WiFi RSSI"
       }
     },
-
     "valve": {
       "ecostream_bypass_valve": {
-        "name": "Bypassklep",
-        "icon": "mdi:valve"
+        "name": "Bypassklep"
       }
     },
-
     "button": {
       "ecostream_reset_filter": {
-        "name": "Filter resetten",
-        "icon": "mdi:restart"
+        "name": "Filter resetten"
       }
     }
   }

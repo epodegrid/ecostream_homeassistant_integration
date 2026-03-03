@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from homeassistant.util.json import load_json
 import logging
-from pathlib import Path
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,9 +40,7 @@ WS_RECONNECT_MAX_DELAY = 60
 DEVICE_NAME = "EcoStream"
 DEVICE_MODEL = "EcoStream"
 
-# ---------------------------------------------------------
-# Load icons.json
-# ---------------------------------------------------------
+# Static icon constants (used in entity descriptions only)
 ICON_UPTIME = "mdi:timer-outline"
 ICON_WIFI = "mdi:wifi"
 ICON_RSSI = "mdi:wifi-strength-2"
@@ -53,23 +49,7 @@ ICON_CO2 = "mdi:molecule-co2"
 ICON_TVOC = "mdi:chemical-weapon"
 ICON_HUMIDITY = "mdi:water-percent"
 
-icons_path = Path(__file__).parent / "icons.json"
-icon_map = {}
-
-try:
-    icons_json = load_json(str(icons_path))
-    if isinstance(icons_json, dict):
-        icon_map = icons_json.get("icons", {})
-    else:
-        _LOGGER.warning("icons.json does not contain a valid dictionary")
-
-except Exception as err:
-    _LOGGER.warning("Could not load icons.json: %s", err)
-
-# ---------------------------------------------------------
-# Push key groups (unchanged)
-# ---------------------------------------------------------
-
+# Push key groups
 FAST_KEYS = {
     "status",
 }

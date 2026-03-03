@@ -31,9 +31,7 @@ class EcostreamBypassValve(CoordinatorEntity[EcostreamDataUpdateCoordinator], Va
     _attr_has_entity_name = True
     _attr_name = "Bypass Valve"
     _attr_supported_features = (
-        ValveEntityFeature.OPEN |
-        ValveEntityFeature.CLOSE |
-        ValveEntityFeature.SET_POSITION
+        ValveEntityFeature.OPEN | ValveEntityFeature.CLOSE | ValveEntityFeature.SET_POSITION
     )
 
     #
@@ -64,6 +62,11 @@ class EcostreamBypassValve(CoordinatorEntity[EcostreamDataUpdateCoordinator], Va
     #
     # Mandatory properties for ValveEntity
     #
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available based on coordinator status."""
+        return self.coordinator.last_update_success
 
     @property
     def reports_position(self) -> bool:
