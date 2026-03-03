@@ -1,22 +1,20 @@
 from __future__ import annotations
 
 import asyncio
-import json
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from aiohttp import ClientError, WSMsgType
+import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from custom_components.ecostream.websocket_api import EcostreamWebsocket
 from custom_components.ecostream.const import (
-    WS_RECONNECT_INITIAL_DELAY,
     WS_STALE_TIMEOUT,
 )
+from custom_components.ecostream.websocket_api import EcostreamWebsocket
 
 
 def _make_ws(host="192.168.1.1"):
@@ -31,11 +29,17 @@ def _make_ws(host="192.168.1.1"):
     return ws, hass, callback
 
 
-def _make_aiohttp_ws(messages=None):
+def _make_aiohttp_ws(messages=None, stop_ws=None):
     """Build a mock aiohttp WS connection that yields messages then stops."""
     mock_ws = AsyncMock()
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
-    mock_ws.__aexit__ = AsyncMock(return_value=False)
+
+    async def fake_aexit(exc_type, exc, tb):
+        if stop_ws is not None:
+            stop_ws._stopping = True
+        return False
+
+    mock_ws.__aexit__ = fake_aexit
     mock_ws.closed = False
     mock_ws.exception = MagicMock(return_value=None)
 
@@ -43,7 +47,10 @@ def _make_aiohttp_ws(messages=None):
 
     async def fake_receive():
         if msg_queue:
-            return msg_queue.pop(0)
+            msg = msg_queue.pop(0)
+            if not msg_queue and stop_ws is not None:
+                stop_ws._stopping = True
+            return msg
         await asyncio.sleep(9999)
 
     mock_ws.receive = fake_receive
@@ -315,6 +322,7 @@ def test_check_stale_skipped_when_ws_already_closed():
     hass.loop.create_task.assert_not_called()
 
 
+
 # ---------------------------------------------------------------------------
 # _run (integration-style)
 # ---------------------------------------------------------------------------
@@ -326,7 +334,7 @@ async def test_run_processes_text_message():
     aio_ws = _make_aiohttp_ws([
         _msg(WSMsgType.TEXT, '{"status": {"qset": 100}}'),
         _msg(WSMsgType.CLOSE),
-    ])
+    ], stop_ws=ws)
     ws._session.ws_connect = MagicMock(return_value=aio_ws)
 
     await ws._run()
@@ -340,17 +348,18 @@ async def test_run_ignores_binary_message():
     aio_ws = _make_aiohttp_ws([
         _msg(WSMsgType.BINARY),
         _msg(WSMsgType.CLOSE),
-    ])
+    ], stop_ws=ws)
     ws._session.ws_connect = MagicMock(return_value=aio_ws)
 
     await ws._run()
+
     callback.assert_not_called()
 
 @pytest.mark.asyncio
 async def test_run_breaks_on_close_message():
     ws, _, callback = _make_ws()
 
-    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSE)])
+    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSE)], stop_ws=ws)
     ws._session.ws_connect = MagicMock(return_value=aio_ws)
 
     await ws._run()
@@ -359,7 +368,7 @@ async def test_run_breaks_on_close_message():
 async def test_run_breaks_on_closing_message():
     ws, _, callback = _make_ws()
 
-    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSING)])
+    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSING)], stop_ws=ws)
     ws._session.ws_connect = MagicMock(return_value=aio_ws)
 
     await ws._run()
@@ -368,7 +377,7 @@ async def test_run_breaks_on_closing_message():
 async def test_run_breaks_on_error_message():
     ws, _, _ = _make_ws()
 
-    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.ERROR)])
+    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.ERROR)], stop_ws=ws)
     ws._session.ws_connect = MagicMock(return_value=aio_ws)
 
     await ws._run()
@@ -409,19 +418,19 @@ async def test_run_sets_stopping_false_on_start():
     ws, _, _ = _make_ws()
     ws._stopping = False
 
-    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSE)])
+    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSE)], stop_ws=ws)
     ws._session.ws_connect = MagicMock(return_value=aio_ws)
 
     await ws._run()
+
     assert ws._ws is None
 
 @pytest.mark.asyncio
 async def test_run_resets_has_received_payload_on_reconnect():
     ws, _, _ = _make_ws()
 
-    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSE)])
+    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSE)], stop_ws=ws)
     ws._session.ws_connect = MagicMock(return_value=aio_ws)
     ws._has_received_payload = True
 
     await ws._run()
-    

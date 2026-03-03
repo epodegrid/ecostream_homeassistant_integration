@@ -72,6 +72,17 @@ class EcostreamQsetNumber(
         """Return True if entity is available."""
         return self.coordinator.last_update_success
 
+    @property
+    def native_value(self):
+        """Return the native value from coordinator data."""
+        data = self.coordinator.data or {}
+        status = data.get("status", {})
+        qset = status.get("qset")
+        try:
+            return float(qset) if qset is not None else None
+        except Exception:
+            return None
+
     #
     # UPDATE MIN/MAX FROM DEVICE CONFIG AND VALUE FROM DEVICE
     #

@@ -155,33 +155,21 @@ class EcostreamWebsocket:
                         if self._stopping:
                             break
 
-                        # Turn coroutine into a Task (required for asyncio.wait)
-                        receive_task = asyncio.create_task(ws.receive())
-
                         try:
-                            done, _ = await asyncio.wait(
-                                {receive_task},
+                            msg = await asyncio.wait_for(
+                                ws.receive(),
                                 timeout=WS_HEARTBEAT_INTERVAL,
-                                return_when=asyncio.FIRST_COMPLETED,
                             )
-                        except asyncio.CancelledError:
-                            receive_task.cancel()
-                            raise
-
-                        if self._stopping:
-                            receive_task.cancel()
-                            break
-
-                        # TIMEOUT → send heartbeat & stale-check
-                        if not done:
-                            receive_task.cancel()
+                        except asyncio.TimeoutError:
                             await self._send_heartbeat()
                             if not self._stopping:
                                 self._check_stale()
                             continue
+                        except asyncio.CancelledError:
+                            raise
 
-                        # MESSAGE RECEIVED
-                        msg = receive_task.result()
+                        if self._stopping:
+                            break
 
                         if msg.type == WSMsgType.TEXT:
                             self._last_message_ts = time.time()

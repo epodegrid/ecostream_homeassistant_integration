@@ -392,6 +392,8 @@ class EcostreamBaseSensor(CoordinatorEntity, SensorEntity):
     @cached_property
     def available(self) -> bool:
         data = self.coordinator.data or {}
+        if "status" not in data:
+            return False
         status = data.get("status") or {}
         return bool(status.get("connect_status", 1) == 1)
 
