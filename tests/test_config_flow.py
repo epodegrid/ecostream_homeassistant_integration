@@ -4,6 +4,11 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+from homeassistant.helpers.service_info.zeroconf import (
+    ZeroconfServiceInfo,
+)
+from ipaddress import ip_address
 from pathlib import Path
 import sys
 from unittest.mock import AsyncMock, patch
@@ -123,10 +128,15 @@ async def test_zeroconf_step_success(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data={
-            "host": MOCK_HOST,
-            "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
-        },
+        data=ZeroconfServiceInfo(
+            ip_address=ip_address(MOCK_HOST),
+            ip_addresses=[ip_address(MOCK_HOST)],
+            port=80,
+            hostname=f"{MOCK_SYSTEM_NAME}.local.",
+            type="_http._tcp.local.",
+            name=f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
+            properties={},
+        ),
     )
     assert result.get("type") == FlowResultType.FORM
     assert result.get("step_id") == "confirm"
@@ -148,7 +158,15 @@ async def test_zeroconf_step_no_host_aborts(
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data={"host": None, "name": "EcoStream"},
+        data=ZeroconfServiceInfo(
+            ip_address=ip_address("0.0.0.0"),
+            ip_addresses=[ip_address("0.0.0.0")],
+            port=80,
+            hostname="ecostream.local.",
+            type="_http._tcp.local.",
+            name="EcoStream._http._tcp.local.",
+            properties={},
+        ),
     )
     assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "unknown"
@@ -170,10 +188,15 @@ async def test_zeroconf_step_already_configured(
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data={
-            "host": MOCK_HOST,
-            "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
-        },
+        data=ZeroconfServiceInfo(
+            ip_address=ip_address(MOCK_HOST),
+            ip_addresses=[ip_address(MOCK_HOST)],
+            port=80,
+            hostname=f"{MOCK_SYSTEM_NAME}.local.",
+            type="_http._tcp.local.",
+            name=f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
+            properties={},
+        ),
     )
     assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "already_configured"
@@ -188,7 +211,11 @@ async def test_dhcp_step_success(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
-        data={"ip": MOCK_HOST, "hostname": MOCK_SYSTEM_NAME},
+        data=DhcpServiceInfo(
+            ip=MOCK_HOST,
+            hostname=MOCK_SYSTEM_NAME,
+            macaddress="aabbcc112233",
+        ),
     )
     assert result.get("type") == FlowResultType.FORM
     assert result.get("step_id") == "confirm"
@@ -208,7 +235,11 @@ async def test_dhcp_step_no_ip_aborts(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
-        data={"ip": None, "hostname": "ecostream"},
+        data=DhcpServiceInfo(
+            ip="",
+            hostname="ecostream",
+            macaddress="aabbcc112233",
+        ),
     )
     assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "unknown"
@@ -230,7 +261,11 @@ async def test_dhcp_step_already_configured(
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_DHCP},
-        data={"ip": MOCK_HOST, "hostname": MOCK_SYSTEM_NAME},
+        data=DhcpServiceInfo(
+            ip=MOCK_HOST,
+            hostname=MOCK_SYSTEM_NAME,
+            macaddress="aabbcc112233",
+        ),
     )
     assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "already_configured"
@@ -245,10 +280,15 @@ async def test_confirm_step_cannot_connect(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data={
-            "host": MOCK_HOST,
-            "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
-        },
+        data=ZeroconfServiceInfo(
+            ip_address=ip_address(MOCK_HOST),
+            ip_addresses=[ip_address(MOCK_HOST)],
+            port=80,
+            hostname=f"{MOCK_SYSTEM_NAME}.local.",
+            type="_http._tcp.local.",
+            name=f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
+            properties={},
+        ),
     )
     assert result.get("step_id") == "confirm"
     flow_id = result.get("flow_id")
@@ -267,10 +307,15 @@ async def test_confirm_step_unknown_error(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         const.DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data={
-            "host": MOCK_HOST,
-            "name": f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
-        },
+        data=ZeroconfServiceInfo(
+            ip_address=ip_address(MOCK_HOST),
+            ip_addresses=[ip_address(MOCK_HOST)],
+            port=80,
+            hostname=f"{MOCK_SYSTEM_NAME}.local.",
+            type="_http._tcp.local.",
+            name=f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
+            properties={},
+        ),
     )
     assert result.get("step_id") == "confirm"
     flow_id = result.get("flow_id")

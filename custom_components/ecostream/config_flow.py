@@ -108,7 +108,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         host = discovery_info.host
         name = discovery_info.name or "EcoStream"
 
-        if not host:
+        if not host or host in ("0.0.0.0", "::"):
             return self.async_abort(reason="unknown")
 
         system_name = name.split(".")[0]
