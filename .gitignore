@@ -2,3 +2,4 @@
 .vscode/**
 custom_components/ecostream/__pycache__/**
 tests/__pycache__/**
+.coverage

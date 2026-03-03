@@ -155,3 +155,4 @@ async def async_get_config_entry_diagnostics(
         # -------------------------
         "raw_status": last_status,
     }
+

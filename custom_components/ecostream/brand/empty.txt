@@ -1,6 +1,0 @@
-Needs: 
-icon.png: A square avatar-like icon, representing the brand or product for that domain.
-logo.png: The logo of the brand or product for that domain.
-
-See: https://github.com/home-assistant/brands
-and: https://developers.home-assistant.io/blog/2026/02/24/brands-proxy-api/

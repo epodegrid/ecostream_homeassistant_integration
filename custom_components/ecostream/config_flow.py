@@ -166,17 +166,17 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         or f"EcoStream ({self._host})"
                     )
 
-                await self.async_set_unique_id(system_name)
-                self._abort_if_unique_id_configured(updates={CONF_HOST: self._host})
+                    await self.async_set_unique_id(system_name)
+                    self._abort_if_unique_id_configured(updates={CONF_HOST: self._host})
 
-                return self.async_create_entry(
-                    title=system_name,
-                    data={CONF_HOST: self._host},
-                )
+                    return self.async_create_entry(
+                        title=system_name,
+                        data={CONF_HOST: self._host},
+                    )
 
         return self.async_show_form(
             step_id="confirm",
-            data_schema=vol.Schema({}),  # alleen OK knop
+            data_schema=vol.Schema({}),  # Only OK button
             errors=errors,
             description_placeholders={
                 "host": self._host or "",
