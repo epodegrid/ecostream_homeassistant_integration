@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cached_property
 from homeassistant.components.valve import (
     ValveEntity,
     ValveEntityFeature,
@@ -79,7 +80,7 @@ class EcostreamBypassValve(
     # Mandatory properties for ValveEntity
     #
 
-    @property
+    @cached_property
     def available(self) -> bool:
         """Return if entity is available based on coordinator status."""
         return self.coordinator.last_update_success
@@ -120,6 +121,7 @@ class EcostreamBypassValve(
     #
     @callback
     def _handle_coordinator_update(self) -> None:
+        vars(self).pop("available", None)
         data = self.coordinator.data or {}
         status = data.get("status", {})
 

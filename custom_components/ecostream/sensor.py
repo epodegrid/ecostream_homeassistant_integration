@@ -389,7 +389,7 @@ class EcostreamBaseSensor(CoordinatorEntity, SensorEntity):
             model=DEVICE_MODEL,
         )
 
-    @property
+    @cached_property
     def available(self) -> bool:
         data = self.coordinator.data or {}
         status = data.get("status") or {}
@@ -398,6 +398,7 @@ class EcostreamBaseSensor(CoordinatorEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         # Invalidate cached_property when data updates
+        vars(self).pop("available", None)
         vars(self).pop("native_value", None)
         self.async_write_ha_state()
 

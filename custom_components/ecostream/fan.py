@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cached_property
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
@@ -57,13 +58,14 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
             model=DEVICE_MODEL,
         )
 
-    @property
+    @cached_property
     def available(self) -> bool:
         """Return if entity is available."""
         return self.coordinator.last_update_success
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        vars(self).pop("available", None)
         self._update_percentage()
         self.async_write_ha_state()
 

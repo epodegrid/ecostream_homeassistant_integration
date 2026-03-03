@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import cached_property
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -66,7 +67,7 @@ class EcostreamQsetNumber(
         self._attr_native_max_value = 350
         self._attr_native_step = 1
 
-    @property
+    @cached_property
     def available(self) -> bool:
         """Return True if entity is available."""
         return self.coordinator.last_update_success
@@ -76,6 +77,7 @@ class EcostreamQsetNumber(
     #
     @callback
     def _handle_coordinator_update(self) -> None:
+        vars(self).pop("available", None)
         data = self.coordinator.data or {}
         status = data.get("status", {})
         config = data.get("config") or {}
