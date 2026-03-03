@@ -160,7 +160,7 @@ class EcostreamWebsocket:
                                 ws.receive(),
                                 timeout=WS_HEARTBEAT_INTERVAL,
                             )
-                        except asyncio.TimeoutError:
+                        except TimeoutError:
                             await self._send_heartbeat()
                             if not self._stopping:
                                 self._check_stale()

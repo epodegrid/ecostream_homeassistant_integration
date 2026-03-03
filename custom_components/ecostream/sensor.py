@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import cached_property
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -422,7 +422,7 @@ class EcostreamBaseSensor(CoordinatorEntity, SensorEntity):
         if desc.is_date:
             try:
                 if isinstance(raw, (int, float)):
-                    return datetime.utcfromtimestamp(raw).date()
+                    return datetime.fromtimestamp(raw, tz=UTC).date()
                 if isinstance(raw, datetime):
                     return raw.date()
                 return raw
