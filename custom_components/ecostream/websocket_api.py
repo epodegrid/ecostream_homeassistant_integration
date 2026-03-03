@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import json
 import logging
 import time
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any
 
 from aiohttp import ClientError, WSMsgType
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     WS_HEARTBEAT_INTERVAL,
-    WS_STALE_TIMEOUT,
     WS_RECONNECT_INITIAL_DELAY,
     WS_RECONNECT_MAX_DELAY,
+    WS_STALE_TIMEOUT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class EcostreamWebsocket:
         self._session = async_get_clientsession(hass)
         self._message_callback = message_callback
 
-        self._task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task | None = None
         self._ws = None
         self._stopping = False
 
@@ -69,7 +70,7 @@ class EcostreamWebsocket:
         if self._ws is not None:
             try:
                 await self._ws.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 _LOGGER.debug("Error closing EcoStream WS", exc_info=True)
 
         if self._task is not None:
@@ -98,7 +99,7 @@ class EcostreamWebsocket:
         try:
             await self._ws.send_json(payload)
             _LOGGER.debug("Sent JSON to EcoStream %s: %s", self._host, payload)
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:
             _LOGGER.error("Failed to send JSON to EcoStream %s: %s", self._host, err)
 
     # ------------------------------------------------------------------
@@ -197,7 +198,7 @@ class EcostreamWebsocket:
                         backoff,
                     )
 
-            except Exception as err:  # noqa: BLE001
+            except Exception as err:
                 if not self._stopping:
                     _LOGGER.exception("Unexpected error in EcoStream WS loop: %s", err)
 
@@ -222,7 +223,7 @@ class EcostreamWebsocket:
         try:
             await self._ws.send_str("{}")
             _LOGGER.debug("EcoStream heartbeat → %s", self._host)
-        except Exception:  # noqa: BLE001
+        except Exception:
             _LOGGER.debug(
                 "Failed to send EcoStream heartbeat → %s", self._host, exc_info=True
             )
@@ -271,7 +272,7 @@ class EcostreamWebsocket:
 
         try:
             await self._message_callback(payload)
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:
             _LOGGER.exception(
                 "Error while processing EcoStream payload in coordinator: %s", err
             )

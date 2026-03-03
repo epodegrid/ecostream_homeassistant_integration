@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import logging
-from typing import Any, Optional
-
 from homeassistant.components.select import SelectEntity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.switch import SwitchEntity
@@ -10,16 +7,17 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import logging
+from typing import Any
 
 from .const import (
-    DOMAIN,
-    DEVICE_NAME,
-    DEVICE_MODEL,
-    BOOST_QSET,
     BOOST_OPTIONS,
+    BOOST_QSET,
     DEFAULT_BOOST_DURATION_MINUTES,
+    DEVICE_MODEL,
+    DEVICE_NAME,
+    DOMAIN,
 )
-
 from .coordinator import EcostreamDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)

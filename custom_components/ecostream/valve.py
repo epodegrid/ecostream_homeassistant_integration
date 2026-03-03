@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import logging
-from typing import Any, Optional
-
 from homeassistant.components.valve import (
     ValveEntity,
     ValveEntityFeature,
@@ -11,8 +8,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import logging
+from typing import Any
 
-from .const import DOMAIN, DEVICE_NAME, DEVICE_MODEL
+from .const import DEVICE_MODEL, DEVICE_NAME, DOMAIN
 from .coordinator import EcostreamDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -56,7 +55,7 @@ class EcostreamBypassValve(CoordinatorEntity[EcostreamDataUpdateCoordinator], Va
         )
 
         # Track local state
-        self._position: Optional[int] = None
+        self._position: int | None = None
 
         # These may remain False unless you want animations
         self._is_opening = False
@@ -72,19 +71,19 @@ class EcostreamBypassValve(CoordinatorEntity[EcostreamDataUpdateCoordinator], Va
         return True
 
     @property
-    def current_valve_position(self) -> Optional[int]:
+    def current_valve_position(self) -> int | None:
         """Return 0–100%."""
         return self._position
 
     @property
-    def is_open(self) -> Optional[bool]:
+    def is_open(self) -> bool | None:
         """Open if > 0%."""
         if self._position is None:
             return None
         return self._position > 0
 
     @property
-    def is_closed(self) -> Optional[bool]:
+    def is_closed(self) -> bool | None:
         if self._position is None:
             return None
         return self._position == 0

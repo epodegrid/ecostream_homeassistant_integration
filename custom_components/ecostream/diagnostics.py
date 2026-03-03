@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
-import json
-from typing import Any
-
+from datetime import UTC, datetime
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+import json
+from pathlib import Path
+from typing import Any
 
 from .const import (
-    DOMAIN,
-    CONF_PUSH_INTERVAL,
     CONF_FAST_PUSH_INTERVAL,
+    CONF_PUSH_INTERVAL,
+    DOMAIN,
 )
 
 
@@ -95,9 +94,9 @@ async def async_get_config_entry_diagnostics(
 
     # Convert last update to readable string
     if isinstance(last_update, datetime):
-        last_update_utc = last_update.astimezone(timezone.utc).isoformat()
+        last_update_utc = last_update.astimezone(UTC).isoformat()
         age_seconds = int(
-            (datetime.now(timezone.utc) - last_update).total_seconds()
+            (datetime.now(UTC) - last_update).total_seconds()
         )
     else:
         last_update_utc = None

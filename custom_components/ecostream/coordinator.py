@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-import logging
-import random
-import time
-from typing import Any, Mapping
-
+from collections.abc import Mapping
 from homeassistant.const import (
     EVENT_HOMEASSISTANT_STARTED,
     EVENT_HOMEASSISTANT_STOP,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+import logging
+import random
+import time
+from typing import Any
 
 from .const import (
     CONF_FAST_PUSH_INTERVAL,
@@ -40,6 +40,7 @@ class EcostreamDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         host: str,
         options: Mapping[str, Any] | None = None,
     ) -> None:
+        """Initialize the coordinator with Home Assistant, device host, and optional settings."""
         super().__init__(
             hass=hass,
             logger=_LOGGER,

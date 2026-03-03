@@ -1,24 +1,24 @@
 from __future__ import annotations
 
 import asyncio
-import logging
-from typing import Any
-
-from aiohttp import ClientError, WSMsgType
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
+import logging
+from typing import Any
+
+from aiohttp import ClientError, WSMsgType
 
 from .const import (
+    CONF_FAST_PUSH_INTERVAL,
+    CONF_PUSH_INTERVAL,
+    DEFAULT_FAST_PUSH_INTERVAL,
+    DEFAULT_PUSH_INTERVAL,
     DOMAIN,
     PLATFORMS,
-    CONF_PUSH_INTERVAL,
-    DEFAULT_PUSH_INTERVAL,
-    CONF_FAST_PUSH_INTERVAL,
-    DEFAULT_FAST_PUSH_INTERVAL,
 )
 from .coordinator import EcostreamDataUpdateCoordinator
 
@@ -36,10 +36,12 @@ async def _probe_host(hass: HomeAssistant, host: str) -> None:
                 raise ConfigEntryNotReady(f"Unexpected WebSocket message type: {msg.type}")
     except ConfigEntryNotReady:
         raise
-    except (ClientError, asyncio.TimeoutError) as err:
+    except (TimeoutError, ClientError) as err:
         raise ConfigEntryNotReady(f"Cannot connect to EcoStream at {host}: {err}") from err
     except Exception as err:
-        raise ConfigEntryNotReady(f"Unexpected error connecting to EcoStream at {host}: {err}") from err
+        raise ConfigEntryNotReady(
+            f"Unexpected error connecting to EcoStream at {host}: {err}"
+        ) from err
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

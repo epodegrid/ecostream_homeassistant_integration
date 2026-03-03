@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-import asyncio
-import json
-import logging
-from typing import Any
-
-import voluptuous as vol
-from aiohttp import ClientError, WSMsgType
-
 from homeassistant import config_entries
+from homeassistant.components.zeroconf import ZeroconfServiceInfo
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
+import json
+import logging
+from typing import Any
+
+from aiohttp import ClientError, WSMsgType
+import voluptuous as vol
 
 from .const import DOMAIN
 
@@ -24,6 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 # Exceptions
 # ---------------------------------------------------------------------------
 
+
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
 
@@ -32,12 +33,14 @@ class CannotConnect(HomeAssistantError):
 # Config Flow
 # ---------------------------------------------------------------------------
 
+
 class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handles the EcoStream configuration flow."""
 
     VERSION = 1
 
     def __init__(self) -> None:
+        """Initialize the EcoStream config flow."""
         self._host: str | None = None
         self._discovered_name: str | None = None
 
@@ -45,7 +48,8 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # USER STEP
     # ======================================================================
     async def async_step_user(
-        self, user_input: dict[str, Any] | None = None,
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
 
         errors: dict[str, str] = {}
@@ -58,7 +62,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 info = await self._probe_ecostream(host)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except Exception:  # noqa: BLE001
+            except Exception:
                 _LOGGER.exception("Unexpected error during EcoStream validation")
                 errors["base"] = "unknown"
             else:
@@ -73,9 +77,11 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
         # Show form
-        data_schema = vol.Schema({
-            vol.Required(CONF_HOST, default=self._host or ""): str,
-        })
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_HOST, default=self._host or ""): str,
+            }
+        )
 
         return self.async_show_form(
             step_id="user",
@@ -87,11 +93,12 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ZEROCONF STEP
     # ======================================================================
     async def async_step_zeroconf(
-        self, discovery_info: dict[str, Any],
+        self,
+        discovery_info: ZeroconfServiceInfo,
     ) -> ConfigFlowResult:
 
-        host = discovery_info.get("host")
-        name = discovery_info.get("name", "EcoStream")
+        host = discovery_info.host
+        name = discovery_info.name or "EcoStream"
 
         if not host:
             return self.async_abort(reason="unknown")
@@ -100,7 +107,8 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         _LOGGER.info(
             "EcoStream discovered via Zeroconf: host=%s, name=%s",
-            host, name,
+            host,
+            name,
         )
 
         self._host = host
@@ -115,11 +123,12 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # DHCP STEP
     # ======================================================================
     async def async_step_dhcp(
-        self, discovery_info: dict[str, Any],
+        self,
+        discovery_info: DhcpServiceInfo,
     ) -> ConfigFlowResult:
 
-        host = discovery_info.get("ip")
-        hostname = discovery_info.get("hostname", "EcoStream")
+        host = discovery_info.ip
+        hostname = getattr(discovery_info, "hostname", "EcoStream")
 
         if not host:
             return self.async_abort(reason="unknown")
@@ -128,7 +137,8 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         _LOGGER.info(
             "EcoStream discovered via DHCP: host=%s hostname=%s",
-            host, hostname,
+            host,
+            hostname,
         )
 
         self._host = host
@@ -143,7 +153,8 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # CONFIRMATION
     # ======================================================================
     async def async_step_confirm(
-        self, user_input: dict[str, Any] | None = None,
+        self,
+        user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
 
         errors: dict[str, str] = {}
@@ -156,7 +167,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     info = await self._probe_ecostream(self._host)
                 except CannotConnect:
                     errors["base"] = "cannot_connect"
-                except Exception:  # noqa: BLE001
+                except Exception:
                     _LOGGER.exception("Unexpected error while validating EcoStream")
                     errors["base"] = "unknown"
                 else:
@@ -188,7 +199,8 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # REAUTH STEP
     # ======================================================================
     async def async_step_reauth(
-        self, entry_data: dict[str, Any],
+        self,
+        entry_data: dict[str, Any],
     ) -> ConfigFlowResult:
         self._host = entry_data.get(CONF_HOST)
         return await self.async_step_user()
@@ -223,11 +235,11 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 return {"system_name": system_name}
 
-        except (ClientError, asyncio.TimeoutError) as err:
+        except (TimeoutError, ClientError) as err:
             raise CannotConnect from err
         except CannotConnect:
             raise
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:
             _LOGGER.exception("Probe error: %s", err)
             raise CannotConnect from err
 
@@ -245,4 +257,5 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         from .options_flow import EcostreamOptionsFlow
+
         return EcostreamOptionsFlow(config_entry)

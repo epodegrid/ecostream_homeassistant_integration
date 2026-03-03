@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-import voluptuous as vol
-import logging
-from typing import Any
-
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
+import logging
+from typing import Any
+
+import voluptuous as vol
 
 from .const import (
-    CONF_PUSH_INTERVAL,
     CONF_FAST_PUSH_INTERVAL,
-    DEFAULT_PUSH_INTERVAL,
+    CONF_PUSH_INTERVAL,
     DEFAULT_FAST_PUSH_INTERVAL,
+    DEFAULT_PUSH_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,5 +93,5 @@ class EcostreamOptionsFlow(config_entries.OptionsFlow):
     @callback
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
-    ) -> "EcostreamOptionsFlow":
+    ) -> EcostreamOptionsFlow:
         return EcostreamOptionsFlow(config_entry)

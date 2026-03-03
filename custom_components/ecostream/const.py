@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import json
+from homeassistant.util.json import load_json
 import logging
 from pathlib import Path
-from homeassistant.util.json import load_json
 
 _LOGGER = logging.getLogger(__name__)
 

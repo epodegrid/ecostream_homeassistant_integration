@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import logging
-from typing import Any, Optional, cast
-
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import logging
+from typing import Any, cast
 
-from .const import DOMAIN, DEVICE_NAME, DEVICE_MODEL
+from .const import DEVICE_MODEL, DEVICE_NAME, DOMAIN
+from .coordinator import EcostreamDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,12 +34,16 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
     _attr_has_entity_name = True
     _attr_name = "Ventilation"
     _attr_should_poll = False
+    _attr_supported_features = (
+        FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF | FanEntityFeature.SET_SPEED
+    )
 
     def __init__(
         self,
         coordinator: EcostreamDataUpdateCoordinator,  # type: ignore[name-defined]
         entry: ConfigEntry,
     ) -> None:
+        """Initialize the EcoStream ventilation fan entity."""
         super().__init__(coordinator)
         self._entry = entry
 
@@ -51,17 +55,19 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
             model=DEVICE_MODEL,
         )
 
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return self.coordinator.last_update_success
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._update_percentage()
+        self.async_write_ha_state()
+
     # ------------------------------------------------------------------
     # Supported features
     # ------------------------------------------------------------------
-    @property
-    def supported_features(self) -> FanEntityFeature:
-        features = FanEntityFeature(0)
-        for name in ("TURN_ON", "TURN_OFF", "SET_PERCENTAGE"):
-            val = getattr(FanEntityFeature, name, None)
-            if val is not None:
-                features |= val
-        return features
 
     # ------------------------------------------------------------------
     # Helpers
@@ -78,7 +84,7 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
         except (TypeError, ValueError):
             return 0.0
 
-    def _get_capacity_min(self) -> Optional[float]:
+    def _get_capacity_min(self) -> float | None:
         try:
             value = self._config().get("capacity_min")
             if value is None:
@@ -87,7 +93,7 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
         except (TypeError, ValueError):
             return None
 
-    def _get_capacity_max(self) -> Optional[float]:
+    def _get_capacity_max(self) -> float | None:
         try:
             value = self._config().get("capacity_max")
             if value is None:
@@ -103,24 +109,29 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
     def is_on(self) -> bool:
         return self._get_qset() > 0
 
-    @property
-    def percentage(self) -> Optional[int]:
-        """Map qset to 0–100% based on capacity range."""
+    def _update_percentage(self) -> None:
+        """Update the percentage attribute based on qset."""
         qset = self._get_qset()
         cap_min = self._get_capacity_min()
         cap_max = self._get_capacity_max()
 
         if cap_min is None or cap_max is None or cap_max <= cap_min:
-            return None
-
-        pct = int(round((qset - cap_min) / (cap_max - cap_min) * 100))
-        return max(0, min(100, pct))
+            self._attr_percentage = None
+        else:
+            pct = round((qset - cap_min) / (cap_max - cap_min) * 100)
+            self._attr_percentage = max(0, min(100, pct))
 
     # ------------------------------------------------------------------
     # Commands
     # ------------------------------------------------------------------
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        pct = kwargs.get("percentage", self.percentage or 30)
+    async def async_turn_on(
+        self,
+        percentage: int | None = None,
+        preset_mode: str | None = None,
+        turn_on: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        pct = percentage or self._attr_percentage or 30
         await self.async_set_percentage(pct)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -164,8 +175,4 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
         )
 
         await coordinator.ws.send_json(payload)
-        self.async_write_ha_state()
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
         self.async_write_ha_state()

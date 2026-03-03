@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import logging
-from typing import Any
-
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import logging
 
-from .const import DOMAIN, DEVICE_NAME, DEVICE_MODEL
+from .const import DEVICE_MODEL, DEVICE_NAME, DOMAIN
 from .coordinator import EcostreamDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
