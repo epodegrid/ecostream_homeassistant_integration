@@ -66,7 +66,6 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         vars(self).pop("available", None)
-        self._update_percentage()
         self.async_write_ha_state()
 
     # ------------------------------------------------------------------
@@ -113,17 +112,18 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
     def is_on(self) -> bool:
         return self._get_qset() > 0
 
-    def _update_percentage(self) -> None:
-        """Update the percentage attribute based on qset."""
-        qset = self._get_qset()
+    @property
+    def percentage(self) -> int | None:
+        data = self.coordinator.data or {}
+        if "status" not in data:
+            return None
         cap_min = self._get_capacity_min()
         cap_max = self._get_capacity_max()
-
         if cap_min is None or cap_max is None or cap_max <= cap_min:
-            self._attr_percentage = None
-        else:
-            pct = round((qset - cap_min) / (cap_max - cap_min) * 100)
-            self._attr_percentage = max(0, min(100, pct))
+            return None
+        qset = self._get_qset()
+        pct = round((qset - cap_min) / (cap_max - cap_min) * 100)
+        return max(0, min(100, pct))
 
     # ------------------------------------------------------------------
     # Commands
@@ -135,7 +135,7 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):
         turn_on: bool = True,
         **kwargs: Any,
     ) -> None:
-        pct = percentage or self._attr_percentage or 30
+        pct = percentage or self.percentage or 30
         await self.async_set_percentage(pct)
 
     async def async_turn_off(self, **kwargs: Any) -> None:

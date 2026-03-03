@@ -109,7 +109,7 @@ def test_handle_coordinator_update_calculates_percentage():
         {"status": {"qset": 100}, "config": {"capacity_min": 0, "capacity_max": 200}}
     )
     fan._handle_coordinator_update()
-    assert fan._attr_percentage == 50
+    assert fan.percentage == 50
 
 
 # ---------------------------------------------------------------------------
@@ -258,7 +258,6 @@ async def test_turn_on_without_percentage_uses_stored_percentage():
     fan, coordinator = _make_fan(
         {"status": {"qset": 100}, "config": {"capacity_min": 0, "capacity_max": 200}}
     )
-    fan._handle_coordinator_update()  # This sets _attr_percentage to 50
     await fan.async_turn_on()
     payload = coordinator.ws.send_json.call_args[0][0]
     assert payload["config"]["man_override_set"] == 100.0
@@ -267,7 +266,6 @@ async def test_turn_on_without_percentage_uses_stored_percentage():
 @pytest.mark.asyncio
 async def test_turn_on_defaults_to_30_percent_when_no_stored_percentage():
     fan, coordinator = _make_fan({"config": {"capacity_min": 0, "capacity_max": 200}})
-    fan._attr_percentage = None
     await fan.async_turn_on()
     payload = coordinator.ws.send_json.call_args[0][0]
     assert payload["config"]["man_override_set"] == 60.0  # 30% of 200
