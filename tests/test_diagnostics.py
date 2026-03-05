@@ -1,17 +1,26 @@
 from __future__ import annotations
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+import json
 from pathlib import Path
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
-import json
+
 import pytest
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from custom_components.ecostream.const import DOMAIN, CONF_FAST_PUSH_INTERVAL, CONF_PUSH_INTERVAL
-from custom_components.ecostream.diagnostics import _validate_icons, async_get_config_entry_diagnostics
+from custom_components.ecostream.const import (
+    CONF_FAST_PUSH_INTERVAL,
+    CONF_PUSH_INTERVAL,
+    DOMAIN,
+)
+from custom_components.ecostream.diagnostics import (
+    _validate_icons,
+    async_get_config_entry_diagnostics,
+)
 
 
 class TestValidateIcons:
@@ -27,7 +36,10 @@ class TestValidateIcons:
     def test_icons_json_decode_error(self):
         """Test when icons.json has invalid JSON."""
         with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.read_text", side_effect=json.JSONDecodeError("msg", "doc", 0)):
+            with patch(
+                "pathlib.Path.read_text",
+                side_effect=json.JSONDecodeError("msg", "doc", 0),
+            ):
                 result = _validate_icons()
                 assert result["ok"] is False
                 assert "icons_json_error" in result["error"]
@@ -35,7 +47,10 @@ class TestValidateIcons:
     def test_icons_read_os_error(self):
         """Test when icons.json cannot be read due to OS error."""
         with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.read_text", side_effect=OSError("read error")):
+            with patch(
+                "pathlib.Path.read_text",
+                side_effect=OSError("read error"),
+            ):
                 result = _validate_icons()
                 assert result["ok"] is False
                 assert "icons_read_error" in result["error"]
@@ -43,7 +58,10 @@ class TestValidateIcons:
     def test_icons_schema_invalid_missing_keys(self):
         """Test when icons.json is missing required top-level keys."""
         with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.read_text", return_value='{"other": "data"}'):
+            with patch(
+                "pathlib.Path.read_text",
+                return_value='{"other": "data"}',
+            ):
                 result = _validate_icons()
                 assert result["ok"] is False
                 assert result["error"] == "icons_schema_invalid"
@@ -53,7 +71,10 @@ class TestValidateIcons:
     def test_icons_schema_invalid_wrong_types(self):
         """Test when icons or entities are not dicts."""
         with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.read_text", return_value='{"icons": [], "entities": "invalid"}'):
+            with patch(
+                "pathlib.Path.read_text",
+                return_value='{"icons": [], "entities": "invalid"}',
+            ):
                 result = _validate_icons()
                 assert result["ok"] is False
                 assert result["error"] == "icons_schema_invalid"
@@ -65,7 +86,10 @@ class TestValidateIcons:
             "entities": {"entity1": {}, "entity2": {}, "entity3": {}},
         }
         with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.read_text", return_value=json.dumps(test_data)):
+            with patch(
+                "pathlib.Path.read_text",
+                return_value=json.dumps(test_data),
+            ):
                 result = _validate_icons()
                 assert result["ok"] is True
                 assert result["error"] is None
@@ -96,8 +120,13 @@ class TestAsyncGetConfigEntryDiagnostics:
 
         hass.data = {DOMAIN: {"test_entry_id": coordinator}}
 
-        with patch("custom_components.ecostream.diagnostics._validate_icons", return_value={"ok": True}):
-            result = await async_get_config_entry_diagnostics(hass, entry)
+        with patch(
+            "custom_components.ecostream.diagnostics._validate_icons",
+            return_value={"ok": True},
+        ):
+            result = await async_get_config_entry_diagnostics(
+                hass, entry
+            )
 
         assert result["entry"]["entry_id"] == "test_entry_id"
         assert result["coordinator"]["last_update_success"] is True
@@ -112,9 +141,12 @@ class TestAsyncGetConfigEntryDiagnostics:
         entry.entry_id = "test_entry"
         entry.as_dict.return_value = {}
 
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         coordinator = MagicMock()
-        coordinator.options = {CONF_PUSH_INTERVAL: 60, CONF_FAST_PUSH_INTERVAL: 5}
+        coordinator.options = {
+            CONF_PUSH_INTERVAL: 60,
+            CONF_FAST_PUSH_INTERVAL: 5,
+        }
         coordinator.data = {}
         coordinator.last_update_success = True
         coordinator.ws_state = None
@@ -124,8 +156,13 @@ class TestAsyncGetConfigEntryDiagnostics:
 
         hass.data = {DOMAIN: {"test_entry": coordinator}}
 
-        with patch("custom_components.ecostream.diagnostics._validate_icons", return_value={"ok": True}):
-            result = await async_get_config_entry_diagnostics(hass, entry)
+        with patch(
+            "custom_components.ecostream.diagnostics._validate_icons",
+            return_value={"ok": True},
+        ):
+            result = await async_get_config_entry_diagnostics(
+                hass, entry
+            )
 
         assert result["coordinator"]["last_update_utc"] is not None
         assert result["coordinator"]["seconds_since_last_update"] == 0
@@ -151,8 +188,15 @@ class TestAsyncGetConfigEntryDiagnostics:
 
         hass.data = {DOMAIN: {"test_entry": coordinator}}
 
-        with patch("custom_components.ecostream.diagnostics._validate_icons", return_value={"ok": True}):
-            result = await async_get_config_entry_diagnostics(hass, entry)
+        with patch(
+            "custom_components.ecostream.diagnostics._validate_icons",
+            return_value={"ok": True},
+        ):
+            result = await async_get_config_entry_diagnostics(
+                hass, entry
+            )
 
         assert result["raw_status"] == {"temp": 25, "humidity": 60}
-        assert result["raw_data"] == {"status": {"temp": 25, "humidity": 60}}
+        assert result["raw_data"] == {
+            "status": {"temp": 25, "humidity": 60}
+        }

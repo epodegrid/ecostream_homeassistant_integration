@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+)
 
-from custom_components.ecostream.coordinator import EcostreamDataUpdateCoordinator
 from custom_components.ecostream.const import (
     CONF_FAST_PUSH_INTERVAL,
     CONF_PUSH_INTERVAL,
@@ -20,13 +22,20 @@ from custom_components.ecostream.const import (
     DEFAULT_PUSH_INTERVAL,
     FAST_MODE_SECONDS,
 )
+from custom_components.ecostream.coordinator import (
+    EcostreamDataUpdateCoordinator,
+)
 
 
 def _make_coordinator(data=None, options=None):
     hass = MagicMock()
     hass.bus.async_listen_once = MagicMock()
-    with patch.object(DataUpdateCoordinator, "__init__", return_value=None):
-        coord = EcostreamDataUpdateCoordinator(hass=hass, host="192.168.1.1", options=options)
+    with patch.object(
+        DataUpdateCoordinator, "__init__", return_value=None
+    ):
+        coord = EcostreamDataUpdateCoordinator(
+            hass=hass, host="192.168.1.1", options=options
+        )
     coord.hass = hass
     coord.data = data or {}
     coord.async_set_updated_data = MagicMock()
@@ -37,18 +46,24 @@ def _make_coordinator(data=None, options=None):
 # __init__
 # ---------------------------------------------------------------------------
 
+
 def test_init_defaults():
     coord = _make_coordinator()
     assert coord.host == "192.168.1.1"
     assert coord._push_interval == float(DEFAULT_PUSH_INTERVAL)
-    assert coord._fast_push_interval == float(DEFAULT_FAST_PUSH_INTERVAL)
+    assert coord._fast_push_interval == float(
+        DEFAULT_FAST_PUSH_INTERVAL
+    )
     assert coord._last_push == 0.0
     assert coord._started is False
     assert coord._stopping is False
     assert coord.boost_duration_minutes == 0
 
+
 def test_init_custom_options():
-    coord = _make_coordinator(options={CONF_PUSH_INTERVAL: 60, CONF_FAST_PUSH_INTERVAL: 5})
+    coord = _make_coordinator(
+        options={CONF_PUSH_INTERVAL: 60, CONF_FAST_PUSH_INTERVAL: 5}
+    )
     assert coord._push_interval == 60.0
     assert coord._fast_push_interval == 5.0
 
@@ -58,22 +73,24 @@ def test_init_custom_options():
 # ---------------------------------------------------------------------------
 
 
-
 def test_merge_payload_simple():
     coord = _make_coordinator()
     coord._merge_payload({"key": "value"})
     assert coord.data["key"] == "value"
+
 
 def test_merge_payload_nested_dict_merges():
     coord = _make_coordinator(data={"status": {"a": 1}})
     coord._merge_payload({"status": {"b": 2}})
     assert coord.data["status"] == {"a": 1, "b": 2}
 
+
 def test_merge_payload_nested_overwrites_existing_key():
     coord = _make_coordinator(data={"status": {"a": 1, "b": 2}})
     coord._merge_payload({"status": {"a": 99}})
     assert coord.data["status"]["a"] == 99
     assert coord.data["status"]["b"] == 2
+
 
 def test_merge_payload_replaces_non_dict_with_value():
     coord = _make_coordinator(data={"key": "old"})
@@ -84,6 +101,7 @@ def test_merge_payload_replaces_non_dict_with_value():
 # ---------------------------------------------------------------------------
 # mark_control_action
 # ---------------------------------------------------------------------------
+
 
 def test_mark_control_action_sets_fast_mode():
     coord = _make_coordinator()
@@ -96,18 +114,21 @@ def test_mark_control_action_sets_fast_mode():
 # handle_ws_message
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_handle_ws_message_ignores_non_dict():
     coord = _make_coordinator()
-    await coord.handle_ws_message("not a dict")
-    coord.async_set_updated_data.assert_not_called()
+    await coord.handle_ws_message("not a dict")  # type: ignore[arg-type]
+    cast(MagicMock, coord.async_set_updated_data).assert_not_called()
+
 
 @pytest.mark.asyncio
 async def test_handle_ws_message_first_push_always_fires():
     coord = _make_coordinator()
     coord._last_push = 0
     await coord.handle_ws_message({"status": {"qset": 100}})
-    coord.async_set_updated_data.assert_called_once()
+    cast(MagicMock, coord.async_set_updated_data).assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_handle_ws_message_throttles_when_too_soon():
@@ -115,14 +136,16 @@ async def test_handle_ws_message_throttles_when_too_soon():
     coord._last_push = time.time()
     coord._push_interval = 9999
     await coord.handle_ws_message({"status": {"qset": 100}})
-    coord.async_set_updated_data.assert_not_called()
+    cast(MagicMock, coord.async_set_updated_data).assert_not_called()
+
 
 @pytest.mark.asyncio
 async def test_handle_ws_message_fires_when_interval_elapsed():
     coord = _make_coordinator()
     coord._last_push = time.time() - 9999
     await coord.handle_ws_message({"status": {"qset": 100}})
-    coord.async_set_updated_data.assert_called_once()
+    cast(MagicMock, coord.async_set_updated_data).assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_handle_ws_message_slow_key_updates_snapshot():
@@ -131,6 +154,7 @@ async def test_handle_ws_message_slow_key_updates_snapshot():
     await coord.handle_ws_message({"config": {"capacity_max": 350}})
     assert coord._last_slow_push > 0
 
+
 @pytest.mark.asyncio
 async def test_handle_ws_message_fast_mode_uses_fast_interval():
     coord = _make_coordinator()
@@ -138,14 +162,13 @@ async def test_handle_ws_message_fast_mode_uses_fast_interval():
     coord._fast_push_interval = 0.0
     coord._last_push = time.time() - 1
     await coord.handle_ws_message({"status": {"qset": 100}})
-    coord.async_set_updated_data.assert_called_once()
-
-
+    cast(MagicMock, coord.async_set_updated_data).assert_called_once()
 
 
 # ---------------------------------------------------------------------------
 # async_stop
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_async_stop_sets_stopping():
@@ -153,6 +176,7 @@ async def test_async_stop_sets_stopping():
     coord.ws = None
     await coord.async_stop()
     assert coord._stopping is True
+
 
 @pytest.mark.asyncio
 async def test_async_stop_disconnects_ws():
@@ -163,6 +187,7 @@ async def test_async_stop_disconnects_ws():
     await coord.async_stop()
     ws.async_disconnect.assert_called_once()
     assert coord.ws is None
+
 
 @pytest.mark.asyncio
 async def test_async_stop_cancels_reconnect_task():
@@ -178,11 +203,10 @@ async def test_async_stop_cancels_reconnect_task():
     assert coord._reconnect_task is None
 
 
-
-
 # ---------------------------------------------------------------------------
 # async_start
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_async_start_idempotent():
@@ -192,18 +216,23 @@ async def test_async_start_idempotent():
     await coord.async_start()
     coord._ensure_ws_started.assert_not_called()
 
+
 @pytest.mark.asyncio
 async def test_async_start_registers_listeners():
     coord = _make_coordinator()
     coord._ensure_ws_started = AsyncMock()
     await coord.async_start()
-    assert coord.hass.bus.async_listen_once.call_count == 2
+    assert (
+        cast(MagicMock, coord.hass.bus.async_listen_once).call_count
+        == 2
+    )
     assert coord._started is True
 
 
 # ---------------------------------------------------------------------------
 # _force_ws_reconnect
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_force_ws_reconnect_no_ws_calls_ensure():
@@ -212,6 +241,7 @@ async def test_force_ws_reconnect_no_ws_calls_ensure():
     coord._ensure_ws_started = AsyncMock()
     await coord._force_ws_reconnect()
     coord._ensure_ws_started.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_force_ws_reconnect_with_ws_reconnects():
@@ -231,6 +261,7 @@ async def test_force_ws_reconnect_with_ws_reconnects():
 # _async_start_background_tasks
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_start_background_tasks_idempotent():
     coord = _make_coordinator()
@@ -238,6 +269,7 @@ async def test_start_background_tasks_idempotent():
     coord._reconnect_task = existing
     await coord._async_start_background_tasks(None)
     assert coord._reconnect_task is existing
+
 
 @pytest.mark.asyncio
 async def test_start_background_tasks_creates_task():
@@ -253,6 +285,7 @@ async def test_start_background_tasks_creates_task():
 # ---------------------------------------------------------------------------
 # _async_update_data
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_async_update_data_returns_data():

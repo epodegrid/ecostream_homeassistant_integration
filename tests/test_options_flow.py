@@ -1,12 +1,9 @@
-import asyncio
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
-import sys
-from pathlib import Path
-import pytest
-from types import SimpleNamespace
 from homeassistant.const import CONF_HOST
-from custom_components.ecostream.options_flow import EcostreamOptionsFlow
+from pathlib import Path
+import sys
+from unittest.mock import MagicMock
+
+import pytest
 
 from custom_components.ecostream.const import (
     CONF_FAST_PUSH_INTERVAL,
@@ -14,9 +11,12 @@ from custom_components.ecostream.const import (
     DEFAULT_FAST_PUSH_INTERVAL,
     DEFAULT_PUSH_INTERVAL,
 )
+from custom_components.ecostream.options_flow import (
+    EcostreamOptionsFlow,
+)
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-    
+
 
 def _make_entry(data=None, options=None):
     entry = MagicMock()
@@ -36,14 +36,18 @@ async def test_async_step_init_shows_form_with_existing_defaults():
     )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {"type": "form", **kwargs}
+    )
 
     result = await flow.async_step_init()
 
     assert result.get("type") == "form"
     assert result.get("step_id") == "init"
     assert result.get("errors") == {}
-    assert (result.get("description_placeholders") or {})["host"] == "192.168.1.10"
+    assert (result.get("description_placeholders") or {})[
+        "host"
+    ] == "192.168.1.10"
 
     data_schema = result.get("data_schema")
     assert callable(data_schema)
@@ -57,18 +61,24 @@ async def test_async_step_init_shows_form_with_hardcoded_defaults_when_missing()
     entry = _make_entry(data={}, options={})
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {"type": "form", **kwargs}
+    )
 
     result = await flow.async_step_init()
 
     assert result.get("type") == "form"
-    assert (result.get("description_placeholders") or {})["host"] == "EcoStream"
+    assert (result.get("description_placeholders") or {})[
+        "host"
+    ] == "EcoStream"
 
     data_schema = result.get("data_schema")
     assert callable(data_schema)
     defaults = data_schema({})
     assert defaults[CONF_PUSH_INTERVAL] == DEFAULT_PUSH_INTERVAL
-    assert defaults[CONF_FAST_PUSH_INTERVAL] == DEFAULT_FAST_PUSH_INTERVAL
+    assert (
+        defaults[CONF_FAST_PUSH_INTERVAL] == DEFAULT_FAST_PUSH_INTERVAL
+    )
 
 
 @pytest.mark.asyncio
@@ -79,7 +89,9 @@ async def test_async_step_init_valid_input_creates_entry_and_updates_options():
     )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_create_entry = MagicMock(side_effect=lambda **kwargs: {"type": "create_entry", **kwargs})
+    flow.async_create_entry = MagicMock(
+        side_effect=lambda **kwargs: {"type": "create_entry", **kwargs}
+    )
 
     result = await flow.async_step_init(
         {
@@ -97,10 +109,14 @@ async def test_async_step_init_valid_input_creates_entry_and_updates_options():
 
 @pytest.mark.asyncio
 async def test_async_step_init_push_interval_too_short_returns_error():
-    entry = _make_entry(options={CONF_PUSH_INTERVAL: 100, CONF_FAST_PUSH_INTERVAL: 20})
+    entry = _make_entry(
+        options={CONF_PUSH_INTERVAL: 100, CONF_FAST_PUSH_INTERVAL: 20}
+    )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {"type": "form", **kwargs}
+    )
 
     result = await flow.async_step_init(
         {
@@ -117,10 +133,14 @@ async def test_async_step_init_push_interval_too_short_returns_error():
 
 @pytest.mark.asyncio
 async def test_async_step_init_fast_interval_too_short_returns_error():
-    entry = _make_entry(options={CONF_PUSH_INTERVAL: 100, CONF_FAST_PUSH_INTERVAL: 20})
+    entry = _make_entry(
+        options={CONF_PUSH_INTERVAL: 100, CONF_FAST_PUSH_INTERVAL: 20}
+    )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {"type": "form", **kwargs}
+    )
 
     result = await flow.async_step_init(
         {
@@ -140,7 +160,9 @@ async def test_async_step_init_invalid_number_returns_error():
     entry = _make_entry(options={})
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {"type": "form", **kwargs}
+    )
 
     result = await flow.async_step_init(
         {

@@ -1,24 +1,28 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
+import sys
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from custom_components.ecostream.const import (
+    BOOST_QSET,
+    DEFAULT_BOOST_DURATION_MINUTES,
+)
 from custom_components.ecostream.switch import (
-    EcostreamScheduleSwitch,
-    EcostreamSummerComfortSwitch,
-    EcostreamBoostSwitch,
     EcostreamBoostDurationSelect,
     EcostreamBoostRemainingSensor,
+    EcostreamBoostSwitch,
+    EcostreamScheduleSwitch,
+    EcostreamSummerComfortSwitch,
 )
-from custom_components.ecostream.const import DEFAULT_BOOST_DURATION_MINUTES, BOOST_QSET
 
 
 def _make_entity(EntityClass, data=None, ws=True):
@@ -32,9 +36,13 @@ def _make_entity(EntityClass, data=None, ws=True):
     coordinator.boost_duration_minutes = DEFAULT_BOOST_DURATION_MINUTES
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry"
-    with patch.object(CoordinatorEntity, "__init__", lambda self, c: setattr(self, "coordinator", c)):
+    with patch.object(
+        CoordinatorEntity,
+        "__init__",
+        lambda self, c: setattr(self, "coordinator", c),
+    ):
         entity = EntityClass(coordinator, entry)
-    entity.async_write_ha_state = MagicMock()
+    entity.async_write_ha_state = AsyncMock()
     return entity, coordinator
 
 
@@ -42,39 +50,53 @@ def _make_entity(EntityClass, data=None, ws=True):
 # EcostreamScheduleSwitch
 # ---------------------------------------------------------------------------
 
+
 def test_schedule_is_on_true():
-    entity, _ = _make_entity(EcostreamScheduleSwitch, {"config": {"schedule_enabled": True}})
+    entity, _ = _make_entity(
+        EcostreamScheduleSwitch, {"config": {"schedule_enabled": True}}
+    )
     assert entity.is_on is True
+
 
 def test_schedule_is_on_false():
     entity, _ = _make_entity(EcostreamScheduleSwitch)
     assert entity.is_on is False
 
+
 def test_schedule_unique_id():
     entity, _ = _make_entity(EcostreamScheduleSwitch)
     assert entity.unique_id == "test_entry_schedule_enabled"
 
+
 def test_schedule_handle_update():
     entity, _ = _make_entity(EcostreamScheduleSwitch)
     entity._handle_coordinator_update()
-    entity.async_write_ha_state.assert_called_once()
+    cast(AsyncMock, entity.async_write_ha_state).assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_schedule_turn_on():
     entity, coordinator = _make_entity(EcostreamScheduleSwitch)
     await entity.async_turn_on()
-    coordinator.ws.send_json.assert_called_once_with({"config": {"schedule_enabled": True}})
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"schedule_enabled": True}}
+    )
+
 
 @pytest.mark.asyncio
 async def test_schedule_turn_off():
     entity, coordinator = _make_entity(EcostreamScheduleSwitch)
     await entity.async_turn_off()
-    coordinator.ws.send_json.assert_called_once_with({"config": {"schedule_enabled": False}})
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"schedule_enabled": False}}
+    )
+
 
 @pytest.mark.asyncio
 async def test_schedule_no_ws_returns_early():
-    entity, coordinator = _make_entity(EcostreamScheduleSwitch, ws=False)
+    entity, _ = _make_entity(EcostreamScheduleSwitch, ws=False)
     await entity.async_turn_on()
+
 
 @pytest.mark.asyncio
 async def test_schedule_marks_control_action():
@@ -87,29 +109,42 @@ async def test_schedule_marks_control_action():
 # EcostreamSummerComfortSwitch
 # ---------------------------------------------------------------------------
 
+
 def test_summer_comfort_is_on_true():
-    entity, _ = _make_entity(EcostreamSummerComfortSwitch, {"config": {"sum_com_enabled": True}})
+    entity, _ = _make_entity(
+        EcostreamSummerComfortSwitch,
+        {"config": {"sum_com_enabled": True}},
+    )
     assert entity.is_on is True
+
 
 def test_summer_comfort_is_on_false():
     entity, _ = _make_entity(EcostreamSummerComfortSwitch)
     assert entity.is_on is False
 
+
 def test_summer_comfort_unique_id():
     entity, _ = _make_entity(EcostreamSummerComfortSwitch)
     assert entity.unique_id == "test_entry_summer_comfort"
+
 
 @pytest.mark.asyncio
 async def test_summer_comfort_turn_on():
     entity, coordinator = _make_entity(EcostreamSummerComfortSwitch)
     await entity.async_turn_on()
-    coordinator.ws.send_json.assert_called_once_with({"config": {"sum_com_enabled": True}})
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"sum_com_enabled": True}}
+    )
+
 
 @pytest.mark.asyncio
 async def test_summer_comfort_turn_off():
     entity, coordinator = _make_entity(EcostreamSummerComfortSwitch)
     await entity.async_turn_off()
-    coordinator.ws.send_json.assert_called_once_with({"config": {"sum_com_enabled": False}})
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"sum_com_enabled": False}}
+    )
+
 
 @pytest.mark.asyncio
 async def test_summer_comfort_no_ws():
@@ -121,118 +156,163 @@ async def test_summer_comfort_no_ws():
 # EcostreamBoostRemainingSensor
 # ---------------------------------------------------------------------------
 
+
 def test_boost_remaining_with_value():
-    entity, _ = _make_entity(EcostreamBoostRemainingSensor, {"status": {"override_set_time_left": 120}})
+    entity, _ = _make_entity(
+        EcostreamBoostRemainingSensor,
+        {"status": {"override_set_time_left": 120}},
+    )
     assert entity.native_value == 120
+
 
 def test_boost_remaining_none_returns_0():
     entity, _ = _make_entity(EcostreamBoostRemainingSensor)
     assert entity.native_value == 0
 
+
 def test_boost_remaining_invalid_returns_0():
-    entity, _ = _make_entity(EcostreamBoostRemainingSensor, {"status": {"override_set_time_left": "bad"}})
+    entity, _ = _make_entity(
+        EcostreamBoostRemainingSensor,
+        {"status": {"override_set_time_left": "bad"}},
+    )
     assert entity.native_value == 0
+
 
 def test_boost_remaining_unique_id():
     entity, _ = _make_entity(EcostreamBoostRemainingSensor)
     assert entity.unique_id == "test_entry_boost_time_left"
 
+
 def test_boost_remaining_handle_update():
     entity, _ = _make_entity(EcostreamBoostRemainingSensor)
     entity._handle_coordinator_update()
-    entity.async_write_ha_state.assert_called_once()
-
-
+    cast(AsyncMock, entity.async_write_ha_state).assert_called_once()
 
 
 # ---------------------------------------------------------------------------
 # EcostreamBoostDurationSelect
 # ---------------------------------------------------------------------------
 
+
 def test_boost_duration_current_option():
     entity, coordinator = _make_entity(EcostreamBoostDurationSelect)
     coordinator.boost_duration_minutes = 10
     assert entity.current_option == "10"
 
+
 def test_boost_duration_unique_id():
     entity, _ = _make_entity(EcostreamBoostDurationSelect)
     assert entity.unique_id == "test_entry_boost_duration"
+
 
 @pytest.mark.asyncio
 async def test_boost_duration_select_option():
     entity, coordinator = _make_entity(EcostreamBoostDurationSelect)
     await entity.async_select_option("30")
     assert coordinator.boost_duration_minutes == 30
-    entity.async_write_ha_state.assert_called_once()
+    cast(AsyncMock, entity.async_write_ha_state).assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_boost_duration_invalid_option_ignored():
-    entity, coordinator = _make_entity(EcostreamBoostDurationSelect)
+    entity, _ = _make_entity(EcostreamBoostDurationSelect)
+    mock_write = MagicMock()
+    entity.async_write_ha_state = mock_write
     await entity.async_select_option("not_a_number")
-    entity.async_write_ha_state.assert_not_called()
+    mock_write.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
 # EcostreamBoostSwitch
 # ---------------------------------------------------------------------------
 
+
 def test_boost_is_on_with_timer():
-    entity, _ = _make_entity(EcostreamBoostSwitch, {"status": {"override_set_time_left": 60}})
+    entity, _ = _make_entity(
+        EcostreamBoostSwitch, {"status": {"override_set_time_left": 60}}
+    )
     assert entity.is_on is True
 
+
 def test_boost_is_on_false_zero():
-    entity, _ = _make_entity(EcostreamBoostSwitch, {"status": {"override_set_time_left": 0}})
+    entity, _ = _make_entity(
+        EcostreamBoostSwitch, {"status": {"override_set_time_left": 0}}
+    )
     assert entity.is_on is False
+
 
 def test_boost_is_on_false_none():
     entity, _ = _make_entity(EcostreamBoostSwitch)
     assert entity.is_on is False
 
+
 def test_boost_is_on_invalid_value():
-    entity, _ = _make_entity(EcostreamBoostSwitch, {"status": {"override_set_time_left": "bad"}})
+    entity, _ = _make_entity(
+        EcostreamBoostSwitch,
+        {"status": {"override_set_time_left": "bad"}},
+    )
     assert entity.is_on is False
+
 
 def test_boost_unique_id():
     entity, _ = _make_entity(EcostreamBoostSwitch)
     assert entity.unique_id == "test_entry_boost"
 
+
 @pytest.mark.asyncio
 async def test_boost_turn_on_uses_capacity_max():
-    entity, coordinator = _make_entity(EcostreamBoostSwitch, {"config": {"capacity_max": 350}})
+    entity, coordinator = _make_entity(
+        EcostreamBoostSwitch, {"config": {"capacity_max": 350}}
+    )
     coordinator.boost_duration_minutes = 15
     await entity.async_turn_on()
     payload = coordinator.ws.send_json.call_args[0][0]
     assert payload["config"]["man_override_set"] == 350.0
     assert payload["config"]["man_override_set_time"] == 900
 
+
 @pytest.mark.asyncio
 async def test_boost_turn_on_prefers_setpoint_high():
-    entity, coordinator = _make_entity(EcostreamBoostSwitch, {"config": {"setpoint_high": 400, "capacity_max": 350}})
+    entity, coordinator = _make_entity(
+        EcostreamBoostSwitch,
+        {"config": {"setpoint_high": 400, "capacity_max": 350}},
+    )
     coordinator.boost_duration_minutes = 10
     await entity.async_turn_on()
     payload = coordinator.ws.send_json.call_args[0][0]
     assert payload["config"]["man_override_set"] == 400.0
 
+
 @pytest.mark.asyncio
 async def test_boost_turn_on_fallback_boost_qset():
-    entity, coordinator = _make_entity(EcostreamBoostSwitch, {"config": {}})
+    entity, coordinator = _make_entity(
+        EcostreamBoostSwitch, {"config": {}}
+    )
     coordinator.boost_duration_minutes = 5
     await entity.async_turn_on()
     payload = coordinator.ws.send_json.call_args[0][0]
     assert payload["config"]["man_override_set"] == float(BOOST_QSET)
+
 
 @pytest.mark.asyncio
 async def test_boost_turn_on_no_ws():
     entity, _ = _make_entity(EcostreamBoostSwitch, ws=False)
     await entity.async_turn_on()
 
+
 @pytest.mark.asyncio
 async def test_boost_turn_on_duration_below_1_uses_default():
-    entity, coordinator = _make_entity(EcostreamBoostSwitch, {"config": {"capacity_max": 350}})
+    entity, coordinator = _make_entity(
+        EcostreamBoostSwitch, {"config": {"capacity_max": 350}}
+    )
     coordinator.boost_duration_minutes = 0
     await entity.async_turn_on()
     payload = coordinator.ws.send_json.call_args[0][0]
-    assert payload["config"]["man_override_set_time"] == DEFAULT_BOOST_DURATION_MINUTES * 60
+    assert (
+        payload["config"]["man_override_set_time"]
+        == DEFAULT_BOOST_DURATION_MINUTES * 60
+    )
+
 
 @pytest.mark.asyncio
 async def test_boost_turn_off_clears_timer():
@@ -241,14 +321,18 @@ async def test_boost_turn_off_clears_timer():
     payload = coordinator.ws.send_json.call_args[0][0]
     assert payload["config"]["man_override_set_time"] == 0
 
+
 @pytest.mark.asyncio
 async def test_boost_turn_off_no_ws():
     entity, _ = _make_entity(EcostreamBoostSwitch, ws=False)
     await entity.async_turn_off()
 
+
 @pytest.mark.asyncio
 async def test_boost_turn_on_marks_control_action():
-    entity, coordinator = _make_entity(EcostreamBoostSwitch, {"config": {"capacity_max": 350}})
+    entity, coordinator = _make_entity(
+        EcostreamBoostSwitch, {"config": {"capacity_max": 350}}
+    )
     coordinator.boost_duration_minutes = 15
     await entity.async_turn_on()
     coordinator.mark_control_action.assert_called_once()

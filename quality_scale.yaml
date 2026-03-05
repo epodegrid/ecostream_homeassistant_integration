@@ -1,19 +1,18 @@
 rules:
   # Bronze
-  action-setup: 
+  action-setup:
     status: exempt
     comment: This integration does not provide additional actions.
-  appropriate-polling: 
+  appropriate-polling:
     status: exempt
     comment: This integration is push-based.
   brands:
-    status: todo
-    comment: WHo's into GIMP or PhotoShop and has time to make a logo? The integration currently uses the default Home Assistant puzzle piece icon, but a custom icon would be a nice touch.
+    status: done
   common-modules: done
   config-flow-test-coverage: done
   config-flow: done
   dependency-transparency: done
-  docs-actions: 
+  docs-actions:
     status: exempt
     comment: This integration does not provide additional actions.
   docs-high-level-description: done
@@ -28,7 +27,7 @@ rules:
   unique-config-entry: done
 
   # Silver
-  action-exceptions: 
+  action-exceptions:
     status: exempt
     comment: This integration does not provide additional actions.
   config-entry-unloading: done
@@ -58,41 +57,41 @@ rules:
     status: todo
     comment: No automation examples in the README.
   docs-known-limitations: done
-  docs-supported-devices: 
+  docs-supported-devices:
     status: todo
     comment: No list of supported/unsupported devices or firmware versions.
-  docs-supported-functions: 
+  docs-supported-functions:
     status: todo
     comment: No structured table of entities/platforms and what they do.
-  docs-troubleshooting: 
+  docs-troubleshooting:
     status: todo
     comment: Only debug logging is covered; no real troubleshooting guidance. Tough there is a Diagnostics and Debugging section... Don't know.
-  docs-use-cases: 
+  docs-use-cases:
     status: todo
     comment: No described use cases (e.g., “boost on high CO₂”, “night schedule”).
-  dynamic-devices: 
+  dynamic-devices:
     status: exempt
     comment: Not applicable (single fixed device), but formally unimplemented.
-  entity-category: 
+  entity-category:
     status: todo
     comment: No entities use EntityCategory.DIAGNOSTIC or CONFIG (RSSI, uptime, filter date are clear diagnostic candidates).
   entity-device-class: done
-  entity-disabled-by-default: 
+  entity-disabled-by-default:
     status: todo
     comment: Low-value entities (WiFi SSID/RSSI, uptime, efficiency) aren’t disabled by default via entity_registry_enabled_default = False.
-  entity-translations: 
+  entity-translations:
     status: todo
     comment: Entity names are hardcoded; use translation_key with entries in en.json.
-  exception-translations: 
+  exception-translations:
     status: todo
     comment: Entity names are hardcoded; use translation_key with entries in en.json.
-  icon-translations: 
+  icon-translations:
     status: todo
     comment:
-  reconfiguration-flow: 
+  reconfiguration-flow:
     status: todo
     comment: Missing async_step_reconfigure in config_flow.py.
-  repair-issues: 
+  repair-issues:
     status: todo
     comment: No use of homeassistant.helpers.issue_registry for recoverable issues (e.g., lost connection, overdue filter).
   stale-devices:
@@ -103,6 +102,6 @@ rules:
   async-dependency: done
   inject-websession:
     status: todo
-  strict-typing: 
+  strict-typing:
     status: todo
     comment: Multiple, type ignore annotations present in fan.py-23, type ignore[name-defined] in fan.py-40, type ignore[name-defined] in switch.py-185, type ignore[attr-defined], Additionally, no mypy.ini or pyrightconfig.json with strict mode configured, and no py.typed marker present.

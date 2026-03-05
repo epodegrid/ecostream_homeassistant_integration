@@ -1,20 +1,23 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
+import sys
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from custom_components.ecostream.discovery import async_process_zeroconf, async_process_dhcp
+from custom_components.ecostream.discovery import (
+    async_process_dhcp,
+    async_process_zeroconf,
+)
 
 
 def _make_hass(configured_hosts=None):
     hass = MagicMock()
     entries = []
-    for host in (configured_hosts or []):
+    for host in configured_hosts or []:
         entry = MagicMock()
         entry.data = {"host": host}
         entries.append(entry)
@@ -28,6 +31,7 @@ def _make_hass(configured_hosts=None):
 # async_process_zeroconf
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_zeroconf_ignores_non_ecostream_name():
     hass = _make_hass()
@@ -36,6 +40,7 @@ async def test_zeroconf_ignores_non_ecostream_name():
     info.ip_address = "192.168.1.1"
     await async_process_zeroconf(hass, info)
     hass.async_create_task.assert_not_called()
+
 
 @pytest.mark.asyncio
 async def test_zeroconf_ignores_missing_ip():
@@ -46,6 +51,7 @@ async def test_zeroconf_ignores_missing_ip():
     await async_process_zeroconf(hass, info)
     hass.async_create_task.assert_not_called()
 
+
 @pytest.mark.asyncio
 async def test_zeroconf_skips_already_configured():
     hass = _make_hass(configured_hosts=["192.168.1.1"])
@@ -54,6 +60,7 @@ async def test_zeroconf_skips_already_configured():
     info.ip_address = MagicMock(__str__=lambda self: "192.168.1.1")
     await async_process_zeroconf(hass, info)
     hass.async_create_task.assert_not_called()
+
 
 @pytest.mark.asyncio
 async def test_zeroconf_starts_config_flow_for_new_device():
@@ -69,6 +76,7 @@ async def test_zeroconf_starts_config_flow_for_new_device():
 # async_process_dhcp
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_dhcp_ignores_non_ecostream_hostname():
     hass = _make_hass()
@@ -77,6 +85,7 @@ async def test_dhcp_ignores_non_ecostream_hostname():
     info.ip = "192.168.1.1"
     await async_process_dhcp(hass, info)
     hass.async_create_task.assert_not_called()
+
 
 @pytest.mark.asyncio
 async def test_dhcp_ignores_missing_ip():
@@ -87,6 +96,7 @@ async def test_dhcp_ignores_missing_ip():
     await async_process_dhcp(hass, info)
     hass.async_create_task.assert_not_called()
 
+
 @pytest.mark.asyncio
 async def test_dhcp_skips_already_configured():
     hass = _make_hass(configured_hosts=["192.168.1.1"])
@@ -95,6 +105,7 @@ async def test_dhcp_skips_already_configured():
     info.ip = "192.168.1.1"
     await async_process_dhcp(hass, info)
     hass.async_create_task.assert_not_called()
+
 
 @pytest.mark.asyncio
 async def test_dhcp_starts_config_flow_for_new_device():
