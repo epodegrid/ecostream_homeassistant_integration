@@ -67,7 +67,7 @@ class EcostreamDataUpdateCoordinator(
         self._push_interval: float = float(
             self.options.get(CONF_PUSH_INTERVAL, DEFAULT_PUSH_INTERVAL)
         )
-        self._fast_push_interval: float = float(
+        self._fast_push_interval: int = int(
             self.options.get(
                 CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL
             )

@@ -55,16 +55,16 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
         if user_input is not None:
             try:
                 push_interval = int(user_input[CONF_PUSH_INTERVAL])
-                fast_push_interval = float(user_input[CONF_FAST_PUSH_INTERVAL])
+                fast_push_interval = int(user_input[CONF_FAST_PUSH_INTERVAL])
                 filter_days = int(user_input[CONF_FILTER_REPLACEMENT_DAYS])
                 preset_low = int(user_input[CONF_PRESET_LOW_PCT])
                 preset_mid = int(user_input[CONF_PRESET_MID_PCT])
                 preset_high = int(user_input[CONF_PRESET_HIGH_PCT])
                 preset_override_minutes = int(user_input[CONF_PRESET_OVERRIDE_MINUTES])
 
-                if push_interval < 30:
+                if push_interval < 1:
                     errors["base"] = "push_interval_too_short"
-                elif fast_push_interval < 0.1:
+                elif fast_push_interval < 1:
                     errors["base"] = "fast_interval_too_short"
                 elif filter_days < 1:
                     errors["base"] = "invalid_number"
@@ -100,7 +100,7 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
         schema = vol.Schema(
             {
                 vol.Required(CONF_PUSH_INTERVAL, default=current_push): int,
-                vol.Required(CONF_FAST_PUSH_INTERVAL, default=current_fast): vol.Coerce(float),
+                vol.Required(CONF_FAST_PUSH_INTERVAL, default=current_fast): int,
                 vol.Required(CONF_FILTER_REPLACEMENT_DAYS, default=current_filter_days): int,
                 vol.Required(CONF_PRESET_LOW_PCT, default=current_low): vol.All(int, vol.Range(min=1, max=99)),
                 vol.Required(CONF_PRESET_MID_PCT, default=current_mid): vol.All(int, vol.Range(min=1, max=99)),
