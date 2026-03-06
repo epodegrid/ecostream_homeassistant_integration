@@ -54,13 +54,17 @@ async def async_setup_entry(
 # ============================================================================
 
 
-class EcostreamBaseEntity(CoordinatorEntity[EcostreamDataUpdateCoordinator]):
+class EcostreamBaseEntity(
+    CoordinatorEntity[EcostreamDataUpdateCoordinator]
+):
     """Shared device info for EcoStream entities."""
 
     _attr_has_entity_name = True
 
     def __init__(
-        self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
     ) -> None:
         """Initialize the EcoStream base entity with coordinator and config entry."""
         super().__init__(coordinator)
@@ -95,7 +99,9 @@ class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        self._attr_is_on = bool(self._get_config().get("schedule_enabled", False))
+        self._attr_is_on = bool(
+            self._get_config().get("schedule_enabled", False)
+        )
         self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -131,7 +137,9 @@ class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        self._attr_is_on = bool(self._get_config().get("sum_com_enabled", False))
+        self._attr_is_on = bool(
+            self._get_config().get("sum_com_enabled", False)
+        )
         self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -178,7 +186,7 @@ class EcostreamBoostDurationSelect(EcostreamBaseEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         try:
             minutes = int(option)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             _LOGGER.warning("Invalid boost duration option: %s", option)
             return
 
@@ -206,7 +214,7 @@ class EcostreamBoostRemainingSensor(EcostreamBaseEntity, SensorEntity):
 
         try:
             return int(val) if val is not None else 0
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return 0
 
     @callback
@@ -236,7 +244,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             self._attr_is_on = False
         self.async_write_ha_state()
 
@@ -248,19 +256,23 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         """Start (of reset) Boost: hoge Qset gedurende X minuten."""
 
         if not self.coordinator.ws:
-            _LOGGER.error("EcoStream WebSocket not connected, cannot start boost")
+            _LOGGER.error(
+                "EcoStream WebSocket not connected, cannot start boost"
+            )
             return
 
         config = self._get_config()
 
         # Preferentie: setpoint_high, anders capacity_max, anders fallback
         qset_raw = (
-            config.get("setpoint_high") or config.get("capacity_max") or BOOST_QSET
+            config.get("setpoint_high")
+            or config.get("capacity_max")
+            or BOOST_QSET
         )
 
         try:
             qset = float(qset_raw)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             qset = float(BOOST_QSET)
 
         # ----------------------------
@@ -273,7 +285,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         )
         try:
             minutes = int(minutes)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             minutes = DEFAULT_BOOST_DURATION_MINUTES
 
         if minutes < 1:
@@ -317,7 +329,9 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         (setpoints / schema). Dat gedraagt zich zoals de officiële app.
         """
         if not self.coordinator.ws:
-            _LOGGER.error("EcoStream WebSocket not connected, cannot stop boost")
+            _LOGGER.error(
+                "EcoStream WebSocket not connected, cannot stop boost"
+            )
             return
 
         payload = {
