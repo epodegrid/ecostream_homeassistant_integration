@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from functools import cached_property
 from homeassistant.components.select import SelectEntity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 import logging
 from typing import Any
@@ -22,6 +22,7 @@ from .const import (
 from .coordinator import EcostreamDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 0
 
 
 # ============================================================================
@@ -32,12 +33,12 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Register EcoStream switches and boost controls."""
     coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
 
-    entities: list = [
+    entities: list[Any] = [
         EcostreamScheduleSwitch(coordinator, entry),
         EcostreamSummerComfortSwitch(coordinator, entry),
         EcostreamBoostSwitch(coordinator, entry),
@@ -53,20 +54,15 @@ async def async_setup_entry(
 # ============================================================================
 
 
-class EcostreamBaseEntity(
-    CoordinatorEntity[EcostreamDataUpdateCoordinator]
-):
+class EcostreamBaseEntity(CoordinatorEntity[EcostreamDataUpdateCoordinator]):
     """Shared device info for EcoStream entities."""
 
     _attr_has_entity_name = True
-    coordinator: EcostreamDataUpdateCoordinator
 
     def __init__(
-        self,
-        coordinator: EcostreamDataUpdateCoordinator,
-        entry: ConfigEntry,
+        self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry
     ) -> None:
-        """Initialize the EcoStream base entity with coordinator and device info."""
+        """Initialize the EcoStream base entity with coordinator and config entry."""
         super().__init__(coordinator)
         self._entry = entry
         self._attr_device_info = DeviceInfo(
@@ -76,17 +72,11 @@ class EcostreamBaseEntity(
             model=DEVICE_MODEL,
         )
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Update available state when coordinator updates."""
-        vars(self).pop("available", None)
-        self.async_write_ha_state()
-
     # Kleine helpers voor afgeleide klassen
-    def _get_config(self) -> dict:
+    def _get_config(self) -> dict[str, Any]:
         return (self.coordinator.data or {}).get("config", {}) or {}
 
-    def _get_status(self) -> dict:
+    def _get_status(self) -> dict[str, Any]:
         return (self.coordinator.data or {}).get("status", {}) or {}
 
 
@@ -96,24 +86,17 @@ class EcostreamBaseEntity(
 
 
 class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
-    """Switch entity for controlling EcoStream schedule."""
+    _attr_translation_key = "schedule_enabled"
+    _attr_icon = "mdi:calendar-clock"
 
-    _attr_name = "Schedule Enabled"
-
-    @cached_property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        if self.coordinator.last_update_success:
-            return True
-        return super().available
-
-    @cached_property
+    @property
     def unique_id(self) -> str:
         return f"{self._entry.entry_id}_schedule_enabled"
 
-    @cached_property
-    def is_on(self) -> bool:
-        return bool(self._get_config().get("schedule_enabled", False))
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_is_on = bool(self._get_config().get("schedule_enabled", False))
+        self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._apply({"schedule_enabled": True})
@@ -139,24 +122,17 @@ class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
 
 
 class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
-    """Switch entity for controlling EcoStream summer comfort mode."""
+    _attr_translation_key = "summer_comfort"
+    _attr_icon = "mdi:weather-sunny"
 
-    _attr_name = "Summer Comfort"
-
-    @cached_property
+    @property
     def unique_id(self) -> str:
         return f"{self._entry.entry_id}_summer_comfort"
 
-    @cached_property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        if self.coordinator.last_update_success:
-            return True
-        return super().available
-
-    @cached_property
-    def is_on(self) -> bool:
-        return bool(self._get_config().get("sum_com_enabled", False))
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_is_on = bool(self._get_config().get("sum_com_enabled", False))
+        self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._apply({"sum_com_enabled": True})
@@ -182,21 +158,15 @@ class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
 
 
 class EcostreamBoostDurationSelect(EcostreamBaseEntity, SelectEntity):
-    """Select entity for controlling the boost duration in minutes."""
-
-    _attr_name = "Boost Duration"
+    _attr_translation_key = "boost_duration"
     _attr_options = BOOST_OPTIONS
+    _attr_icon = "mdi:timer-outline"
 
-    @cached_property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        return self.coordinator.last_update_success
-
-    @cached_property
+    @property
     def unique_id(self) -> str:
         return f"{self._entry.entry_id}_boost_duration"
 
-    @cached_property  # Changed from @property to @cached_property to match SelectEntity's definition and resolve Pylance error
+    @property
     def current_option(self) -> str | None:
         minutes = getattr(
             self.coordinator,
@@ -222,19 +192,14 @@ class EcostreamBoostDurationSelect(EcostreamBaseEntity, SelectEntity):
 
 
 class EcostreamBoostRemainingSensor(EcostreamBaseEntity, SensorEntity):
-    _attr_name = "Boost Time Remaining"
+    _attr_translation_key = "boost_time_remaining"
     _attr_native_unit_of_measurement = "s"
 
-    @cached_property
+    @property
     def unique_id(self) -> str:
         return f"{self._entry.entry_id}_boost_time_left"
 
-    @cached_property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        return self.coordinator.last_update_success
-
-    @cached_property
+    @property
     def native_value(self) -> int:
         status = self._get_status()
         val = status.get("override_set_time_left")
@@ -244,6 +209,10 @@ class EcostreamBoostRemainingSensor(EcostreamBaseEntity, SensorEntity):
         except (TypeError, ValueError):
             return 0
 
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self.async_write_ha_state()
+
 
 # ============================================================================
 # Boost switch
@@ -251,35 +220,25 @@ class EcostreamBoostRemainingSensor(EcostreamBaseEntity, SensorEntity):
 
 
 class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
-    """Switch entity for controlling EcoStream boost mode.
+    """Boost: tijdelijk hoge Qset met timer op de unit zelf."""
 
-    Boost temporarily sets a high Qset with a timer on the unit itself.
-    """
+    _attr_translation_key = "boost"
+    _attr_icon = "mdi:weather-windy"
 
-    _attr_name = "Boost"
-
-    @cached_property
+    @property
     def unique_id(self) -> str:
         return f"{self._entry.entry_id}_boost"
 
-    @cached_property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        if self.coordinator.last_update_success:
-            return True
-        return super().available
-
-    @cached_property
-    def is_on(self) -> bool:
-        """Boost is 'aan' zolang override_set_time_left > 0 is."""
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Update UI wanneer nieuwe EcoStream data binnenkomt."""
         status = self._get_status()
         val = status.get("override_set_time_left")
-        if val is None:
-            return False
         try:
-            return int(val) > 0
+            self._attr_is_on = val is not None and int(float(val)) > 0
         except (TypeError, ValueError):
-            return False
+            self._attr_is_on = False
+        self.async_write_ha_state()
 
     # ------------------------------
     # Boost AAN
@@ -289,18 +248,14 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         """Start (of reset) Boost: hoge Qset gedurende X minuten."""
 
         if not self.coordinator.ws:
-            _LOGGER.error(
-                "EcoStream WebSocket not connected, cannot start boost"
-            )
+            _LOGGER.error("EcoStream WebSocket not connected, cannot start boost")
             return
 
         config = self._get_config()
 
         # Preferentie: setpoint_high, anders capacity_max, anders fallback
         qset_raw = (
-            config.get("setpoint_high")
-            or config.get("capacity_max")
-            or BOOST_QSET
+            config.get("setpoint_high") or config.get("capacity_max") or BOOST_QSET
         )
 
         try:
@@ -362,9 +317,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         (setpoints / schema). Dat gedraagt zich zoals de officiële app.
         """
         if not self.coordinator.ws:
-            _LOGGER.error(
-                "EcoStream WebSocket not connected, cannot stop boost"
-            )
+            _LOGGER.error("EcoStream WebSocket not connected, cannot stop boost")
             return
 
         payload = {

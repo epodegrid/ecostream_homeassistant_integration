@@ -1,18 +1,17 @@
 rules:
   # Bronze
-  action-setup:
+  action-setup: 
     status: exempt
     comment: This integration does not provide additional actions.
-  appropriate-polling:
+  appropriate-polling: 
     status: exempt
     comment: This integration is push-based.
-  brands:
-    status: done
+  brands: done
   common-modules: done
   config-flow-test-coverage: done
   config-flow: done
   dependency-transparency: done
-  docs-actions:
+  docs-actions: 
     status: exempt
     comment: This integration does not provide additional actions.
   docs-high-level-description: done
@@ -27,7 +26,7 @@ rules:
   unique-config-entry: done
 
   # Silver
-  action-exceptions:
+  action-exceptions: 
     status: exempt
     comment: This integration does not provide additional actions.
   config-entry-unloading: done
@@ -35,11 +34,8 @@ rules:
   docs-installation-parameters: done
   entity-unavailable: done
   integration-owner: done
-  log-when-unavailable: todo
-  comment: Restrict websocket_api.py to log only a single entry when the connection is lost and another single entry when it is restored, avoiding multiple log entries during the backoff loop.
-  parallel-updates:
-    status: todo
-    comment: Ensure that PARALLEL_UPDATES is explicitly set to 0 in all platform files for push-based integrations using CoordinatorEntity, as the coordinator manages updates
+  log-when-unavailable: done
+  parallel-updates: done
   reauthentication-flow: done
   test-coverage:
     status: todo
@@ -50,58 +46,30 @@ rules:
   diagnostics: done
   discovery-update-info: done
   discovery: done
-  docs-data-update:
-    status: todo
-    comment: README mentions “local push” but doesn’t explain the WebSocket mechanism, update cadence, or throttling.
-  docs-examples:
-    status: todo
-    comment: No automation examples in the README.
+  docs-data-update: done
+  docs-examples: done
   docs-known-limitations: done
-  docs-supported-devices:
-    status: todo
-    comment: No list of supported/unsupported devices or firmware versions.
-  docs-supported-functions:
-    status: todo
-    comment: No structured table of entities/platforms and what they do.
-  docs-troubleshooting:
-    status: todo
-    comment: Only debug logging is covered; no real troubleshooting guidance. Tough there is a Diagnostics and Debugging section... Don't know.
-  docs-use-cases:
-    status: todo
-    comment: No described use cases (e.g., “boost on high CO₂”, “night schedule”).
-  dynamic-devices:
+  docs-supported-devices: done
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: done
+  dynamic-devices: 
     status: exempt
     comment: Not applicable (single fixed device), but formally unimplemented.
-  entity-category:
-    status: todo
-    comment: No entities use EntityCategory.DIAGNOSTIC or CONFIG (RSSI, uptime, filter date are clear diagnostic candidates).
+  entity-category: done
   entity-device-class: done
-  entity-disabled-by-default:
-    status: todo
-    comment: Low-value entities (WiFi SSID/RSSI, uptime, efficiency) aren’t disabled by default via entity_registry_enabled_default = False.
-  entity-translations:
-    status: todo
-    comment: Entity names are hardcoded; use translation_key with entries in en.json.
-  exception-translations:
-    status: todo
-    comment: Entity names are hardcoded; use translation_key with entries in en.json.
+  entity-disabled-by-default: done
+  entity-translations: done
+  exception-translations: done
   icon-translations:
-    status: todo
-    comment:
-  reconfiguration-flow:
-    status: todo
-    comment: Missing async_step_reconfigure in config_flow.py.
-  repair-issues:
-    status: todo
-    comment: No use of homeassistant.helpers.issue_registry for recoverable issues (e.g., lost connection, overdue filter).
-  stale-devices:
-    status: todo
-    comment: No cleanup of stale devices on reconfigure.
+    status: done
+    comment: icons.json was removed (deprecated). Icons are currently set via _attr_icon on entities. Needs icons.json re-implementation or confirmation that direct icon attributes satisfy this rule.
+  reconfiguration-flow: done
+  repair-issues: done
+  stale-devices: done
 
   # Platinum
   async-dependency: done
-  inject-websession:
-    status: todo
+  inject-websession: done
   strict-typing:
-    status: todo
-    comment: Multiple, type ignore annotations present in fan.py-23, type ignore[name-defined] in fan.py-40, type ignore[name-defined] in switch.py-185, type ignore[attr-defined], Additionally, no mypy.ini or pyrightconfig.json with strict mode configured, and no py.typed marker present.
+    status: done

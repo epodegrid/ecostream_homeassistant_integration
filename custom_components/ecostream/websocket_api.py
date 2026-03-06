@@ -3,15 +3,18 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.issue_registry import IssueSeverity
 import json
 import logging
 import time
-from typing import Any
+from typing import Any, cast
 
 from aiohttp import ClientError, WSMsgType
 
 from .const import (
+    DOMAIN,
     WS_HEARTBEAT_INTERVAL,
     WS_RECONNECT_INITIAL_DELAY,
     WS_RECONNECT_MAX_DELAY,
@@ -36,8 +39,9 @@ class EcostreamWebsocket:
 
         Args:
             hass: Home Assistant instance.
-            host: IP address or hostname of the EcoStream device.
-            message_callback: Async callback to handle received messages.
+            host: The hostname or IP address of the EcoStream device.
+            message_callback: Async callback function to process received messages.
+
         """
         self._hass = hass
         host = (host or "").strip().strip("/")
@@ -47,13 +51,14 @@ class EcostreamWebsocket:
         self._session = async_get_clientsession(hass)
         self._message_callback = message_callback
 
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[None] | None = None
         self._ws = None
         self._stopping = False
 
         self._last_message_ts: float | None = None
         self._has_received_payload = False
         self._stale_logged = False
+        self._logged_unavailable = False
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -78,9 +83,7 @@ class EcostreamWebsocket:
             try:
                 await self._ws.close()
             except Exception:
-                _LOGGER.debug(
-                    "Error closing EcoStream WS", exc_info=True
-                )
+                _LOGGER.debug("Error closing EcoStream WS", exc_info=True)
 
         if self._task is not None:
             self._task.cancel()
@@ -90,9 +93,7 @@ class EcostreamWebsocket:
                 pass
             self._task = None
 
-        _LOGGER.info(
-            "EcoStream WebSocket loop stopped for %s", self._host
-        )
+        _LOGGER.info("EcoStream WebSocket loop stopped for %s", self._host)
 
     # ------------------------------------------------------------------
     # Sending
@@ -109,15 +110,9 @@ class EcostreamWebsocket:
 
         try:
             await self._ws.send_json(payload)
-            _LOGGER.debug(
-                "Sent JSON to EcoStream %s: %s", self._host, payload
-            )
+            _LOGGER.debug("Sent JSON to EcoStream %s: %s", self._host, payload)
         except Exception as err:
-            _LOGGER.error(
-                "Failed to send JSON to EcoStream %s: %s",
-                self._host,
-                err,
-            )
+            _LOGGER.error("Failed to send JSON to EcoStream %s: %s", self._host, err)
 
     # ------------------------------------------------------------------
     # Main worker
@@ -129,9 +124,8 @@ class EcostreamWebsocket:
 
         while not self._stopping:
             try:
-                _LOGGER.info(
-                    "Connecting to EcoStream WS at %s", self._ws_url
-                )
+                if not self._logged_unavailable:
+                    _LOGGER.info("Connecting to EcoStream WS at %s", self._ws_url)
 
                 async with self._session.ws_connect(
                     self._ws_url,
@@ -143,10 +137,12 @@ class EcostreamWebsocket:
                     self._stale_logged = False
                     backoff = WS_RECONNECT_INITIAL_DELAY
 
-                    _LOGGER.info(
-                        "EcoStream WebSocket connected: %s",
-                        self._ws_url,
-                    )
+                    if self._logged_unavailable:
+                        _LOGGER.info("EcoStream WebSocket reconnected: %s", self._ws_url)
+                        ir.async_delete_issue(self._hass, DOMAIN, "connection_lost")
+                    else:
+                        _LOGGER.info("EcoStream WebSocket connected: %s", self._ws_url)
+                    self._logged_unavailable = False
 
                     # ------------------------------
                     # READ LOOP
@@ -155,21 +151,33 @@ class EcostreamWebsocket:
                         if self._stopping:
                             break
 
+                        # Turn coroutine into a Task (required for asyncio.wait)
+                        receive_task = asyncio.create_task(ws.receive())
+
                         try:
-                            msg = await asyncio.wait_for(
-                                ws.receive(),
+                            done, _ = await asyncio.wait(
+                                {receive_task},
                                 timeout=WS_HEARTBEAT_INTERVAL,
+                                return_when=asyncio.FIRST_COMPLETED,
                             )
-                        except TimeoutError:
+                        except asyncio.CancelledError:
+                            receive_task.cancel()
+                            raise
+
+                        if self._stopping:
+                            receive_task.cancel()
+                            break
+
+                        # TIMEOUT → send heartbeat & stale-check
+                        if not done:
+                            receive_task.cancel()
                             await self._send_heartbeat()
                             if not self._stopping:
                                 self._check_stale()
                             continue
-                        except asyncio.CancelledError:
-                            raise
 
-                        if self._stopping:
-                            break
+                        # MESSAGE RECEIVED
+                        msg = receive_task.result()
 
                         if msg.type == WSMsgType.TEXT:
                             self._last_message_ts = time.time()
@@ -179,24 +187,17 @@ class EcostreamWebsocket:
                                 await self._handle_text(msg.data)
 
                         elif msg.type == WSMsgType.BINARY:
-                            _LOGGER.debug(
-                                "Ignoring binary WS message from EcoStream"
-                            )
+                            _LOGGER.debug("Ignoring binary WS message from EcoStream")
 
-                        elif msg.type in (
-                            WSMsgType.CLOSE,
-                            WSMsgType.CLOSING,
-                        ):
+                        elif msg.type in (WSMsgType.CLOSE, WSMsgType.CLOSING):
                             _LOGGER.warning(
-                                "EcoStream WS closing (type=%s)",
-                                msg.type,
+                                "EcoStream WS closing (type=%s)", msg.type
                             )
                             break
 
                         elif msg.type == WSMsgType.ERROR:
                             _LOGGER.error(
-                                "EcoStream WebSocket error: %s",
-                                ws.exception(),
+                                "EcoStream WebSocket error: %s", ws.exception()
                             )
                             break
 
@@ -204,24 +205,41 @@ class EcostreamWebsocket:
                             self._check_stale()
 
             except asyncio.CancelledError:
-                _LOGGER.debug(
-                    "EcoStream WS loop cancelled for %s", self._host
-                )
+                _LOGGER.debug("EcoStream WS loop cancelled for %s", self._host)
                 break
 
             except (ClientError, OSError) as err:
                 if not self._stopping:
-                    _LOGGER.warning(
-                        "EcoStream WS client/OS error: %s — reconnecting in %ss",
-                        err,
-                        backoff,
-                    )
+                    if not self._logged_unavailable:
+                        _LOGGER.warning(
+                            "EcoStream WS unavailable: %s — will retry in background",
+                            err,
+                        )
+                        self._logged_unavailable = True
+                        ir.async_create_issue(
+                            self._hass,
+                            DOMAIN,
+                            "connection_lost",
+                            is_fixable=False,
+                            severity=IssueSeverity.WARNING,
+                            translation_key="connection_lost",
+                            translation_placeholders={"host": self._host},
+                        )
 
             except Exception as err:
                 if not self._stopping:
-                    _LOGGER.exception(
-                        "Unexpected error in EcoStream WS loop: %s", err
-                    )
+                    if not self._logged_unavailable:
+                        _LOGGER.exception("Unexpected error in EcoStream WS loop: %s", err)
+                        self._logged_unavailable = True
+                        ir.async_create_issue(
+                            self._hass,
+                            DOMAIN,
+                            "connection_lost",
+                            is_fixable=False,
+                            severity=IssueSeverity.WARNING,
+                            translation_key="connection_lost",
+                            translation_placeholders={"host": self._host},
+                        )
 
             finally:
                 self._ws = None
@@ -246,9 +264,7 @@ class EcostreamWebsocket:
             _LOGGER.debug("EcoStream heartbeat → %s", self._host)
         except Exception:
             _LOGGER.debug(
-                "Failed to send EcoStream heartbeat → %s",
-                self._host,
-                exc_info=True,
+                "Failed to send EcoStream heartbeat → %s", self._host, exc_info=True
             )
 
     def _check_stale(self) -> None:
@@ -288,17 +304,15 @@ class EcostreamWebsocket:
             return
 
         if not isinstance(payload, dict):
-            _LOGGER.debug(
-                "Ignoring non-dict JSON from EcoStream: %s", payload
-            )
+            _LOGGER.debug("Ignoring non-dict JSON from EcoStream: %s", payload)
             return
 
-        _LOGGER.debug("WS JSON from %s: %s", self._host, payload)
+        typed_payload: dict[str, Any] = cast(dict[str, Any], payload)
+        _LOGGER.debug("WS JSON from %s: %s", self._host, typed_payload)
 
         try:
-            await self._message_callback(payload)
+            await self._message_callback(typed_payload)
         except Exception as err:
             _LOGGER.exception(
-                "Error while processing EcoStream payload in coordinator: %s",
-                err,
+                "Error while processing EcoStream payload in coordinator: %s", err
             )

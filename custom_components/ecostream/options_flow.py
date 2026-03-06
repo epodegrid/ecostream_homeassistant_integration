@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from homeassistant import config_entries
+from homeassistant.config_entries import (
+    ConfigFlowResult,
+    OptionsFlowWithConfigEntry,
+)
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
 import logging
@@ -18,13 +22,14 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class EcostreamOptionsFlow(config_entries.OptionsFlow):
+class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
     """Handle EcoStream configuration options."""
 
     def __init__(
         self, config_entry: config_entries.ConfigEntry
     ) -> None:
         """Initialize EcoStream options flow."""
+        super().__init__(config_entry)
         self._entry = config_entry
         self._options = dict(config_entry.options)
 
@@ -33,18 +38,16 @@ class EcostreamOptionsFlow(config_entries.OptionsFlow):
     # --------------------------------------------------------------
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
+    ) -> ConfigFlowResult:
 
         errors: dict[str, str] = {}
 
         if user_input is not None:
             # validate numeric values
             try:
-                push_interval = float(
-                    user_input.get(CONF_PUSH_INTERVAL, 0)
-                )
-                fast_push_interval = float(
-                    user_input.get(CONF_FAST_PUSH_INTERVAL, 0)
+                push_interval = int(user_input[CONF_PUSH_INTERVAL])
+                fast_push_interval = int(
+                    user_input[CONF_FAST_PUSH_INTERVAL]
                 )
 
                 if push_interval < 30:
@@ -79,11 +82,11 @@ class EcostreamOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(
                     CONF_PUSH_INTERVAL,
                     default=current_push,
-                ): vol.Coerce(float),
+                ): int,
                 vol.Required(
                     CONF_FAST_PUSH_INTERVAL,
                     default=current_fast,
-                ): vol.Coerce(float),
+                ): int,
             }
         )
 

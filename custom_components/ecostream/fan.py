@@ -1,27 +1,28 @@
 from __future__ import annotations
 
-from functools import cached_property
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 import logging
-from typing import Any, cast
+from typing import Any
 
 from .const import DEVICE_MODEL, DEVICE_NAME, DOMAIN
 from .coordinator import EcostreamDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
-    hass,
+    hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the EcoStream fan platform."""
-    coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data  # type: ignore[name-defined]
+    coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
 
     async_add_entities(
         [EcostreamVentilationFan(coordinator, entry)],
@@ -29,21 +30,20 @@ async def async_setup_entry(
     )
 
 
-class EcostreamVentilationFan(CoordinatorEntity, FanEntity):  # type: ignore[misc]
+class EcostreamVentilationFan(
+    CoordinatorEntity[EcostreamDataUpdateCoordinator], FanEntity
+):
     """EcoStream main ventilation fan."""
 
     _attr_has_entity_name = True
-    _attr_name = "Ventilation"
+    _attr_translation_key = "ventilation"
     _attr_should_poll = False
-    _attr_supported_features = (
-        FanEntityFeature.TURN_ON
-        | FanEntityFeature.TURN_OFF
-        | FanEntityFeature.SET_SPEED
-    )
+    _attr_icon = "mdi:fan"
+    coordinator: EcostreamDataUpdateCoordinator
 
     def __init__(
         self,
-        coordinator: EcostreamDataUpdateCoordinator,  # type: ignore[name-defined]
+        coordinator: EcostreamDataUpdateCoordinator,
         entry: ConfigEntry,
     ) -> None:
         """Initialize the EcoStream ventilation fan entity."""
@@ -58,28 +58,27 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):  # type: ignore[mis
             model=DEVICE_MODEL,
         )
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        vars(self).pop("percentage", None)
-        self.async_write_ha_state()
-
-    # ------------------------------------------------------------------
-    # Supported features
-    # ------------------------------------------------------------------
+        # Set supported features
+        features = FanEntityFeature(0)
+        for name in ("TURN_ON", "TURN_OFF", "SET_PERCENTAGE"):
+            val = getattr(FanEntityFeature, name, None)
+            if val is not None:
+                features |= val
+        self._attr_supported_features = features
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
-    def _status(self) -> dict:
+    def _status(self) -> dict[str, Any]:
         return (self.coordinator.data or {}).get("status", {}) or {}
 
-    def _config(self) -> dict:
+    def _config(self) -> dict[str, Any]:
         return (self.coordinator.data or {}).get("config", {}) or {}
 
     def _get_qset(self) -> float:
         try:
             return float(self._status().get("qset", 0.0))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return 0.0
 
     def _get_capacity_min(self) -> float | None:
@@ -88,7 +87,7 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):  # type: ignore[mis
             if value is None:
                 return None
             return float(value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return None
 
     def _get_capacity_max(self) -> float | None:
@@ -97,7 +96,7 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):  # type: ignore[mis
             if value is None:
                 return None
             return float(value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return None
 
     # ------------------------------------------------------------------
@@ -107,16 +106,15 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):  # type: ignore[mis
     def is_on(self) -> bool:
         return self._get_qset() > 0
 
-    @cached_property
-    def percentage(self) -> int | None:
-        data = self.coordinator.data or {}
-        if "status" not in data:
-            return None
+    def _calculate_percentage(self) -> int | None:
+        """Map qset to 0  100% based on capacity range."""
+        qset = self._get_qset()
         cap_min = self._get_capacity_min()
         cap_max = self._get_capacity_max()
+
         if cap_min is None or cap_max is None or cap_max <= cap_min:
             return None
-        qset = self._get_qset()
+
         pct = round((qset - cap_min) / (cap_max - cap_min) * 100)
         return max(0, min(100, pct))
 
@@ -127,10 +125,13 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):  # type: ignore[mis
         self,
         percentage: int | None = None,
         preset_mode: str | None = None,
-        turn_on: bool = True,
         **kwargs: Any,
     ) -> None:
-        pct = percentage or self.percentage or 30
+        pct = (
+            percentage
+            if percentage is not None
+            else kwargs.get("percentage", self._attr_percentage or 30)
+        )
         await self.async_set_percentage(pct)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -151,9 +152,8 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):  # type: ignore[mis
             return
 
         qset = cap_min + (percentage / 100.0) * (cap_max - cap_min)
-        coordinator = cast(Any, self.coordinator)
 
-        if not coordinator.ws:
+        if not self.coordinator.ws:
             _LOGGER.error(
                 "EcoStream WebSocket not connected → cannot set fan"
             )
@@ -166,7 +166,7 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):  # type: ignore[mis
             }
         }
 
-        coordinator.mark_control_action()
+        self.coordinator.mark_control_action()
         _LOGGER.debug(
             "EcoStream ventilation: %s%% → Qset %.1f (min=%.1f max=%.1f)",
             percentage,
@@ -175,5 +175,10 @@ class EcostreamVentilationFan(CoordinatorEntity, FanEntity):  # type: ignore[mis
             cap_max,
         )
 
-        await coordinator.ws.send_json(payload)
+        await self.coordinator.ws.send_json(payload)
+        self.async_write_ha_state()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_percentage = self._calculate_percentage()
         self.async_write_ha_state()

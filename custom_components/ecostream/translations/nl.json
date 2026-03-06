@@ -11,6 +11,12 @@
       "confirm": {
         "title": "EcoStream-apparaat toevoegen",
         "description": "EcoStream-apparaat \"{name}\" is gevonden op {host}. Wil je dit apparaat toevoegen?"
+      },
+      "reconfigure": {
+        "title": "EcoStream opnieuw configureren",
+        "data": {
+          "host": "IP-adres van het apparaat"
+        }
       }
     },
     "error": {
@@ -21,6 +27,16 @@
       "already_configured": "Deze EcoStream-unit is al geconfigureerd."
     }
   },
+
+  "exceptions": {
+    "cannot_connect": {
+      "message": "Kan geen verbinding maken met EcoStream op {host}."
+    },
+    "unknown_error": {
+      "message": "Onverwachte fout bij verbinding met EcoStream op {host}."
+    }
+  },
+
   "options": {
     "step": {
       "init": {
@@ -33,25 +49,54 @@
       }
     }
   },
+
   "entity": {
     "fan": {
-      "ecostream_ventilation": {
-        "name": "Ventilatie"
+      "ventilation": {
+        "name": "Ventilatie",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "low": "Laag",
+              "mid": "Middel",
+              "high": "Hoog"
+            }
+          }
+        }
       }
+    },
+    "sensor": {
+      "bypass_position": {"name": "Bypasspositie"},
+      "eco2_return": {"name": "eCO₂ Retour"},
+      "tvoc_return": {"name": "TVOC Retour"},
+      "humidity_return": {"name": "Vochtigheid Retour"},
+      "temperature_eha": {"name": "Temperatuur EHA"},
+      "temperature_eta": {"name": "Temperatuur ETA"},
+      "temperature_oda": {"name": "Temperatuur ODA"},
+      "fan_exhaust_speed": {"name": "Afvoerventilator snelheid"},
+      "fan_supply_speed": {"name": "Toevoerventilator snelheid"},
+      "qset": {"name": "Qset"},
+      "mode_time_left": {"name": "Resterende modestijd"},
+      "frost_protection_active": {"name": "Vorstbeveiliging actief"},
+      "efficiency": {"name": "Warmteterugwinning efficiëntie"},
+      "schedule_enabled": {"name": "Schema ingeschakeld"},
+      "summer_comfort_enabled": {"name": "Zomercomfort ingeschakeld"},
+      "summer_comfort_temp": {"name": "Zomercomfort temperatuur"},
+      "filter_replacement_date": {"name": "Filtervervangingsdatum"},
+      "filter_replacement_warning": {"name": "Filtervervangingswaarschuwing"},
+      "uptime": {"name": "Uptime"},
+      "wifi_ip": {"name": "WiFi IP-adres"},
+      "wifi_ssid": {"name": "WiFi SSID"},
+      "wifi_rssi": {"name": "WiFi signaalsterkte"},
+      "boost_time_remaining": {"name": "Resterende boosttijd"}
     },
     "switch": {
-      "ecostream_schedule_enabled": {
-        "name": "Schema ingeschakeld"
-      },
-      "ecostream_summer_comfort": {
-        "name": "Zomercomfort"
-      },
-      "ecostream_boost": {
-        "name": "Boost"
-      }
+      "schedule_enabled": {"name": "Schema ingeschakeld"},
+      "summer_comfort": {"name": "Zomercomfort"},
+      "boost": {"name": "Boost"}
     },
     "select": {
-      "ecostream_boost_duration": {
+      "boost_duration": {
         "name": "Boostduur",
         "state": {
           "5": "5 minuten",
@@ -61,59 +106,11 @@
         }
       }
     },
-    "sensor": {
-      "ecostream_boost_time_left": {
-        "name": "Resterende boosttijd"
-      },
-      "ecostream_eco2_return": {
-        "name": "eCO₂ Retour"
-      },
-      "ecostream_tvoc_return": {
-        "name": "TVOC Retour"
-      },
-      "ecostream_humidity_return": {
-        "name": "Vochtigheid Retour"
-      },
-      "ecostream_temperature_eta": {
-        "name": "Temperatuur ETA"
-      },
-      "ecostream_temperature_eha": {
-        "name": "Temperatuur EHA"
-      },
-      "ecostream_temperature_oda": {
-        "name": "Temperatuur ODA"
-      },
-      "ecostream_fan_exhaust_speed": {
-        "name": "Afvoerventilator snelheid"
-      },
-      "ecostream_fan_supply_speed": {
-        "name": "Toevoerventilator snelheid"
-      },
-      "ecostream_qset": {
-        "name": "Qset"
-      },
-      "ecostream_uptime": {
-        "name": "Uptime"
-      },
-      "ecostream_wifi_ip": {
-        "name": "WiFi IP-adres"
-      },
-      "ecostream_wifi_ssid": {
-        "name": "WiFi SSID"
-      },
-      "ecostream_wifi_rssi": {
-        "name": "WiFi RSSI"
-      }
+    "number": {
+      "qset_number": {"name": "Qset"}
     },
     "valve": {
-      "ecostream_bypass_valve": {
-        "name": "Bypassklep"
-      }
-    },
-    "button": {
-      "ecostream_reset_filter": {
-        "name": "Filter resetten"
-      }
+      "bypass_valve": {"name": "Bypassklep"}
     }
   }
 }

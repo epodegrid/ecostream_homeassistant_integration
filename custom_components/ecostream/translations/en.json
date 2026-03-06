@@ -13,22 +13,94 @@
                 "data": {
                     "host": "Host"
                 }
+            },
+            "reconfigure": {
+                "title": "Reconfigure EcoStream",
+                "data": {
+                    "host": "Host"
+                }
             }
         }
     },
-    "entity": {
-    "fan": {
-      "ecostream_fan": {
-        "state_attributes": {
-          "preset_mode": {
-            "state": {
-              "low": "Low",
-              "mid": "Medium",
-              "high": "High"
-            }
-          }
+    "exceptions": {
+        "cannot_connect": {
+            "message": "Cannot connect to EcoStream at {host}."
+        },
+        "unknown_error": {
+            "message": "Unexpected error connecting to EcoStream at {host}."
         }
-      }
+    },
+    "entity": {
+        "fan": {
+            "ventilation": {
+                "name": "Ventilation",
+                "state_attributes": {
+                    "preset_mode": {
+                        "state": {
+                            "low": "Low",
+                            "mid": "Medium",
+                            "high": "High"
+                        }
+                    }
+                }
+            }
+        },
+        "sensor": {
+            "bypass_position": {"name": "Bypass Position"},
+            "eco2_return": {"name": "eCO₂ Return"},
+            "tvoc_return": {"name": "TVOC Return"},
+            "humidity_return": {"name": "Humidity Return"},
+            "temperature_eha": {"name": "Temperature EHA"},
+            "temperature_eta": {"name": "Temperature ETA"},
+            "temperature_oda": {"name": "Temperature ODA"},
+            "fan_exhaust_speed": {"name": "Fan Exhaust Speed"},
+            "fan_supply_speed": {"name": "Fan Supply Speed"},
+            "qset": {"name": "Qset"},
+            "mode_time_left": {"name": "Mode Time Left"},
+            "frost_protection_active": {"name": "Frost Protection Active"},
+            "efficiency": {"name": "Heat Recovery Efficiency"},
+            "schedule_enabled": {"name": "Schedule Enabled"},
+            "summer_comfort_enabled": {"name": "Summer Comfort Enabled"},
+            "summer_comfort_temp": {"name": "Summer Comfort Temperature"},
+            "filter_replacement_date": {"name": "Filter Replacement Date"},
+            "filter_replacement_warning": {"name": "Filter Replacement Warning"},
+            "uptime": {"name": "Uptime"},
+            "wifi_ip": {"name": "WiFi IP"},
+            "wifi_ssid": {"name": "WiFi SSID"},
+            "wifi_rssi": {"name": "WiFi Signal Strength"},
+            "boost_time_remaining": {"name": "Boost Time Remaining"}
+        },
+        "switch": {
+            "schedule_enabled": {"name": "Schedule Enabled"},
+            "summer_comfort": {"name": "Summer Comfort"},
+            "boost": {"name": "Boost"}
+        },
+        "select": {
+            "boost_duration": {
+                "name": "Boost Duration",
+                "state": {
+                    "5": "5 minutes",
+                    "10": "10 minutes",
+                    "15": "15 minutes",
+                    "30": "30 minutes"
+                }
+            }
+        },
+        "number": {
+            "qset_number": {"name": "Qset"}
+        },
+        "valve": {
+            "bypass_valve": {"name": "Bypass Valve"}
+        }
+    },
+    "issues": {
+        "connection_lost": {
+            "title": "EcoStream device is unreachable",
+            "description": "Home Assistant lost connection to the BUVA EcoStream at {host}. The integration will keep retrying. Check that the device is powered on and reachable on the network."
+        },
+        "filter_replacement_overdue": {
+            "title": "EcoStream filter replacement overdue",
+            "description": "The BUVA EcoStream filter is overdue for replacement. Use the reset filter button after replacing the filter to clear this issue."
+        }
     }
-  }
 }

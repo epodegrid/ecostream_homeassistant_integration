@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_HOST
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
@@ -12,7 +11,7 @@ from homeassistant.helpers.service_info.zeroconf import (
 )
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 from aiohttp import ClientError, WSMsgType
 import voluptuous as vol
@@ -52,7 +51,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> ConfigFlowResult:
+    ) -> config_entries.ConfigFlowResult:
 
         errors: dict[str, str] = {}
 
@@ -65,19 +64,13 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
-                _LOGGER.exception(
-                    "Unexpected error during EcoStream validation"
-                )
+                _LOGGER.exception("Unexpected error during EcoStream validation")
                 errors["base"] = "unknown"
             else:
-                system_name = (
-                    info.get("system_name") or f"EcoStream ({host})"
-                )
+                system_name = info.get("system_name") or f"EcoStream ({host})"
 
                 await self.async_set_unique_id(system_name)
-                self._abort_if_unique_id_configured(
-                    updates={CONF_HOST: host}
-                )
+                self._abort_if_unique_id_configured(updates={CONF_HOST: host})
 
                 return self.async_create_entry(
                     title=system_name,
@@ -103,12 +96,12 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_zeroconf(
         self,
         discovery_info: ZeroconfServiceInfo,
-    ) -> ConfigFlowResult:
+    ) -> config_entries.ConfigFlowResult:
 
         host = discovery_info.host
         name = discovery_info.name or "EcoStream"
 
-        if not host or host in ("0.0.0.0", "::"):
+        if not host:
             return self.async_abort(reason="unknown")
 
         system_name = name.split(".")[0]
@@ -133,7 +126,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_dhcp(
         self,
         discovery_info: DhcpServiceInfo,
-    ) -> ConfigFlowResult:
+    ) -> config_entries.ConfigFlowResult:
 
         host = discovery_info.ip
         hostname = getattr(discovery_info, "hostname", "EcoStream")
@@ -163,43 +156,39 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_confirm(
         self,
         user_input: dict[str, Any] | None = None,
-    ) -> ConfigFlowResult:
+    ) -> config_entries.ConfigFlowResult:
 
         errors: dict[str, str] = {}
 
         if user_input is not None:
             if not self._host:
+                return self.async_abort(reason="unknown")
+
+            try:
+                info = await self._probe_ecostream(self._host)
+            except CannotConnect:
                 errors["base"] = "cannot_connect"
+            except Exception:
+                _LOGGER.exception("Unexpected error while validating EcoStream")
+                errors["base"] = "unknown"
             else:
-                try:
-                    info = await self._probe_ecostream(self._host)
-                except CannotConnect:
-                    errors["base"] = "cannot_connect"
-                except Exception:
-                    _LOGGER.exception(
-                        "Unexpected error while validating EcoStream"
-                    )
-                    errors["base"] = "unknown"
-                else:
-                    system_name = (
-                        info.get("system_name")
-                        or self._discovered_name
-                        or f"EcoStream ({self._host})"
-                    )
+                system_name = (
+                    info.get("system_name")
+                    or self._discovered_name
+                    or f"EcoStream ({self._host})"
+                )
 
-                    await self.async_set_unique_id(system_name)
-                    self._abort_if_unique_id_configured(
-                        updates={CONF_HOST: self._host}
-                    )
+                await self.async_set_unique_id(system_name)
+                self._abort_if_unique_id_configured(updates={CONF_HOST: self._host})
 
-                    return self.async_create_entry(
-                        title=system_name,
-                        data={CONF_HOST: self._host},
-                    )
+                return self.async_create_entry(
+                    title=system_name,
+                    data={CONF_HOST: self._host},
+                )
 
         return self.async_show_form(
             step_id="confirm",
-            data_schema=vol.Schema({}),  # Only OK button
+            data_schema=vol.Schema({}),  # alleen OK knop
             errors=errors,
             description_placeholders={
                 "host": self._host or "",
@@ -213,9 +202,42 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reauth(
         self,
         entry_data: dict[str, Any],
-    ) -> ConfigFlowResult:
+    ) -> config_entries.ConfigFlowResult:
         self._host = entry_data.get(CONF_HOST)
         return await self.async_step_user()
+
+    # ======================================================================
+    # RECONFIGURE STEP
+    # ======================================================================
+    async def async_step_reconfigure(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        errors: dict[str, str] = {}
+        entry = self._get_reconfigure_entry()
+
+        if user_input is not None:
+            host = user_input[CONF_HOST].strip()
+            try:
+                await self._probe_ecostream(host)
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except Exception:
+                _LOGGER.exception("Unexpected error during EcoStream reconfigure")
+                errors["base"] = "unknown"
+            else:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data={**entry.data, CONF_HOST: host},
+                )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {vol.Required(CONF_HOST, default=entry.data.get(CONF_HOST, "")): str}
+            ),
+            errors=errors,
+        )
 
     # ======================================================================
     # HELPER: Probe device
@@ -242,8 +264,9 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if not isinstance(payload, dict):
                     raise CannotConnect("Invalid payload")
 
-                system = payload.get("system", {})
-                system_name = system.get("system_name")
+                typed_payload: dict[str, Any] = cast(dict[str, Any], payload)
+                system: dict[str, Any] = cast(dict[str, Any], typed_payload.get("system") or {})
+                system_name: str | None = system.get("system_name")
 
                 return {"system_name": system_name}
 
@@ -267,7 +290,7 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ======================================================================
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry):
+    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
         from .options_flow import EcostreamOptionsFlow
 
         return EcostreamOptionsFlow(config_entry)

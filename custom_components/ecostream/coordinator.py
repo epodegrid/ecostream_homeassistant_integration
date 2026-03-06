@@ -6,7 +6,9 @@ from homeassistant.const import (
     EVENT_HOMEASSISTANT_STARTED,
     EVENT_HOMEASSISTANT_STOP,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Event, HomeAssistant
+from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.issue_registry import IssueSeverity
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
@@ -20,6 +22,7 @@ from .const import (
     CONF_PUSH_INTERVAL,
     DEFAULT_FAST_PUSH_INTERVAL,
     DEFAULT_PUSH_INTERVAL,
+    DOMAIN,
     FAST_KEYS,
     FAST_MODE_SECONDS,
     SLOW_KEYS,
@@ -34,7 +37,7 @@ RECONNECT_MIN_SLEEP = 60
 
 
 class EcostreamDataUpdateCoordinator(
-    DataUpdateCoordinator[dict[str, Any]]
+    DataUpdateCoordinator[Mapping[str, Any]]
 ):
     """Manages EcoStream WebSocket data & push scheduling (pure push model)."""
 
@@ -44,7 +47,13 @@ class EcostreamDataUpdateCoordinator(
         host: str,
         options: Mapping[str, Any] | None = None,
     ) -> None:
-        """Initialize the coordinator with Home Assistant, device host, and optional settings."""
+        """Initialize the EcoStream coordinator.
+
+        Args:
+            hass: The Home Assistant instance.
+            host: The EcoStream device host address.
+            options: Optional configuration options for push intervals.
+        """
         super().__init__(
             hass=hass,
             logger=_LOGGER,
@@ -69,11 +78,11 @@ class EcostreamDataUpdateCoordinator(
         self._fast_mode_until: float = 0.0
 
         self._last_slow_snapshot: dict[str, Any] = {}
-        self.data: dict[str, Any] = {}
+        self.data: Mapping[str, Any] = {}
 
         self.ws: EcostreamWebsocket | None = None
 
-        self._reconnect_task: asyncio.Task | None = None
+        self._reconnect_task: asyncio.Task[None] | None = None
         self._started: bool = False
         self._stopping: bool = False
 
@@ -122,7 +131,7 @@ class EcostreamDataUpdateCoordinator(
             await self.ws.async_disconnect()
             self.ws = None
 
-    async def _async_handle_hass_stop(self, event) -> None:
+    async def _async_handle_hass_stop(self, event: Event) -> None:
         """Handle HA shutdown."""
         await self.async_stop()
 
@@ -130,7 +139,7 @@ class EcostreamDataUpdateCoordinator(
     # Background Tasks (SAFE)
     # ==========================================================
 
-    async def _async_start_background_tasks(self, event) -> None:
+    async def _async_start_background_tasks(self, event: Event) -> None:
         """Start reconnect loop safely inside HA event loop."""
         if self._reconnect_task:
             return
@@ -212,9 +221,6 @@ class EcostreamDataUpdateCoordinator(
     # ==========================================================
 
     async def handle_ws_message(self, message: dict[str, Any]) -> None:
-        if not isinstance(message, dict):
-            return
-
         self._merge_payload(message)
 
         now = time.time()
@@ -250,20 +256,38 @@ class EcostreamDataUpdateCoordinator(
             }
 
         self.async_set_updated_data(dict(self.data))
+        self._update_filter_issue()
+
+    def _update_filter_issue(self) -> None:
+        config = self.data.get("config", {})
+        filter_warning = bool(config.get("filter_datetime", 0))
+        if filter_warning:
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                "filter_replacement_overdue",
+                is_fixable=False,
+                severity=IssueSeverity.WARNING,
+                translation_key="filter_replacement_overdue",
+            )
+        else:
+            ir.async_delete_issue(
+                self.hass, DOMAIN, "filter_replacement_overdue"
+            )
 
     # ==========================================================
     # Fallback
     # ==========================================================
 
-    async def _async_update_data(self) -> dict[str, Any]:
-        return self.data  # ensure this is a dict
+    async def _async_update_data(self) -> Mapping[str, Any]:
+        return dict(self.data)
 
     # ==========================================================
     # Merge helper
     # ==========================================================
 
     def _merge_payload(self, incoming: dict[str, Any]) -> None:
-        base = self.data
+        base = dict(self.data)
         for key, value in incoming.items():
             if isinstance(base.get(key), dict) and isinstance(
                 value, dict
@@ -271,3 +295,4 @@ class EcostreamDataUpdateCoordinator(
                 base[key] = {**base[key], **value}
             else:
                 base[key] = value
+        self.data = base

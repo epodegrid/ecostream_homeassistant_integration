@@ -1,9 +1,5 @@
 {
   "name": "Buva Ecostream",
-  "homeassistant": "2026.01.1",
   "content_in_root": false,
-  "country": [
-    "NL",
-    "BE"
-  ]
+  "country": ["NL", "BE"]
 }

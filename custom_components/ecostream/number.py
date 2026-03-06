@@ -1,23 +1,27 @@
 from __future__ import annotations
 
-from functools import cached_property
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+)
 import logging
+from typing import Any, cast
 
 from .const import DEVICE_MODEL, DEVICE_NAME, DOMAIN
 from .coordinator import EcostreamDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Register EcoStream number entities."""
     coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
@@ -35,21 +39,17 @@ class EcostreamQsetNumber(
     """Writeable Qset control for ventilation capacity."""
 
     _attr_has_entity_name = True
-    _attr_name = "Qset"
+    _attr_translation_key = "qset_number"
     _attr_mode = NumberMode.SLIDER
     _attr_native_unit_of_measurement = "m³/h"
+    _attr_icon = "mdi:air-filter"
 
     def __init__(
         self,
         coordinator: EcostreamDataUpdateCoordinator,
         entry: ConfigEntry,
     ) -> None:
-        """Initialize the EcoStream Qset number entity.
-
-        Args:
-            coordinator: The data update coordinator.
-            entry: The config entry.
-        """
+        """Initialize the Qset number entity."""
         super().__init__(coordinator)
         self._entry = entry
 
@@ -67,37 +67,23 @@ class EcostreamQsetNumber(
         self._attr_native_max_value = 350
         self._attr_native_step = 1
 
-    @cached_property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return self.coordinator.last_update_success
-
-    @property
-    def native_value(self):
-        """Return the native value from coordinator data."""
-        data = self.coordinator.data or {}
-        status = data.get("status", {})
-        qset = status.get("qset")
-        try:
-            return float(qset) if qset is not None else None
-        except Exception:
-            return None
+    #
+    # VALUE FROM DEVICE
+    #
 
     #
-    # UPDATE MIN/MAX FROM DEVICE CONFIG AND VALUE FROM DEVICE
+    # UPDATE MIN/MAX FROM DEVICE CONFIG
     #
     @callback
     def _handle_coordinator_update(self) -> None:
-        vars(self).pop("available", None)
-        data = self.coordinator.data or {}
-        status = data.get("status", {})
-        config = data.get("config") or {}
+        data = cast(dict[str, Any], self.coordinator.data or {})
+        status = cast(dict[str, Any], data.get("status", {}))
+        config = cast(dict[str, Any], data.get("config") or {})
 
         qset = status.get("qset")
+
         try:
-            self._attr_native_value = (
-                float(qset) if qset is not None else None
-            )
+            self._attr_native_value = float(qset) if qset is not None else None
         except Exception:
             self._attr_native_value = None
 

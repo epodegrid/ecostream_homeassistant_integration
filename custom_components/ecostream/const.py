@@ -40,16 +40,12 @@ WS_RECONNECT_MAX_DELAY = 60
 DEVICE_NAME = "EcoStream"
 DEVICE_MODEL = "EcoStream"
 
-# Static icon constants (used in entity descriptions only)
-ICON_UPTIME = "mdi:timer-outline"
-ICON_WIFI = "mdi:wifi"
-ICON_RSSI = "mdi:wifi-strength-2"
-ICON_TEMP = "mdi:thermometer"
-ICON_CO2 = "mdi:molecule-co2"
-ICON_TVOC = "mdi:chemical-weapon"
-ICON_HUMIDITY = "mdi:water-percent"
 
-# Push key groups
+
+# ---------------------------------------------------------
+# Push key groups (unchanged)
+# ---------------------------------------------------------
+
 FAST_KEYS = {
     "status",
 }

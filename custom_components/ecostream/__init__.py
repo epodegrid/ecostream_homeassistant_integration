@@ -6,7 +6,9 @@ from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.device_registry import (
+    async_get as async_get_device_registry,
+)
 import logging
 from typing import Any
 
@@ -34,34 +36,57 @@ async def _probe_host(hass: HomeAssistant, host: str) -> None:
             msg = await ws.receive(timeout=5)
             if msg.type not in (WSMsgType.TEXT, WSMsgType.BINARY):
                 raise ConfigEntryNotReady(
-                    f"Unexpected WebSocket message type: {msg.type}"
+                    translation_domain=DOMAIN,
+                    translation_key="cannot_connect",
+                    translation_placeholders={"host": host},
                 )
     except ConfigEntryNotReady:
         raise
     except (TimeoutError, ClientError) as err:
         raise ConfigEntryNotReady(
-            f"Cannot connect to EcoStream at {host}: {err}"
+            translation_domain=DOMAIN,
+            translation_key="cannot_connect",
+            translation_placeholders={"host": host},
         ) from err
     except Exception as err:
         raise ConfigEntryNotReady(
-            f"Unexpected error connecting to EcoStream at {host}: {err}"
+            translation_domain=DOMAIN,
+            translation_key="unknown_error",
+            translation_placeholders={"host": host},
         ) from err
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """(Unused) configuration.yaml setup."""
-    return True
+async def _cleanup_stale_devices(
+    hass: HomeAssistant, entry: ConfigEntry, current_host: str
+) -> None:
+    """Remove devices whose identifier host no longer matches the current host."""
+    dev_reg = async_get_device_registry(hass)
+    for device in list(dev_reg.devices.values()):
+        for config_entry_id in device.config_entries:
+            if config_entry_id != entry.entry_id:
+                continue
+            stale = any(
+                identifier[0] == DOMAIN
+                and identifier[1] != current_host
+                for identifier in device.identifiers
+            )
+            if stale:
+                _LOGGER.debug(
+                    "Removing stale EcoStream device %s (old host identifier)",
+                    device.id,
+                )
+                dev_reg.async_remove_device(device.id)
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> bool:
     """Set up BUVA EcoStream from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
 
     host: str = entry.data[CONF_HOST]
 
     await _probe_host(hass, host)
+    await _cleanup_stale_devices(hass, entry, host)
 
     # Merge options
     options: dict[str, Any] = dict(entry.options or {})
@@ -80,7 +105,6 @@ async def async_setup_entry(
     await coordinator.async_start()
 
     entry.runtime_data = coordinator
-    hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(
         entry, PLATFORMS
@@ -123,7 +147,6 @@ async def async_unload_entry(
         )
         unload_ok = all(unload_results)
 
-    hass.data[DOMAIN].pop(entry.entry_id, None)
     _LOGGER.info("EcoStream entry %s unloaded", entry.entry_id)
 
     return unload_ok
