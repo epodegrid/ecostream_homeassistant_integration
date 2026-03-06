@@ -1,12 +1,11 @@
-# BUVA EcoStream — Home Assistant Integration  
+# BUVA EcoStream — Home Assistant Integration
 
 ![HA Compatibility](https://img.shields.io/badge/Home%20Assistant-2024.12+-blue.svg)  ![HACS Default](https://img.shields.io/badge/HACS-Custom-orange.svg)  ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 A **full-featured, modern and high-performance** Home Assistant integration for the **BUVA EcoStream** balanced ventilation unit.
 Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*, *diagnostics*, *WiFi info*, and an **Apple Home-style dashboard**.
 
-![dashboard](https://github.com/Uber1337NL/ecostream_homeassistant_integration/blob/v2.0/custom_components/ecostream/docs/dashboard.png)
-
+![dashboard](./custom_components/ecostream/docs/dashboard.png)
 ---
 
 ## ✨ Features
@@ -21,16 +20,16 @@ Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,
 
 ### 🌬 Ventilation Control
 
-- Modern HA FanEntity API  
+- Modern HA FanEntity API
 - Percentage-based control (Qset)
-- Fast-mode when adjusting ventilation  
-- Automatic restoration after Boost mode  
+- Fast-mode when adjusting ventilation
+- Automatic restoration after Boost mode
 
 ### 🚀 Advanced Boost Mode
 
-- Configurable duration (5/10/15/30 min)  
-- Automatic CO₂-based cancellation  
-- Countdown sensor (`boost_time_remaining`)  
+- Configurable duration (5/10/15/30 min)
+- Automatic CO₂-based cancellation
+- Countdown sensor (`boost_time_remaining`)
 - Visual dashboard tile (optional Apple-style card)
 
 ### 🔁 Bypass Valve
@@ -38,7 +37,7 @@ Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,
 - Supports:
   - `OPEN`
   - `CLOSE`
-  - `SET_POSITION (0–100%)`  
+  - `SET_POSITION (0–100%)`
 - Reports exact valve position
 
 ### 🌡 Sensors (rounded & refined)
@@ -54,17 +53,17 @@ Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,
 
 ### 🔘 Buttons
 
-- Reset filter timer  
+- Reset filter timer
 
 ---
 
 ## 📦 Supported Devices
 
-| Device | Supported | Notes |
-|---|---|---|
-| BUVA EcoStream | ✅ Yes | All firmware versions |
-| BUVA EcoStream+ | ✅ Yes | All firmware versions |
-| Other BUVA models | ❌ No | Different protocol |
+| Device            | Supported | Notes                 |
+| ----------------- | --------- | --------------------- |
+| BUVA EcoStream    | ✅ Yes     | All firmware versions |
+| BUVA EcoStream+   | ✅ Yes     | All firmware versions |
+| Other BUVA models | ❌ No      | Different protocol    |
 
 ### Firmware notes
 
@@ -78,43 +77,43 @@ Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,
 
 ### Sensors
 
-| Entity | Unit | Description | Enabled by default |
-|---|---|---|---|
-| eCO₂ Return | ppm | CO₂ level in return air | ✅ |
-| TVOC Return | ppb | Total VOC in return air | ✅ |
-| Humidity Return | % | Relative humidity in return air | ✅ |
-| Temperature ETA | °C | Extract air temperature | ✅ |
-| Temperature EHA | °C | Exhaust air temperature | ✅ |
-| Temperature ODA | °C | Outside air temperature | ✅ |
-| Bypass Position | % | Current bypass valve position | ✅ |
-| Qset | m³/h | Active ventilation flow setpoint | ✅ |
-| Heat Recovery Efficiency | % | Calculated heat recovery efficiency | ❌ |
-| Mode Time Left | s | Remaining time for active override mode | ✅ |
-| Frost Protection Active | — | Whether frost protection is active | ✅ |
-| Fan Exhaust Speed | rpm | Exhaust fan speed | ❌ |
-| Fan Supply Speed | rpm | Supply fan speed | ❌ |
-| Schedule Enabled | — | Whether a schedule is active | ✅ |
-| Summer Comfort Enabled | — | Whether summer comfort mode is active | ✅ |
-| Summer Comfort Temp | °C | Summer comfort temperature threshold | ✅ |
-| Filter Replacement Date | date | Date of last filter reset | ✅ (diagnostic) |
-| Filter Replacement Warning | — | Whether filter replacement is overdue | ✅ (diagnostic) |
-| Uptime | — | Device uptime formatted as `Xd Yh Zm` | ❌ (diagnostic) |
-| WiFi IP | — | Device IP address | ✅ |
-| WiFi SSID | — | Connected WiFi network name | ✅ |
-| WiFi RSSI | dBm | WiFi signal strength | ✅ |
-| Boost Time Remaining | s | Remaining boost mode countdown | ✅ |
+| Entity                     | Unit | Description                             | Enabled by default |
+| -------------------------- | ---- | --------------------------------------- | ------------------ |
+| eCO₂ Return                | ppm  | CO₂ level in return air                 | ✅                  |
+| TVOC Return                | ppb  | Total VOC in return air                 | ✅                  |
+| Humidity Return            | %    | Relative humidity in return air         | ✅                  |
+| Temperature ETA            | °C   | Extract air temperature                 | ✅                  |
+| Temperature EHA            | °C   | Exhaust air temperature                 | ✅                  |
+| Temperature ODA            | °C   | Outside air temperature                 | ✅                  |
+| Bypass Position            | %    | Current bypass valve position           | ✅                  |
+| Qset                       | m³/h | Active ventilation flow setpoint        | ✅                  |
+| Heat Recovery Efficiency   | %    | Calculated heat recovery efficiency     | ❌                  |
+| Mode Time Left             | s    | Remaining time for active override mode | ✅                  |
+| Frost Protection Active    | —    | Whether frost protection is active      | ✅                  |
+| Fan Exhaust Speed          | rpm  | Exhaust fan speed                       | ❌                  |
+| Fan Supply Speed           | rpm  | Supply fan speed                        | ❌                  |
+| Schedule Enabled           | —    | Whether a schedule is active            | ✅                  |
+| Summer Comfort Enabled     | —    | Whether summer comfort mode is active   | ✅                  |
+| Summer Comfort Temp        | °C   | Summer comfort temperature threshold    | ✅                  |
+| Filter Replacement Date    | date | Date of last filter reset               | ✅ (diagnostic)     |
+| Filter Replacement Warning | —    | Whether filter replacement is overdue   | ✅ (diagnostic)     |
+| Uptime                     | —    | Device uptime formatted as `Xd Yh Zm`   | ❌ (diagnostic)     |
+| WiFi IP                    | —    | Device IP address                       | ✅                  |
+| WiFi SSID                  | —    | Connected WiFi network name             | ✅                  |
+| WiFi RSSI                  | dBm  | WiFi signal strength                    | ✅                  |
+| Boost Time Remaining       | s    | Remaining boost mode countdown          | ✅                  |
 
 ### Controls
 
-| Entity | Platform | Description |
-|---|---|---|
-| Ventilation | Fan | Set ventilation speed (percentage / preset: low / mid / high) |
-| Qset | Number | Directly set the ventilation flow in m³/h |
-| Bypass Valve | Valve | Open, close, or set bypass valve position (0–100%) |
-| Schedule | Switch | Enable or disable the ventilation schedule |
-| Summer Comfort | Switch | Enable or disable summer comfort mode |
-| Boost | Switch | Start or stop boost mode |
-| Boost Duration | Select | Configure boost duration (5 / 10 / 15 / 30 min) |
+| Entity         | Platform | Description                                                   |
+| -------------- | -------- | ------------------------------------------------------------- |
+| Ventilation    | Fan      | Set ventilation speed (percentage / preset: low / mid / high) |
+| Qset           | Number   | Directly set the ventilation flow in m³/h                     |
+| Bypass Valve   | Valve    | Open, close, or set bypass valve position (0–100%)            |
+| Schedule       | Switch   | Enable or disable the ventilation schedule                    |
+| Summer Comfort | Switch   | Enable or disable summer comfort mode                         |
+| Boost          | Switch   | Start or stop boost mode                                      |
+| Boost Duration | Select   | Configure boost duration (5 / 10 / 15 / 30 min)               |
 
 ---
 
@@ -133,10 +132,10 @@ This integration uses a **local push** model — the EcoStream device sends data
 
 To avoid excessive entity writes during rapid changes (e.g., when adjusting fan speed), the integration applies two configurable throttle windows:
 
-| Mode | Default | When active |
-|---|---|---|
-| Normal push interval | 3 s | Idle / steady state |
-| Fast push interval | 1 s | During active manual control |
+| Mode                 | Default | When active                  |
+| -------------------- | ------- | ---------------------------- |
+| Normal push interval | 3 s     | Idle / steady state          |
+| Fast push interval   | 1 s     | During active manual control |
 
 These can be adjusted under **Settings → Devices & Services → EcoStream → Configure**.
 
@@ -376,9 +375,9 @@ This includes:
 
 ## 📑 Known Limitations
 
-- The unit does **not** expose a real WebSocket endpoint  
-  → the integration uses a safe emulated stream model  
-- Some older firmware versions may omit TVOC data  
+- The unit does **not** expose a real WebSocket endpoint
+  → the integration uses a safe emulated stream model
+- Some older firmware versions may omit TVOC data
 
 ---
 
