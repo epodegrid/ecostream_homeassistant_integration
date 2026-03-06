@@ -443,6 +443,47 @@ class EcostreamBaseSensor(
 
 
 # ---------------------------------------------------------------------------
+# Boost Remaining Sensor
+# ---------------------------------------------------------------------------
+
+
+class EcostreamBoostRemainingSensor(
+    CoordinatorEntity[EcostreamDataUpdateCoordinator], SensorEntity
+):
+    _attr_has_entity_name = True
+    _attr_translation_key = "boost_time_remaining"
+    _attr_native_unit_of_measurement = "s"
+
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_boost_time_left"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.host)},
+            manufacturer="BUVA",
+            name=DEVICE_NAME,
+            model=DEVICE_MODEL,
+        )
+
+    @property
+    def native_value(self) -> int:
+        status = cast(dict[str, Any], (self.coordinator.data or {}).get("status") or {})
+        val = status.get("override_set_time_left")
+        try:
+            return int(val) if val is not None else 0
+        except (TypeError, ValueError):
+            return 0
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self.async_write_ha_state()
+
+
+# ---------------------------------------------------------------------------
 # Setup
 # ---------------------------------------------------------------------------
 
@@ -455,9 +496,10 @@ async def async_setup_entry(
 
     coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
 
-    entities = [
+    entities: list[Any] = [
         EcostreamBaseSensor(coordinator, entry, desc)
         for desc in SENSOR_DESCRIPTIONS
     ]
+    entities.append(EcostreamBoostRemainingSensor(coordinator, entry))
 
     async_add_entities(entities, update_before_add=True)

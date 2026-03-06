@@ -10,6 +10,7 @@ PLATFORMS: list[str] = [
     "sensor",
     "fan",
     "number",
+    "select",
     "switch",
     "valve",
 ]

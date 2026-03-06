@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from homeassistant.components.select import SelectEntity
-from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -12,7 +10,6 @@ import logging
 from typing import Any
 
 from .const import (
-    BOOST_OPTIONS,
     BOOST_QSET,
     DEFAULT_BOOST_DURATION_MINUTES,
     DEVICE_MODEL,
@@ -42,8 +39,6 @@ async def async_setup_entry(
         EcostreamScheduleSwitch(coordinator, entry),
         EcostreamSummerComfortSwitch(coordinator, entry),
         EcostreamBoostSwitch(coordinator, entry),
-        EcostreamBoostDurationSelect(coordinator, entry),
-        EcostreamBoostRemainingSensor(coordinator, entry),
     ]
 
     async_add_entities(entities, update_before_add=True)
@@ -160,66 +155,6 @@ class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
         await self.coordinator.ws.send_json(payload)
 
 
-# ============================================================================
-# Boost Duration Select
-# ============================================================================
-
-
-class EcostreamBoostDurationSelect(EcostreamBaseEntity, SelectEntity):
-    _attr_translation_key = "boost_duration"
-    _attr_options = BOOST_OPTIONS
-    _attr_icon = "mdi:timer-outline"
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._entry.entry_id}_boost_duration"
-
-    @property
-    def current_option(self) -> str | None:
-        minutes = getattr(
-            self.coordinator,
-            "boost_duration_minutes",
-            DEFAULT_BOOST_DURATION_MINUTES,
-        )
-        return str(minutes)
-
-    async def async_select_option(self, option: str) -> None:
-        try:
-            minutes = int(option)
-        except (TypeError, ValueError):
-            _LOGGER.warning("Invalid boost duration option: %s", option)
-            return
-
-        self.coordinator.boost_duration_minutes = minutes  # type: ignore[attr-defined]
-        self.async_write_ha_state()
-
-
-# ============================================================================
-# Boost Remaining Sensor (uit status.override_set_time_left)
-# ============================================================================
-
-
-class EcostreamBoostRemainingSensor(EcostreamBaseEntity, SensorEntity):
-    _attr_translation_key = "boost_time_remaining"
-    _attr_native_unit_of_measurement = "s"
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._entry.entry_id}_boost_time_left"
-
-    @property
-    def native_value(self) -> int:
-        status = self._get_status()
-        val = status.get("override_set_time_left")
-
-        try:
-            return int(val) if val is not None else 0
-        except (TypeError, ValueError):
-            return 0
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        self.async_write_ha_state()
 
 
 # ============================================================================
