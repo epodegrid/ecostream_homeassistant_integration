@@ -23,7 +23,7 @@
   "zeroconf": [
     {
       "type": "_http._tcp.local.",
-      "name": "EcoStream*"
+      "name": "ecostream*"
     }
   ]
 }
