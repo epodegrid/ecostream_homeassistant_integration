@@ -55,31 +55,45 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
         if user_input is not None:
             try:
                 push_interval = int(user_input[CONF_PUSH_INTERVAL])
-                fast_push_interval = int(user_input[CONF_FAST_PUSH_INTERVAL])
-                filter_days = int(user_input[CONF_FILTER_REPLACEMENT_DAYS])
+                fast_push_interval = int(
+                    user_input[CONF_FAST_PUSH_INTERVAL]
+                )
+                filter_days = int(
+                    user_input[CONF_FILTER_REPLACEMENT_DAYS]
+                )
                 preset_low = int(user_input[CONF_PRESET_LOW_PCT])
                 preset_mid = int(user_input[CONF_PRESET_MID_PCT])
                 preset_high = int(user_input[CONF_PRESET_HIGH_PCT])
-                preset_override_minutes = int(user_input[CONF_PRESET_OVERRIDE_MINUTES])
+                preset_override_minutes = int(
+                    user_input[CONF_PRESET_OVERRIDE_MINUTES]
+                )
 
-                if push_interval < 1:
+                if push_interval < 20:
                     errors["base"] = "push_interval_too_short"
                 elif fast_push_interval < 1:
                     errors["base"] = "fast_interval_too_short"
-                elif filter_days < 1:
+                elif filter_days < 30:
                     errors["base"] = "invalid_number"
-                elif not (0 < preset_low < preset_mid < preset_high <= 100):
+                elif not (
+                    0 < preset_low < preset_mid < preset_high <= 100
+                ):
                     errors["base"] = "invalid_preset_order"
-                elif preset_override_minutes < 1:
+                elif preset_override_minutes < 5:
                     errors["base"] = "invalid_number"
                 else:
                     self._options[CONF_PUSH_INTERVAL] = push_interval
-                    self._options[CONF_FAST_PUSH_INTERVAL] = fast_push_interval
-                    self._options[CONF_FILTER_REPLACEMENT_DAYS] = filter_days
+                    self._options[CONF_FAST_PUSH_INTERVAL] = (
+                        fast_push_interval
+                    )
+                    self._options[CONF_FILTER_REPLACEMENT_DAYS] = (
+                        filter_days
+                    )
                     self._options[CONF_PRESET_LOW_PCT] = preset_low
                     self._options[CONF_PRESET_MID_PCT] = preset_mid
                     self._options[CONF_PRESET_HIGH_PCT] = preset_high
-                    self._options[CONF_PRESET_OVERRIDE_MINUTES] = preset_override_minutes
+                    self._options[CONF_PRESET_OVERRIDE_MINUTES] = (
+                        preset_override_minutes
+                    )
 
                     return self.async_create_entry(
                         title="EcoStream Options",
@@ -89,23 +103,55 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
             except ValueError:
                 errors["base"] = "invalid_number"
 
-        current_push = self._options.get(CONF_PUSH_INTERVAL, DEFAULT_PUSH_INTERVAL)
-        current_fast = self._options.get(CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL)
-        current_filter_days = self._options.get(CONF_FILTER_REPLACEMENT_DAYS, DEFAULT_FILTER_REPLACEMENT_DAYS)
-        current_low = self._options.get(CONF_PRESET_LOW_PCT, DEFAULT_PRESET_LOW_PCT)
-        current_mid = self._options.get(CONF_PRESET_MID_PCT, DEFAULT_PRESET_MID_PCT)
-        current_high = self._options.get(CONF_PRESET_HIGH_PCT, DEFAULT_PRESET_HIGH_PCT)
-        current_override_minutes = self._options.get(CONF_PRESET_OVERRIDE_MINUTES, DEFAULT_PRESET_OVERRIDE_MINUTES)
+        current_push = self._options.get(
+            CONF_PUSH_INTERVAL, DEFAULT_PUSH_INTERVAL
+        )
+        current_fast = self._options.get(
+            CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL
+        )
+        current_filter_days = self._options.get(
+            CONF_FILTER_REPLACEMENT_DAYS,
+            DEFAULT_FILTER_REPLACEMENT_DAYS,
+        )
+        current_low = self._options.get(
+            CONF_PRESET_LOW_PCT, DEFAULT_PRESET_LOW_PCT
+        )
+        current_mid = self._options.get(
+            CONF_PRESET_MID_PCT, DEFAULT_PRESET_MID_PCT
+        )
+        current_high = self._options.get(
+            CONF_PRESET_HIGH_PCT, DEFAULT_PRESET_HIGH_PCT
+        )
+        current_override_minutes = self._options.get(
+            CONF_PRESET_OVERRIDE_MINUTES,
+            DEFAULT_PRESET_OVERRIDE_MINUTES,
+        )
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_PUSH_INTERVAL, default=current_push): int,
-                vol.Required(CONF_FAST_PUSH_INTERVAL, default=current_fast): int,
-                vol.Required(CONF_FILTER_REPLACEMENT_DAYS, default=current_filter_days): int,
-                vol.Required(CONF_PRESET_LOW_PCT, default=current_low): vol.All(int, vol.Range(min=1, max=99)),
-                vol.Required(CONF_PRESET_MID_PCT, default=current_mid): vol.All(int, vol.Range(min=1, max=99)),
-                vol.Required(CONF_PRESET_HIGH_PCT, default=current_high): vol.All(int, vol.Range(min=1, max=100)),
-                vol.Required(CONF_PRESET_OVERRIDE_MINUTES, default=current_override_minutes): vol.All(int, vol.Range(min=1)),
+                vol.Required(
+                    CONF_PUSH_INTERVAL, default=current_push
+                ): int,
+                vol.Required(
+                    CONF_FAST_PUSH_INTERVAL, default=current_fast
+                ): int,
+                vol.Required(
+                    CONF_FILTER_REPLACEMENT_DAYS,
+                    default=current_filter_days,
+                ): int,
+                vol.Required(
+                    CONF_PRESET_LOW_PCT, default=current_low
+                ): vol.All(int, vol.Range(min=1, max=50)),
+                vol.Required(
+                    CONF_PRESET_MID_PCT, default=current_mid
+                ): vol.All(int, vol.Range(min=30, max=70)),
+                vol.Required(
+                    CONF_PRESET_HIGH_PCT, default=current_high
+                ): vol.All(int, vol.Range(min=50, max=100)),
+                vol.Required(
+                    CONF_PRESET_OVERRIDE_MINUTES,
+                    default=current_override_minutes,
+                ): vol.All(int, vol.Range(min=5)),
             }
         )
 

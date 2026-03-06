@@ -297,6 +297,7 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         name="WiFi IP",
         translation_key="wifi_ip",
         icon="mdi:wifi",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: _deep_get(d, ["comm_wifi", "wifi_ip"]),
     ),
     EcostreamSensorDescription(
@@ -304,6 +305,7 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         name="WiFi SSID",
         translation_key="wifi_ssid",
         icon="mdi:wifi",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: _deep_get(d, ["comm_wifi", "ssid"]),
     ),
     EcostreamSensorDescription(
