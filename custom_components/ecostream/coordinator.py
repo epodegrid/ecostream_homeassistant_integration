@@ -259,8 +259,15 @@ class EcostreamDataUpdateCoordinator(
         self._update_filter_issue()
 
     def _update_filter_issue(self) -> None:
+        import time
+
         config = self.data.get("config", {})
-        filter_warning = bool(config.get("filter_datetime", 0))
+        filter_ts = config.get("filter_datetime")
+        filter_warning = (
+            isinstance(filter_ts, (int, float))
+            and filter_ts > 0
+            and time.time() >= float(filter_ts)
+        )
         if filter_warning:
             ir.async_create_issue(
                 self.hass,

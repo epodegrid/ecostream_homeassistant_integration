@@ -273,9 +273,13 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         key="filter_replacement_warning",
         name="Filter Replacement Warning",
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d: bool(
-            _deep_get(d, ["config", "filter_datetime"], 0)
-        ),
+        value_fn=lambda d: (
+            lambda ts: (
+                isinstance(ts, (int, float))
+                and ts > 0
+                and __import__("time").time() >= float(ts)
+            )
+        )(_deep_get(d, ["config", "filter_datetime"])),
     ),
     # -------------------------------------------------------------------
     # SYSTEM

@@ -111,7 +111,7 @@ class EcostreamQsetNumber(
         # Ensure fast-push mode activates
         self.coordinator.mark_control_action()
 
-        payload = {"config": {"man_override_set": float(value)}}
+        payload = {"config": {"man_override_set": float(value), "man_override_set_time": 0}}
 
         _LOGGER.debug("EcoStream Qset → setting to %.1f", value)
 

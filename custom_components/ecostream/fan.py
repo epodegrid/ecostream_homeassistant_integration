@@ -9,7 +9,21 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 import logging
 from typing import Any
 
-from .const import DEVICE_MODEL, DEVICE_NAME, DOMAIN
+from .const import (
+    CONF_PRESET_HIGH_PCT,
+    CONF_PRESET_LOW_PCT,
+    CONF_PRESET_MID_PCT,
+    DEFAULT_PRESET_HIGH_PCT,
+    DEFAULT_PRESET_LOW_PCT,
+    DEFAULT_PRESET_MID_PCT,
+    DEVICE_MODEL,
+    DEVICE_NAME,
+    DOMAIN,
+    PRESET_HIGH,
+    PRESET_LOW,
+    PRESET_MID,
+    PRESET_MODES,
+)
 from .coordinator import EcostreamDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,11 +74,13 @@ class EcostreamVentilationFan(
 
         # Set supported features
         features = FanEntityFeature(0)
-        for name in ("TURN_ON", "TURN_OFF", "SET_PERCENTAGE"):
+        for name in ("TURN_ON", "TURN_OFF", "SET_PERCENTAGE", "PRESET_MODE"):
             val = getattr(FanEntityFeature, name, None)
             if val is not None:
                 features |= val
         self._attr_supported_features = features
+        self._attr_preset_modes = PRESET_MODES
+        self._attr_preset_mode: str | None = None
 
     # ------------------------------------------------------------------
     # Helpers
@@ -99,6 +115,28 @@ class EcostreamVentilationFan(
         except (TypeError, ValueError):
             return None
 
+    def _preset_pct(self, preset: str) -> int:
+        opts = self._entry.options or {}
+        if preset == PRESET_LOW:
+            return int(opts.get(CONF_PRESET_LOW_PCT, DEFAULT_PRESET_LOW_PCT))
+        if preset == PRESET_MID:
+            return int(opts.get(CONF_PRESET_MID_PCT, DEFAULT_PRESET_MID_PCT))
+        return int(opts.get(CONF_PRESET_HIGH_PCT, DEFAULT_PRESET_HIGH_PCT))
+
+    def _calculate_preset(self, pct: int | None) -> str | None:
+        if pct is None:
+            return None
+        low = self._preset_pct(PRESET_LOW)
+        mid = self._preset_pct(PRESET_MID)
+        high = self._preset_pct(PRESET_HIGH)
+        if pct <= low:
+            return PRESET_LOW
+        if pct <= mid:
+            return PRESET_MID
+        if pct <= high:
+            return PRESET_HIGH
+        return None
+
     # ------------------------------------------------------------------
     # State → Home Assistant
     # ------------------------------------------------------------------
@@ -127,6 +165,9 @@ class EcostreamVentilationFan(
         preset_mode: str | None = None,
         **kwargs: Any,
     ) -> None:
+        if preset_mode is not None:
+            await self.async_set_preset_mode(preset_mode)
+            return
         pct = (
             percentage
             if percentage is not None
@@ -136,6 +177,11 @@ class EcostreamVentilationFan(
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self.async_set_percentage(0)
+
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        pct = self._preset_pct(preset_mode)
+        self._attr_preset_mode = preset_mode
+        await self.async_set_percentage(pct)
 
     async def async_set_percentage(self, percentage: int) -> None:
         percentage = max(0, min(100, int(percentage)))
@@ -180,5 +226,7 @@ class EcostreamVentilationFan(
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        self._attr_percentage = self._calculate_percentage()
+        pct = self._calculate_percentage()
+        self._attr_percentage = pct
+        self._attr_preset_mode = self._calculate_preset(pct)
         self.async_write_ha_state()

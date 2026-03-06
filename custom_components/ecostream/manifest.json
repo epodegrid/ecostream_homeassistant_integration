@@ -8,7 +8,7 @@
   "config_flow": true,
   "dhcp": [
     { "hostname": "ecostream*" },
-    { "macaddress": "F0:AD:4E:*:*:*" }
+    { "macaddress": "f0:ad:4e:*:*:*" }
   ],
   "documentation": "https://github.com/epodegrid/ecostream_homeassistant_integration",
   "integration_type": "hub",
@@ -23,7 +23,7 @@
   "zeroconf": [
     {
       "type": "_http._tcp.local.",
-      "name": "ecostream*"
+      "name": "EcoStream*"
     }
   ]
 }
