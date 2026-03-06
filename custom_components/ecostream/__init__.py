@@ -10,14 +10,17 @@ from homeassistant.helpers.device_registry import (
     async_get as async_get_device_registry,
 )
 import logging
+import time
 from typing import Any
 
 from aiohttp import ClientError, WSMsgType
 
 from .const import (
     CONF_FAST_PUSH_INTERVAL,
+    CONF_FILTER_REPLACEMENT_DAYS,
     CONF_PUSH_INTERVAL,
     DEFAULT_FAST_PUSH_INTERVAL,
+    DEFAULT_FILTER_REPLACEMENT_DAYS,
     DEFAULT_PUSH_INTERVAL,
     DOMAIN,
     PLATFORMS,
@@ -110,6 +113,10 @@ async def async_setup_entry(
         entry, PLATFORMS
     )
 
+    entry.async_on_unload(
+        entry.add_update_listener(_async_options_updated)
+    )
+
     _LOGGER.info(
         "EcoStream entry %s set up for host %s (push=%ss fast=%ss)",
         entry.entry_id,
@@ -119,6 +126,29 @@ async def async_setup_entry(
     )
 
     return True
+
+
+async def _async_options_updated(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Update device configuration when options change."""
+    coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
+    if not coordinator.ws:
+        return
+
+    filter_days = int(
+        entry.options.get(CONF_FILTER_REPLACEMENT_DAYS, DEFAULT_FILTER_REPLACEMENT_DAYS)
+    )
+    filter_datetime = int(time.time() + filter_days * 86400)
+
+    await coordinator.ws.send_json(
+        {"config": {"filter_datetime": filter_datetime}}
+    )
+    _LOGGER.debug(
+        "EcoStream filter_datetime updated: %s days → timestamp %s",
+        filter_days,
+        filter_datetime,
+    )
 
 
 async def async_unload_entry(
