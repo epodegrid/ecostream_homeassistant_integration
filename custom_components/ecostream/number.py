@@ -11,7 +11,13 @@ from homeassistant.helpers.update_coordinator import (
 import logging
 from typing import Any, cast
 
-from .const import DEVICE_MODEL, DEVICE_NAME, DOMAIN
+from .const import (
+    CONF_PRESET_OVERRIDE_MINUTES,
+    DEFAULT_PRESET_OVERRIDE_MINUTES,
+    DEVICE_MODEL,
+    DEVICE_NAME,
+    DOMAIN,
+)
 from .coordinator import EcostreamDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -112,7 +118,9 @@ class EcostreamQsetNumber(
         # Ensure fast-push mode activates
         self.coordinator.mark_control_action()
 
-        payload = {"config": {"man_override_set": float(value), "man_override_set_time": 0}}
+        opts = self._entry.options or {}
+        override_minutes = int(opts.get(CONF_PRESET_OVERRIDE_MINUTES, DEFAULT_PRESET_OVERRIDE_MINUTES))
+        payload = {"config": {"man_override_set": float(value), "man_override_set_time": override_minutes * 60}}
 
         _LOGGER.debug("EcoStream Qset → setting to %.1f", value)
 
