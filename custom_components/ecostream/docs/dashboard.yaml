@@ -8,11 +8,11 @@ views:
       - type: grid
         cards:
           - type: custom:mini-graph-card
-            name: 🛠 Efficiency (%)
+            name: Effiëncie (%)
             icon: mdi:percent
             entities:
-              - sensor.ecostream_heat_recovery_efficiency
-            hours_to_show: 24
+              - sensor.ecostream_efficiency
+            hours_to_show: 8
             line_width: 3
             points_per_hour: 8
             color_thresholds:
@@ -20,7 +20,7 @@ views:
                 color: '#34c759'
               - value: 80
                 color: '#ffcc00'
-              - value: 0
+              - value: 70
                 color: '#ff3b30'
           - type: horizontal-stack
             cards:
@@ -165,6 +165,68 @@ views:
                     - color: '#ff9f0a'
                   name:
                     - font-weight: 600
+          - type: horizontal-stack
+            cards:
+              - type: custom:button-card
+                entity: button.ecostream_low
+                name: Low
+                icon: mdi:fan-speed-1
+                tap_action:
+                  action: call-service
+                  service: button.press
+                  target:
+                    entity_id: button.ecostream_low
+                styles:
+                  card:
+                    - border-radius: 22px
+                    - padding: 18px
+                    - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
+                  icon:
+                    - width: 40px
+                    - height: 40px
+                    - color: '#34c759'
+                  name:
+                    - font-weight: 600
+              - type: custom:button-card
+                entity: button.ecostream_mid
+                name: Mid
+                icon: mdi:fan-speed-2
+                tap_action:
+                  action: call-service
+                  service: button.press
+                  target:
+                    entity_id: button.ecostream_mid
+                styles:
+                  card:
+                    - border-radius: 22px
+                    - padding: 18px
+                    - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
+                  icon:
+                    - width: 40px
+                    - height: 40px
+                    - color: '#ffcc00'
+                  name:
+                    - font-weight: 600
+              - type: custom:button-card
+                entity: button.ecostream_high
+                name: High
+                icon: mdi:fan-speed-3
+                tap_action:
+                  action: call-service
+                  service: button.press
+                  target:
+                    entity_id: button.ecostream_high
+                styles:
+                  card:
+                    - border-radius: 22px
+                    - padding: 18px
+                    - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
+                  icon:
+                    - width: 40px
+                    - height: 40px
+                    - color: '#ff3b30'
+                  name:
+                    - font-weight: 600
       - type: grid
         cards:
           - type: custom:mini-graph-card
@@ -214,8 +276,6 @@ views:
               - entity: sensor.ecostream_wifi_ssid
               - entity: sensor.ecostream_wifi_ip
               - entity: sensor.ecostream_wifi_rssi
-              - entity: sensor.shellyplug_s_80646f816c28_power
-                name: Opgenomen vermogen (stroom)
             title: 🛠 Systeemstatus
           - type: tile
             entity: sensor.ecostream_schedule_enabled
