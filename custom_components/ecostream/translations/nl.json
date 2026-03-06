@@ -44,7 +44,12 @@
         "description": "Pas geavanceerde instellingen aan voor de EcoStream-integratie.",
         "data": {
           "push_interval": "Normaal update-interval (seconden)",
-          "fast_push_interval": "Snel update-interval (seconden)"
+          "fast_push_interval": "Snel update-interval (seconden)",
+          "filter_replacement_days": "Filtervervanging interval (dagen)",
+          "preset_low_pct": "Preset laag toerental (%)",
+          "preset_mid_pct": "Preset middel toerental (%)",
+          "preset_high_pct": "Preset hoog toerental (%)",
+          "preset_override_minutes": "Preset overschrijving duur (minuten)"
         }
       }
     }

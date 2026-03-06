@@ -18,12 +18,14 @@ from .const import (
     CONF_PRESET_HIGH_PCT,
     CONF_PRESET_LOW_PCT,
     CONF_PRESET_MID_PCT,
+    CONF_PRESET_OVERRIDE_MINUTES,
     CONF_PUSH_INTERVAL,
     DEFAULT_FAST_PUSH_INTERVAL,
     DEFAULT_FILTER_REPLACEMENT_DAYS,
     DEFAULT_PRESET_HIGH_PCT,
     DEFAULT_PRESET_LOW_PCT,
     DEFAULT_PRESET_MID_PCT,
+    DEFAULT_PRESET_OVERRIDE_MINUTES,
     DEFAULT_PUSH_INTERVAL,
 )
 
@@ -58,6 +60,7 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                 preset_low = int(user_input[CONF_PRESET_LOW_PCT])
                 preset_mid = int(user_input[CONF_PRESET_MID_PCT])
                 preset_high = int(user_input[CONF_PRESET_HIGH_PCT])
+                preset_override_minutes = int(user_input[CONF_PRESET_OVERRIDE_MINUTES])
 
                 if push_interval < 30:
                     errors["base"] = "push_interval_too_short"
@@ -67,6 +70,8 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                     errors["base"] = "invalid_number"
                 elif not (0 < preset_low < preset_mid < preset_high <= 100):
                     errors["base"] = "invalid_preset_order"
+                elif preset_override_minutes < 1:
+                    errors["base"] = "invalid_number"
                 else:
                     self._options[CONF_PUSH_INTERVAL] = push_interval
                     self._options[CONF_FAST_PUSH_INTERVAL] = fast_push_interval
@@ -74,6 +79,7 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                     self._options[CONF_PRESET_LOW_PCT] = preset_low
                     self._options[CONF_PRESET_MID_PCT] = preset_mid
                     self._options[CONF_PRESET_HIGH_PCT] = preset_high
+                    self._options[CONF_PRESET_OVERRIDE_MINUTES] = preset_override_minutes
 
                     return self.async_create_entry(
                         title="EcoStream Options",
@@ -89,6 +95,7 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
         current_low = self._options.get(CONF_PRESET_LOW_PCT, DEFAULT_PRESET_LOW_PCT)
         current_mid = self._options.get(CONF_PRESET_MID_PCT, DEFAULT_PRESET_MID_PCT)
         current_high = self._options.get(CONF_PRESET_HIGH_PCT, DEFAULT_PRESET_HIGH_PCT)
+        current_override_minutes = self._options.get(CONF_PRESET_OVERRIDE_MINUTES, DEFAULT_PRESET_OVERRIDE_MINUTES)
 
         schema = vol.Schema(
             {
@@ -98,6 +105,7 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                 vol.Required(CONF_PRESET_LOW_PCT, default=current_low): vol.All(int, vol.Range(min=1, max=99)),
                 vol.Required(CONF_PRESET_MID_PCT, default=current_mid): vol.All(int, vol.Range(min=1, max=99)),
                 vol.Required(CONF_PRESET_HIGH_PCT, default=current_high): vol.All(int, vol.Range(min=1, max=100)),
+                vol.Required(CONF_PRESET_OVERRIDE_MINUTES, default=current_override_minutes): vol.All(int, vol.Range(min=1)),
             }
         )
 

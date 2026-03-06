@@ -97,6 +97,22 @@
             "bypass_valve": {"name": "Bypass Valve"}
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "title": "EcoStream Options",
+                "data": {
+                    "push_interval": "Normal update interval (seconds)",
+                    "fast_push_interval": "Fast update interval (seconds)",
+                    "filter_replacement_days": "Filter replacement interval (days)",
+                    "preset_low_pct": "Preset low speed (%)",
+                    "preset_mid_pct": "Preset medium speed (%)",
+                    "preset_high_pct": "Preset high speed (%)",
+                    "preset_override_minutes": "Preset override duration (minutes)"
+                }
+            }
+        }
+    },
     "issues": {
         "connection_lost": {
             "title": "EcoStream device is unreachable",

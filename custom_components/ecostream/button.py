@@ -13,9 +13,11 @@ from .const import (
     CONF_PRESET_HIGH_PCT,
     CONF_PRESET_LOW_PCT,
     CONF_PRESET_MID_PCT,
+    CONF_PRESET_OVERRIDE_MINUTES,
     DEFAULT_PRESET_HIGH_PCT,
     DEFAULT_PRESET_LOW_PCT,
     DEFAULT_PRESET_MID_PCT,
+    DEFAULT_PRESET_OVERRIDE_MINUTES,
     DEVICE_MODEL,
     DEVICE_NAME,
     DOMAIN,
@@ -104,10 +106,13 @@ class EcostreamPresetButton(
 
         qset = cap_min + (pct / 100.0) * (cap_max - cap_min)
 
+        opts = self._entry.options or {}
+        override_minutes = int(opts.get(CONF_PRESET_OVERRIDE_MINUTES, DEFAULT_PRESET_OVERRIDE_MINUTES))
+
         payload = {
             "config": {
                 "man_override_set": float(qset),
-                "man_override_set_time": 0,
+                "man_override_set_time": override_minutes * 60,
             }
         }
 
