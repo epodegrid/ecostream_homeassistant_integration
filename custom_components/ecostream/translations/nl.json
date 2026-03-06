@@ -107,7 +107,11 @@
       }
     },
     "number": {
-      "qset_number": {"name": "Qset"}
+      "qset_number": {"name": "Qset"},
+      "preset_low_pct": {"name": "Preset laag toerental"},
+      "preset_mid_pct": {"name": "Preset middel toerental"},
+      "preset_high_pct": {"name": "Preset hoog toerental"},
+      "filter_replacement_days": {"name": "Filtervervanging interval"}
     },
     "valve": {
       "bypass_valve": {"name": "Bypassklep"}

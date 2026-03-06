@@ -87,7 +87,11 @@
             }
         },
         "number": {
-            "qset_number": {"name": "Qset"}
+            "qset_number": {"name": "Qset"},
+            "preset_low_pct": {"name": "Preset Low Speed"},
+            "preset_mid_pct": {"name": "Preset Medium Speed"},
+            "preset_high_pct": {"name": "Preset High Speed"},
+            "filter_replacement_days": {"name": "Filter Replacement Interval"}
         },
         "valve": {
             "bypass_valve": {"name": "Bypass Valve"}

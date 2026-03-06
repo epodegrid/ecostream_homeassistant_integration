@@ -31,16 +31,16 @@ CO2_THRESHOLD = 800
 DEFAULT_BOOST_DURATION_MINUTES = 15
 
 # Default push intervals (seconds)
-DEFAULT_PUSH_INTERVAL = 2
-DEFAULT_FAST_PUSH_INTERVAL = 0.7
+DEFAULT_PUSH_INTERVAL = 20
+DEFAULT_FAST_PUSH_INTERVAL = 3
 FAST_MODE_SECONDS = 20
-SLOW_PUSH_INTERVAL = 15
+SLOW_PUSH_INTERVAL = 3
 
 # Default options
 DEFAULT_FILTER_REPLACEMENT_DAYS = 180
-DEFAULT_PRESET_LOW_PCT = 30
-DEFAULT_PRESET_MID_PCT = 60
-DEFAULT_PRESET_HIGH_PCT = 100
+DEFAULT_PRESET_LOW_PCT = 10
+DEFAULT_PRESET_MID_PCT = 50
+DEFAULT_PRESET_HIGH_PCT = 90
 
 # Fan presets
 PRESET_LOW = "low"
@@ -58,14 +58,13 @@ WS_RECONNECT_MAX_DELAY = 60
 DEVICE_NAME = "EcoStream"
 DEVICE_MODEL = "EcoStream"
 
-
-
 # ---------------------------------------------------------
-# Push key groups (unchanged)
+# Push key groups
 # ---------------------------------------------------------
 
 FAST_KEYS = {
     "status",
+    "ext_module",
 }
 
 SLOW_KEYS = {
@@ -75,5 +74,4 @@ SLOW_KEYS = {
     "comm_bt",
     "error",
     "debug",
-    "ext_module",
 }
