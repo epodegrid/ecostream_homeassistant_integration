@@ -65,6 +65,7 @@ class EcostreamVentilationFan(
         self._entry = entry
 
         self._attr_unique_id = f"{entry.entry_id}_ventilation"
+        self.entity_id = "fan.ecostream_ventilation"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.host)},
             manufacturer="BUVA",

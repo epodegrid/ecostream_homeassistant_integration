@@ -54,6 +54,7 @@ class EcostreamQsetNumber(
         self._entry = entry
 
         self._attr_unique_id = f"{entry.entry_id}_qset_number"
+        self.entity_id = "number.ecostream_qset_number"
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.host)},

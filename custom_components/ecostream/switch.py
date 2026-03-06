@@ -88,6 +88,14 @@ class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
     _attr_translation_key = "schedule_enabled"
     _attr_icon = "mdi:calendar-clock"
 
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self.entity_id = "switch.ecostream_schedule_enabled"
+
     @property
     def unique_id(self) -> str:
         return f"{self._entry.entry_id}_schedule_enabled"
@@ -125,6 +133,14 @@ class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
 class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
     _attr_translation_key = "summer_comfort"
     _attr_icon = "mdi:weather-sunny"
+
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self.entity_id = "switch.ecostream_summer_comfort"
 
     @property
     def unique_id(self) -> str:
@@ -167,6 +183,14 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
 
     _attr_translation_key = "boost"
     _attr_icon = "mdi:weather-windy"
+
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self.entity_id = "switch.ecostream_boost"
 
     @property
     def unique_id(self) -> str:

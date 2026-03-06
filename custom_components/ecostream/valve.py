@@ -57,6 +57,7 @@ class EcostreamBypassValve(
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_bypass_valve"
+        self.entity_id = "valve.ecostream_bypass_valve"
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.host)},

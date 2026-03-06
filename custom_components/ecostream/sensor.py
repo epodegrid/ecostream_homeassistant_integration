@@ -382,6 +382,7 @@ class EcostreamBaseSensor(
 
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
         self._attr_translation_key = description.key
+        self.entity_id = f"sensor.ecostream_{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.host)},
             manufacturer="BUVA",
@@ -462,6 +463,7 @@ class EcostreamBoostRemainingSensor(
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_boost_time_left"
+        self.entity_id = "sensor.ecostream_boost_time_remaining"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.host)},
             manufacturer="BUVA",
