@@ -198,9 +198,10 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
 
         config = self._get_config()
 
-        # Preferentie: setpoint_high, anders capacity_max, anders fallback
+        # Use the Qset slider value (man_override_set), fallback to setpoint_high / capacity_max
         qset_raw = (
-            config.get("setpoint_high")
+            config.get("man_override_set")
+            or config.get("setpoint_high")
             or config.get("capacity_max")
             or BOOST_QSET
         )
