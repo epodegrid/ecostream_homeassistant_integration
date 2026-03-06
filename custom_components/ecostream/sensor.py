@@ -173,7 +173,6 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         name="Fan Exhaust Speed",
         native_unit_of_measurement="rpm",
         state_class=SensorStateClass.MEASUREMENT,
-        entity_registry_enabled_default=False,
         value_fn=lambda d: (
             None
             if (v := _deep_get(d, ["status", "fan_eha_speed"])) is None
@@ -185,7 +184,6 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         name="Fan Supply Speed",
         native_unit_of_measurement="rpm",
         state_class=SensorStateClass.MEASUREMENT,
-        entity_registry_enabled_default=False,
         value_fn=lambda d: (
             None
             if (v := _deep_get(d, ["status", "fan_sup_speed"])) is None
@@ -229,7 +227,6 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         name="Heat Recovery Efficiency",
         native_unit_of_measurement="%",
         state_class=SensorStateClass.MEASUREMENT,
-        entity_registry_enabled_default=False,
         value_fn=lambda d: _calc_efficiency(d),
     ),
     # -------------------------------------------------------------------
@@ -290,7 +287,6 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         translation_key="uptime",
         icon="mdi:timer-outline",
         entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
         value_fn=lambda d: _deep_get(d, ["system", "uptime"]),
     ),
     # -------------------------------------------------------------------
