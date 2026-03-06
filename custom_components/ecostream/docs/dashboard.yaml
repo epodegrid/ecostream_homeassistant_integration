@@ -44,12 +44,12 @@ views:
                     - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
                   icon:
                     - width: 40px
-                    - height: 40px
+                    - height: 30px
                     - color: '#007aff'
                     - animation: rotating 5s linear infinite
                   name:
                     - font-size: 1.2rem
-                    - font-weight: 600
+                    - font-weight: 100
               - type: custom:button-card
                 entity: sensor.ecostream_fan_exhaust_speed
                 name: Afvoer
@@ -70,17 +70,17 @@ views:
                     - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
                   icon:
                     - width: 40px
-                    - height: 40px
+                    - height: 30px
                     - color: '#007aff'
                     - animation: rotating 5s linear infinite
                   name:
                     - font-size: 1.2rem
-                    - font-weight: 600
+                    - font-weight: 100
           - type: horizontal-stack
             cards:
               - type: gauge
                 entity: sensor.ecostream_temperature_eta
-                name: EHA (retour)
+                name: ETA (retour)
                 min: 0
                 max: 30
               - type: gauge
@@ -117,10 +117,10 @@ views:
                     - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
                   icon:
                     - width: 40px
-                    - height: 40px
+                    - height: 30px
                     - animation: rotating 8s linear infinite
                   name:
-                    - font-weight: 600
+                    - font-weight: 100
               - type: custom:button-card
                 entity: switch.ecostream_boost
                 name: Boost
@@ -143,10 +143,10 @@ views:
                     - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
                   icon:
                     - width: 40px
-                    - height: 40px
+                    - height: 30px
                     - color: '#007aff'
                   name:
-                    - font-weight: 600
+                    - font-weight: 100
               - type: custom:button-card
                 entity: valve.ecostream_bypass_valve
                 name: Bypass
@@ -161,10 +161,10 @@ views:
                     - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
                   icon:
                     - width: 40px
-                    - height: 40px
+                    - height: 30px
                     - color: '#ff9f0a'
                   name:
-                    - font-weight: 600
+                    - font-weight: 100
           - type: horizontal-stack
             cards:
               - type: custom:button-card
@@ -183,10 +183,10 @@ views:
                     - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
                   icon:
                     - width: 40px
-                    - height: 40px
+                    - height: 30px
                     - color: '#34c759'
                   name:
-                    - font-weight: 600
+                    - font-weight: 100
               - type: custom:button-card
                 entity: button.ecostream_mid
                 name: Mid
@@ -203,10 +203,10 @@ views:
                     - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
                   icon:
                     - width: 40px
-                    - height: 40px
+                    - height: 30px
                     - color: '#ffcc00'
                   name:
-                    - font-weight: 600
+                    - font-weight: 100
               - type: custom:button-card
                 entity: button.ecostream_high
                 name: High
@@ -223,10 +223,10 @@ views:
                     - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
                   icon:
                     - width: 40px
-                    - height: 40px
+                    - height: 30px
                     - color: '#ff3b30'
                   name:
-                    - font-weight: 600
+                    - font-weight: 100
       - type: grid
         cards:
           - type: custom:mini-graph-card
@@ -277,10 +277,34 @@ views:
               - entity: sensor.ecostream_wifi_ip
               - entity: sensor.ecostream_wifi_rssi
             title: 🛠 Systeemstatus
+          - type: gauge
+            entity: sensor.ecostream_qset
+            min: 60
+            max: 300
+            name: Current Qset
+            needle: false
+            grid_options:
+              columns: 6
+              rows: 2
+          - type: entity
+            entity: sensor.ecostream_mode_time_left
+            name: Resterende tijd
+            grid_options:
+              columns: 3
+              rows: 2
+            tap_action:
+              action: none
+            card_mod:
+              style: |
+                :host {
+                  --card-primary-font-size: 20x;
+                  --card-secondary-font-size: 40px;
+                }
           - type: tile
             entity: sensor.ecostream_schedule_enabled
             name: Schema actief
             icon: mdi:fan-clock
+            color: deep-purple
             hide_state: false
             vertical: true
             features_position: bottom
@@ -288,6 +312,7 @@ views:
             entity: sensor.ecostream_filter_replacement_date
             name: 'Filter vervangen op:'
             icon: mdi:air-filter
+            color: light-green
             hide_state: false
             vertical: true
             features_position: bottom
@@ -295,12 +320,15 @@ views:
             entity: sensor.ecostream_summer_comfort_enabled
             name: Zomercomfort
             icon: far:sun
+            color: amber
+            show_entity_picture: false
             vertical: true
             features_position: bottom
           - type: tile
             entity: sensor.ecostream_frost_protection_active
             name: Vorstbescherming
             icon: mdi:snowflake-thermometer
+            color: primary
             hide_state: false
             vertical: true
             features_position: bottom
@@ -310,3 +338,18 @@ views:
       badges_wrap: wrap
     max_columns: 3
     icon: mdi:fan
+    footer:
+      card:
+        type: custom:mushroom-title-card
+        title_tap_action:
+          action: none
+        subtitle_tap_action:
+          action: url
+          url_path: https://github.com/Uber1337NL
+        subtitle: BUVA EcoStream dashboard by Uber1337NL
+        alignment: center
+        card_mod:
+          style: |
+            ha-card {
+              --subtitle-font-size: 12px !important;
+            }
