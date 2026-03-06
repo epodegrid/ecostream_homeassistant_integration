@@ -90,18 +90,21 @@ class EcostreamPresetButton(
         cap_max_raw = config.get("capacity_max")
 
         if cap_min_raw is None or cap_max_raw is None:
-            _LOGGER.error("Invalid capacity range, cannot set preset")
+            _LOGGER.warning(
+                "EcoStream capacity_min/capacity_max not in coordinator data (keys: %s), cannot set preset",
+                list(config.keys()),
+            )
             return
 
         try:
             cap_min = float(cap_min_raw)
             cap_max = float(cap_max_raw)
         except (TypeError, ValueError):
-            _LOGGER.error("Invalid capacity range, cannot set preset")
+            _LOGGER.error("Invalid capacity range values: min=%s max=%s", cap_min_raw, cap_max_raw)
             return
 
         if cap_max <= cap_min:
-            _LOGGER.error("Invalid capacity range, cannot set preset")
+            _LOGGER.error("capacity_max (%s) <= capacity_min (%s), cannot set preset", cap_max, cap_min)
             return
 
         qset = cap_min + (pct / 100.0) * (cap_max - cap_min)
