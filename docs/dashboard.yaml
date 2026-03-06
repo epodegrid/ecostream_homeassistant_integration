@@ -1,0 +1,53 @@
+title: EcoStream
+views:
+  - title: Ventilation
+    cards:
+      - type: entities
+        title: EcoStream
+        entities:
+          - entity: fan.ecostream_ventilation
+          - entity: number.ecostream_qset_number
+          - entity: switch.ecostream_schedule_enabled
+          - entity: switch.ecostream_summer_comfort
+          - entity: switch.ecostream_boost
+          - entity: select.ecostream_boost_duration
+          - entity: sensor.ecostream_boost_time_remaining
+
+      - type: horizontal-stack
+        cards:
+          - type: button
+            name: Low
+            icon: mdi:fan-speed-1
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.ecostream_preset_low
+
+          - type: button
+            name: Mid
+            icon: mdi:fan-speed-2
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.ecostream_preset_mid
+
+          - type: button
+            name: High
+            icon: mdi:fan-speed-3
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.ecostream_preset_high
+
+      - type: entities
+        title: Sensors
+        entities:
+          - entity: sensor.ecostream_qset
+          - entity: sensor.ecostream_co2
+          - entity: sensor.ecostream_temperature
+          - entity: sensor.ecostream_humidity
+          - entity: sensor.ecostream_filter_replacement_warning
+          - entity: sensor.ecostream_filter_replacement_date

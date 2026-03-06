@@ -7,6 +7,7 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "ecostream"
 
 PLATFORMS: list[str] = [
+    "button",
     "sensor",
     "fan",
     "number",
