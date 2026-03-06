@@ -186,7 +186,7 @@ class EcostreamBoostDurationSelect(EcostreamBaseEntity, SelectEntity):
     async def async_select_option(self, option: str) -> None:
         try:
             minutes = int(option)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             _LOGGER.warning("Invalid boost duration option: %s", option)
             return
 
@@ -214,7 +214,7 @@ class EcostreamBoostRemainingSensor(EcostreamBaseEntity, SensorEntity):
 
         try:
             return int(val) if val is not None else 0
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return 0
 
     @callback
@@ -244,7 +244,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             self._attr_is_on = False
         self.async_write_ha_state()
 
@@ -272,7 +272,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
 
         try:
             qset = float(qset_raw)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             qset = float(BOOST_QSET)
 
         # ----------------------------
@@ -285,7 +285,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         )
         try:
             minutes = int(minutes)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             minutes = DEFAULT_BOOST_DURATION_MINUTES
 
         if minutes < 1:

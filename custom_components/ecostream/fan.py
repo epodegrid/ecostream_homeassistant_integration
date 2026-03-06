@@ -78,7 +78,7 @@ class EcostreamVentilationFan(
     def _get_qset(self) -> float:
         try:
             return float(self._status().get("qset", 0.0))
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return 0.0
 
     def _get_capacity_min(self) -> float | None:
@@ -87,7 +87,7 @@ class EcostreamVentilationFan(
             if value is None:
                 return None
             return float(value)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return None
 
     def _get_capacity_max(self) -> float | None:
@@ -96,7 +96,7 @@ class EcostreamVentilationFan(
             if value is None:
                 return None
             return float(value)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return None
 
     # ------------------------------------------------------------------
