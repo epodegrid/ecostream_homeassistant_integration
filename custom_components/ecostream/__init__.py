@@ -16,6 +16,7 @@ from typing import Any
 from aiohttp import ClientError, WSMsgType
 
 from .const import (
+    CONF_ALLOW_OVERRIDE_FILTER_DATE,
     CONF_BOOST_DURATION,
     CONF_FILTER_REPLACEMENT_DAYS,
     CONF_PRESET_OVERRIDE_MINUTES,
@@ -142,14 +143,7 @@ async def _async_options_updated(
     if not coordinator.ws:
         return
 
-    filter_days = int(
-        entry.options.get(
-            CONF_FILTER_REPLACEMENT_DAYS,
-            DEFAULT_FILTER_REPLACEMENT_DAYS,
-        )
-    )
-    filter_datetime = int(time.time() + filter_days * 86400)
-
+    # Update boost duration
     boost_duration = int(
         entry.options.get(
             CONF_BOOST_DURATION, DEFAULT_BOOST_DURATION_MINUTES
@@ -157,15 +151,34 @@ async def _async_options_updated(
     )
     coordinator.boost_duration_minutes = boost_duration
 
-    await coordinator.ws.send_json(
-        {"config": {"filter_datetime": filter_datetime}}
+    # Only update filter date if override is allowed
+    allow_override = entry.options.get(
+        CONF_ALLOW_OVERRIDE_FILTER_DATE, False
     )
-    _LOGGER.debug(
-        "EcoStream filter_datetime updated: %s days → timestamp %s, boost_duration=%sm",
-        filter_days,
-        filter_datetime,
-        boost_duration,
-    )
+
+    if allow_override:
+        filter_days = int(
+            entry.options.get(
+                CONF_FILTER_REPLACEMENT_DAYS,
+                DEFAULT_FILTER_REPLACEMENT_DAYS,
+            )
+        )
+        filter_datetime = int(time.time() + filter_days * 86400)
+
+        await coordinator.ws.send_json(
+            {"config": {"filter_datetime": filter_datetime}}
+        )
+        _LOGGER.debug(
+            "EcoStream filter_datetime updated: %s days → timestamp %s, boost_duration=%sm",
+            filter_days,
+            filter_datetime,
+            boost_duration,
+        )
+    else:
+        _LOGGER.debug(
+            "EcoStream options updated: boost_duration=%sm (filter override disabled)",
+            boost_duration,
+        )
 
 
 async def async_unload_entry(

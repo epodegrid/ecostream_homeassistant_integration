@@ -20,6 +20,7 @@ PLATFORMS: list[str] = [
 # Boost
 BOOST_QSET = 300
 CO2_THRESHOLD = 800
+BOOST_OPTIONS = ["5", "10", "15", "30", "60"]
 
 # Default options
 DEFAULT_FILTER_REPLACEMENT_DAYS = 180
@@ -32,6 +33,7 @@ DEFAULT_BOOST_DURATION_MINUTES = 15
 CONF_FILTER_REPLACEMENT_DAYS = "filter_replacement_days"
 CONF_PRESET_OVERRIDE_MINUTES = "preset_override_minutes"
 CONF_BOOST_DURATION = "boost_duration"
+CONF_ALLOW_OVERRIDE_FILTER_DATE = "allow_override_filter_date"
 
 # Default push intervals (seconds)
 FAST_MODE_SECONDS = 20

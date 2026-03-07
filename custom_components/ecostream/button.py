@@ -10,7 +10,10 @@ import logging
 from typing import Any, cast
 
 from .const import (
+    CONF_ALLOW_OVERRIDE_FILTER_DATE,
+    CONF_FILTER_REPLACEMENT_DAYS,
     CONF_PRESET_OVERRIDE_MINUTES,
+    DEFAULT_FILTER_REPLACEMENT_DAYS,
     DEFAULT_PRESET_OVERRIDE_MINUTES,
     DEVICE_MODEL,
     DEVICE_NAME,
@@ -32,11 +35,14 @@ async def async_setup_entry(
 ) -> None:
     coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
 
-    async_add_entities([
-        EcostreamPresetButton(coordinator, entry, PRESET_LOW),
-        EcostreamPresetButton(coordinator, entry, PRESET_MID),
-        EcostreamPresetButton(coordinator, entry, PRESET_HIGH),
-    ])
+    async_add_entities(
+        [
+            EcostreamPresetButton(coordinator, entry, PRESET_LOW),
+            EcostreamPresetButton(coordinator, entry, PRESET_MID),
+            EcostreamPresetButton(coordinator, entry, PRESET_HIGH),
+            EcostreamResetFilterButton(coordinator, entry),
+        ]
+    )
 
 
 class EcostreamPresetButton(
@@ -65,7 +71,10 @@ class EcostreamPresetButton(
         )
 
     def _get_setpoint(self) -> float | None:
-        config = cast(dict[str, Any], (self.coordinator.data or {}).get("config") or {})
+        config = cast(
+            dict[str, Any],
+            (self.coordinator.data or {}).get("config") or {},
+        )
         key = {
             PRESET_LOW: "setpoint_low",
             PRESET_MID: "setpoint_mid",
@@ -78,7 +87,7 @@ class EcostreamPresetButton(
             if value is None:
                 return None
             return float(value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return None
 
     @property
@@ -88,19 +97,27 @@ class EcostreamPresetButton(
 
     async def async_press(self) -> None:
         if not self.coordinator.ws:
-            _LOGGER.error("EcoStream WebSocket not connected, cannot set preset")
+            _LOGGER.error(
+                "EcoStream WebSocket not connected, cannot set preset"
+            )
             return
 
         qset = self._get_setpoint()
 
         if qset is None:
             _LOGGER.warning(
-                "EcoStream setpoint for preset %s not available in config data", self._preset
+                "EcoStream setpoint for preset %s not available in config data",
+                self._preset,
             )
             return
 
         opts = self._entry.options or {}
-        override_minutes = int(opts.get(CONF_PRESET_OVERRIDE_MINUTES, DEFAULT_PRESET_OVERRIDE_MINUTES))
+        override_minutes = int(
+            opts.get(
+                CONF_PRESET_OVERRIDE_MINUTES,
+                DEFAULT_PRESET_OVERRIDE_MINUTES,
+            )
+        )
 
         payload = {
             "config": {
@@ -110,5 +127,72 @@ class EcostreamPresetButton(
         }
 
         self.coordinator.mark_control_action()
-        _LOGGER.debug("EcoStream preset %s → Qset %.1f", self._preset, qset)
+        _LOGGER.debug(
+            "EcoStream preset %s → Qset %.1f", self._preset, qset
+        )
+        await self.coordinator.ws.send_json(payload)
+
+
+class EcostreamResetFilterButton(
+    CoordinatorEntity[EcostreamDataUpdateCoordinator], ButtonEntity
+):
+    """Button to reset the filter replacement date."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "reset_filter"
+    _attr_icon = "mdi:air-filter"
+
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_reset_filter"
+        self.entity_id = "button.ecostream_reset_filter"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.host)},
+            manufacturer="BUVA",
+            name=DEVICE_NAME,
+            model=DEVICE_MODEL,
+        )
+
+    async def async_press(self) -> None:
+        """Reset the filter replacement date."""
+        if not self.coordinator.ws:
+            _LOGGER.error(
+                "EcoStream WebSocket not connected, cannot reset filter"
+            )
+            return
+
+        # Check if override is allowed
+        opts = self._entry.options or {}
+        allow_override = opts.get(
+            CONF_ALLOW_OVERRIDE_FILTER_DATE, False
+        )
+
+        if not allow_override:
+            _LOGGER.warning(
+                "Filter date override is disabled. Enable 'Allow Override Filter Date' in integration options."
+            )
+            return
+
+        import time
+
+        filter_days = int(
+            opts.get(
+                CONF_FILTER_REPLACEMENT_DAYS,
+                DEFAULT_FILTER_REPLACEMENT_DAYS,
+            )
+        )
+        new_filter_datetime = int(time.time() + filter_days * 86400)
+
+        payload = {"config": {"filter_datetime": new_filter_datetime}}
+
+        _LOGGER.info(
+            "EcoStream filter reset: new date in %s days (timestamp %s)",
+            filter_days,
+            new_filter_datetime,
+        )
         await self.coordinator.ws.send_json(payload)

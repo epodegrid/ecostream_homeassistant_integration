@@ -13,6 +13,7 @@ from typing import Any
 import voluptuous as vol
 
 from .const import (
+    CONF_ALLOW_OVERRIDE_FILTER_DATE,
     CONF_BOOST_DURATION,
     CONF_FILTER_REPLACEMENT_DAYS,
     CONF_PRESET_OVERRIDE_MINUTES,
@@ -54,6 +55,11 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                 preset_override_minutes = int(
                     user_input[CONF_PRESET_OVERRIDE_MINUTES]
                 )
+                allow_override_filter_date = bool(
+                    user_input.get(
+                        CONF_ALLOW_OVERRIDE_FILTER_DATE, False
+                    )
+                )
 
                 if boost_duration < 5:
                     errors["base"] = "invalid_number"
@@ -69,6 +75,9 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                         preset_override_minutes
                     )
                     self._options[CONF_BOOST_DURATION] = boost_duration
+                    self._options[CONF_ALLOW_OVERRIDE_FILTER_DATE] = (
+                        allow_override_filter_date
+                    )
 
                     return self.async_create_entry(
                         title="EcoStream Options",
@@ -90,6 +99,10 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
             CONF_BOOST_DURATION,
             DEFAULT_BOOST_DURATION_MINUTES,
         )
+        current_allow_override = self._options.get(
+            CONF_ALLOW_OVERRIDE_FILTER_DATE,
+            False,
+        )
 
         schema = vol.Schema(
             {
@@ -105,6 +118,10 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                     CONF_BOOST_DURATION,
                     default=current_boost_duration,
                 ): vol.All(int, vol.Range(min=5)),
+                vol.Required(
+                    CONF_ALLOW_OVERRIDE_FILTER_DATE,
+                    default=current_allow_override,
+                ): bool,
             }
         )
 

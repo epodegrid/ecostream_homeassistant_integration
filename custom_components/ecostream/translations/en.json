@@ -128,6 +128,11 @@
                 "name": "External CO₂"
             }
         },
+        "button": {
+            "reset_filter": {
+                "name": "Reset Filter"
+            }
+        },
         "switch": {
             "schedule_enabled": {
                 "name": "Schedule Enabled"
@@ -171,7 +176,11 @@
                 "data": {
                     "filter_replacement_days": "Filter replacement interval (days)",
                     "preset_override_minutes": "Preset override duration (minutes)",
-                    "boost_duration": "Boost duration (minutes)"
+                    "boost_duration": "Boost duration (minutes)",
+                    "allow_override_filter_date": "Allow override filter date"
+                },
+                "data_description": {
+                    "allow_override_filter_date": "When enabled, the filter replacement date will be automatically updated when changing settings or using the reset filter button. Only enable this if you are the sole user of this device."
                 }
             }
         }
