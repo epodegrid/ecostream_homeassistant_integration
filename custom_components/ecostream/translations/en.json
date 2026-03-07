@@ -77,7 +77,7 @@
                 "name": "Qset"
             },
             "mode_time_left": {
-                "name": "Mode Time Left"
+                "name": "Override Time Remaining"
             },
             "frost_protection_active": {
                 "name": "Frost Protection Active"
@@ -111,9 +111,6 @@
             },
             "wifi_rssi": {
                 "name": "WiFi Signal Strength"
-            },
-            "boost_time_remaining": {
-                "name": "Boost Time Remaining"
             },
             "setpoint_low": {
                 "name": "Setpoint Low"

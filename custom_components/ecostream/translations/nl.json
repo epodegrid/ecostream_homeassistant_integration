@@ -99,7 +99,7 @@
         "name": "Qset"
       },
       "mode_time_left": {
-        "name": "Resterende modestijd"
+        "name": "Resterende override tijd"
       },
       "frost_protection_active": {
         "name": "Vorstbeveiliging actief"
@@ -133,9 +133,6 @@
       },
       "wifi_rssi": {
         "name": "WiFi signaalsterkte"
-      },
-      "boost_time_remaining": {
-        "name": "Resterende boosttijd"
       },
       "setpoint_low": {
         "name": "Setpoint Laag"
