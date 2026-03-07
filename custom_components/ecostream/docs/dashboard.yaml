@@ -8,7 +8,7 @@ views:
       - type: grid
         cards:
           - type: custom:mini-graph-card
-            name: Effiëncie (%)
+            name: Efficiëntie (%)
             icon: mdi:percent
             entities:
               - sensor.ecostream_efficiency
@@ -18,9 +18,9 @@ views:
             color_thresholds:
               - value: 90
                 color: '#34c759'
-              - value: 80
+              - value: 82
                 color: '#ffcc00'
-              - value: 70
+              - value: 74
                 color: '#ff3b30'
           - type: horizontal-stack
             cards:
@@ -281,11 +281,13 @@ views:
             entity: sensor.ecostream_qset
             min: 60
             max: 300
-            name: Current Qset
             needle: false
             grid_options:
               columns: 6
               rows: 2
+            tap_action:
+              action: none
+            name: Debiet
           - type: entity
             entity: sensor.ecostream_mode_time_left
             name: Resterende tijd
