@@ -13,14 +13,12 @@ from typing import Any
 import voluptuous as vol
 
 from .const import (
-    CONF_FAST_PUSH_INTERVAL,
+    CONF_BOOST_DURATION,
     CONF_FILTER_REPLACEMENT_DAYS,
     CONF_PRESET_OVERRIDE_MINUTES,
-    CONF_PUSH_INTERVAL,
-    DEFAULT_FAST_PUSH_INTERVAL,
+    DEFAULT_BOOST_DURATION_MINUTES,
     DEFAULT_FILTER_REPLACEMENT_DAYS,
     DEFAULT_PRESET_OVERRIDE_MINUTES,
-    DEFAULT_PUSH_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,24 +43,32 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
 
         if user_input is not None:
             try:
-                push_interval = int(user_input[CONF_PUSH_INTERVAL])
-                fast_push_interval = int(user_input[CONF_FAST_PUSH_INTERVAL])
-                filter_days = int(user_input[CONF_FILTER_REPLACEMENT_DAYS])
-                preset_override_minutes = int(user_input[CONF_PRESET_OVERRIDE_MINUTES])
+                boost_duration = int(
+                    user_input.get(
+                        "boost_duration", DEFAULT_BOOST_DURATION_MINUTES
+                    )
+                )
+                filter_days = int(
+                    user_input[CONF_FILTER_REPLACEMENT_DAYS]
+                )
+                preset_override_minutes = int(
+                    user_input[CONF_PRESET_OVERRIDE_MINUTES]
+                )
 
-                if push_interval < 20:
-                    errors["base"] = "push_interval_too_short"
-                elif fast_push_interval < 1:
-                    errors["base"] = "fast_interval_too_short"
+                if boost_duration < 5:
+                    errors["base"] = "invalid_number"
                 elif filter_days < 30:
                     errors["base"] = "invalid_number"
                 elif preset_override_minutes < 5:
                     errors["base"] = "invalid_number"
                 else:
-                    self._options[CONF_PUSH_INTERVAL] = push_interval
-                    self._options[CONF_FAST_PUSH_INTERVAL] = fast_push_interval
-                    self._options[CONF_FILTER_REPLACEMENT_DAYS] = filter_days
-                    self._options[CONF_PRESET_OVERRIDE_MINUTES] = preset_override_minutes
+                    self._options[CONF_FILTER_REPLACEMENT_DAYS] = (
+                        filter_days
+                    )
+                    self._options[CONF_PRESET_OVERRIDE_MINUTES] = (
+                        preset_override_minutes
+                    )
+                    self._options[CONF_BOOST_DURATION] = boost_duration
 
                     return self.async_create_entry(
                         title="EcoStream Options",
@@ -72,8 +78,6 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
             except ValueError:
                 errors["base"] = "invalid_number"
 
-        current_push = self._options.get(CONF_PUSH_INTERVAL, DEFAULT_PUSH_INTERVAL)
-        current_fast = self._options.get(CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL)
         current_filter_days = self._options.get(
             CONF_FILTER_REPLACEMENT_DAYS,
             DEFAULT_FILTER_REPLACEMENT_DAYS,
@@ -82,11 +86,13 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
             CONF_PRESET_OVERRIDE_MINUTES,
             DEFAULT_PRESET_OVERRIDE_MINUTES,
         )
+        current_boost_duration = self._options.get(
+            CONF_BOOST_DURATION,
+            DEFAULT_BOOST_DURATION_MINUTES,
+        )
 
         schema = vol.Schema(
             {
-                vol.Required(CONF_PUSH_INTERVAL, default=current_push): int,
-                vol.Required(CONF_FAST_PUSH_INTERVAL, default=current_fast): int,
                 vol.Required(
                     CONF_FILTER_REPLACEMENT_DAYS,
                     default=current_filter_days,
@@ -94,6 +100,10 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                 vol.Required(
                     CONF_PRESET_OVERRIDE_MINUTES,
                     default=current_override_minutes,
+                ): vol.All(int, vol.Range(min=5)),
+                vol.Required(
+                    CONF_BOOST_DURATION,
+                    default=current_boost_duration,
                 ): vol.All(int, vol.Range(min=5)),
             }
         )

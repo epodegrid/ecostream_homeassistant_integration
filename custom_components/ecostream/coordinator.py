@@ -18,14 +18,11 @@ import time
 from typing import Any, cast
 
 from .const import (
-    CONF_FAST_PUSH_INTERVAL,
-    CONF_PUSH_INTERVAL,
-    DEFAULT_FAST_PUSH_INTERVAL,
-    DEFAULT_PUSH_INTERVAL,
     DOMAIN,
     FAST_KEYS,
     FAST_MODE_SECONDS,
     SLOW_KEYS,
+    SLOW_PUSH_INTERVAL,
 )
 from .websocket_api import EcostreamWebsocket
 
@@ -64,14 +61,8 @@ class EcostreamDataUpdateCoordinator(
         self.host = host
         self.options = dict(options or {})
 
-        self._push_interval: float = float(
-            self.options.get(CONF_PUSH_INTERVAL, DEFAULT_PUSH_INTERVAL)
-        )
-        self._fast_push_interval: int = int(
-            self.options.get(
-                CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL
-            )
-        )
+        self._push_interval: float = float(SLOW_PUSH_INTERVAL)
+        self._fast_push_interval: int = int(FAST_MODE_SECONDS)
 
         self._last_push: float = 0.0
         self._last_slow_push: float = 0.0

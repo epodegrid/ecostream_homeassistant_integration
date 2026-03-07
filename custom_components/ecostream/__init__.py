@@ -16,12 +16,12 @@ from typing import Any
 from aiohttp import ClientError, WSMsgType
 
 from .const import (
-    CONF_FAST_PUSH_INTERVAL,
+    CONF_BOOST_DURATION,
     CONF_FILTER_REPLACEMENT_DAYS,
-    CONF_PUSH_INTERVAL,
-    DEFAULT_FAST_PUSH_INTERVAL,
+    CONF_PRESET_OVERRIDE_MINUTES,
+    DEFAULT_BOOST_DURATION_MINUTES,
     DEFAULT_FILTER_REPLACEMENT_DAYS,
-    DEFAULT_PUSH_INTERVAL,
+    DEFAULT_PRESET_OVERRIDE_MINUTES,
     DOMAIN,
     PLATFORMS,
 )
@@ -93,9 +93,14 @@ async def async_setup_entry(
 
     # Merge options
     options: dict[str, Any] = dict(entry.options or {})
-    options.setdefault(CONF_PUSH_INTERVAL, DEFAULT_PUSH_INTERVAL)
     options.setdefault(
-        CONF_FAST_PUSH_INTERVAL, DEFAULT_FAST_PUSH_INTERVAL
+        CONF_FILTER_REPLACEMENT_DAYS, DEFAULT_FILTER_REPLACEMENT_DAYS
+    )
+    options.setdefault(
+        CONF_PRESET_OVERRIDE_MINUTES, DEFAULT_PRESET_OVERRIDE_MINUTES
+    )
+    options.setdefault(
+        CONF_BOOST_DURATION, DEFAULT_BOOST_DURATION_MINUTES
     )
 
     coordinator = EcostreamDataUpdateCoordinator(
@@ -118,11 +123,12 @@ async def async_setup_entry(
     )
 
     _LOGGER.info(
-        "EcoStream entry %s set up for host %s (push=%ss fast=%ss)",
+        "EcoStream entry %s set up for host %s (filter_days=%s preset_override=%sm boost=%sm)",
         entry.entry_id,
         host,
-        options.get(CONF_PUSH_INTERVAL),
-        options.get(CONF_FAST_PUSH_INTERVAL),
+        options.get(CONF_FILTER_REPLACEMENT_DAYS),
+        options.get(CONF_PRESET_OVERRIDE_MINUTES),
+        options.get(CONF_BOOST_DURATION),
     )
 
     return True
@@ -137,17 +143,28 @@ async def _async_options_updated(
         return
 
     filter_days = int(
-        entry.options.get(CONF_FILTER_REPLACEMENT_DAYS, DEFAULT_FILTER_REPLACEMENT_DAYS)
+        entry.options.get(
+            CONF_FILTER_REPLACEMENT_DAYS,
+            DEFAULT_FILTER_REPLACEMENT_DAYS,
+        )
     )
     filter_datetime = int(time.time() + filter_days * 86400)
+
+    boost_duration = int(
+        entry.options.get(
+            CONF_BOOST_DURATION, DEFAULT_BOOST_DURATION_MINUTES
+        )
+    )
+    coordinator.boost_duration_minutes = boost_duration
 
     await coordinator.ws.send_json(
         {"config": {"filter_datetime": filter_datetime}}
     )
     _LOGGER.debug(
-        "EcoStream filter_datetime updated: %s days → timestamp %s",
+        "EcoStream filter_datetime updated: %s days → timestamp %s, boost_duration=%sm",
         filter_days,
         filter_datetime,
+        boost_duration,
     )
 
 

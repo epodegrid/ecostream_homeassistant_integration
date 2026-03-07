@@ -46,38 +46,98 @@
             }
         },
         "sensor": {
-            "bypass_position": {"name": "Bypass Position"},
-            "eco2_return": {"name": "eCO₂ Return"},
-            "tvoc_return": {"name": "TVOC Return"},
-            "humidity_return": {"name": "Humidity Return"},
-            "temperature_eha": {"name": "Temperature EHA"},
-            "temperature_eta": {"name": "Temperature ETA"},
-            "temperature_oda": {"name": "Temperature ODA"},
-            "fan_exhaust_speed": {"name": "Fan Exhaust Speed"},
-            "fan_supply_speed": {"name": "Fan Supply Speed"},
-            "qset": {"name": "Qset"},
-            "mode_time_left": {"name": "Mode Time Left"},
-            "frost_protection_active": {"name": "Frost Protection Active"},
-            "efficiency": {"name": "Heat Recovery Efficiency"},
-            "schedule_enabled": {"name": "Schedule Enabled"},
-            "summer_comfort_enabled": {"name": "Summer Comfort Enabled"},
-            "summer_comfort_temp": {"name": "Summer Comfort Temperature"},
-            "filter_replacement_date": {"name": "Filter Replacement Date"},
-            "filter_replacement_warning": {"name": "Filter Replacement Warning"},
-            "uptime": {"name": "Uptime"},
-            "wifi_ip": {"name": "WiFi IP"},
-            "wifi_ssid": {"name": "WiFi SSID"},
-            "wifi_rssi": {"name": "WiFi Signal Strength"},
-            "boost_time_remaining": {"name": "Boost Time Remaining"},
-            "setpoint_low": {"name": "Setpoint Low"},
-            "setpoint_mid": {"name": "Setpoint Mid"},
-            "setpoint_high": {"name": "Setpoint High"},
-            "ext_co2": {"name": "External CO₂"}
+            "bypass_position": {
+                "name": "Bypass Position"
+            },
+            "eco2_return": {
+                "name": "eCO₂ Return"
+            },
+            "tvoc_return": {
+                "name": "TVOC Return"
+            },
+            "humidity_return": {
+                "name": "Humidity Return"
+            },
+            "temperature_eha": {
+                "name": "Temperature EHA"
+            },
+            "temperature_eta": {
+                "name": "Temperature ETA"
+            },
+            "temperature_oda": {
+                "name": "Temperature ODA"
+            },
+            "fan_exhaust_speed": {
+                "name": "Fan Exhaust Speed"
+            },
+            "fan_supply_speed": {
+                "name": "Fan Supply Speed"
+            },
+            "qset": {
+                "name": "Qset"
+            },
+            "mode_time_left": {
+                "name": "Mode Time Left"
+            },
+            "frost_protection_active": {
+                "name": "Frost Protection Active"
+            },
+            "efficiency": {
+                "name": "Heat Recovery Efficiency"
+            },
+            "schedule_enabled": {
+                "name": "Schedule Enabled"
+            },
+            "summer_comfort_enabled": {
+                "name": "Summer Comfort Enabled"
+            },
+            "summer_comfort_temp": {
+                "name": "Summer Comfort Temperature"
+            },
+            "filter_replacement_date": {
+                "name": "Filter Replacement Date"
+            },
+            "filter_replacement_warning": {
+                "name": "Filter Replacement"
+            },
+            "uptime": {
+                "name": "Uptime"
+            },
+            "wifi_ip": {
+                "name": "WiFi IP"
+            },
+            "wifi_ssid": {
+                "name": "WiFi SSID"
+            },
+            "wifi_rssi": {
+                "name": "WiFi Signal Strength"
+            },
+            "boost_time_remaining": {
+                "name": "Boost Time Remaining"
+            },
+            "setpoint_low": {
+                "name": "Setpoint Low"
+            },
+            "setpoint_mid": {
+                "name": "Setpoint Mid"
+            },
+            "setpoint_high": {
+                "name": "Setpoint High"
+            },
+            "ext_co2": {
+                "name": "External CO₂"
+            }
         },
         "switch": {
-            "schedule_enabled": {"name": "Schedule Enabled"},
-            "summer_comfort": {"name": "Summer Comfort"},
-            "boost": {"name": "Boost"}
+            "schedule_enabled": {
+                "name": "Schedule Enabled"
+            },
+            "summer_comfort": {
+                "name": "Summer Comfort"
+            },
+            "boost": {
+                "name": "Boost"
+            }
         },
         "select": {
             "boost_duration": {
@@ -91,11 +151,17 @@
             }
         },
         "number": {
-            "qset_number": {"name": "Qset"},
-            "filter_replacement_days": {"name": "Filter Replacement Interval"}
+            "qset_number": {
+                "name": "Qset"
+            },
+            "filter_replacement_days": {
+                "name": "Filter Replacement Interval"
+            }
         },
         "valve": {
-            "bypass_valve": {"name": "Bypass Valve"}
+            "bypass_valve": {
+                "name": "Bypass Valve"
+            }
         }
     },
     "options": {
@@ -103,10 +169,9 @@
             "init": {
                 "title": "EcoStream Options",
                 "data": {
-                    "push_interval": "Normal update interval (seconds)",
-                    "fast_push_interval": "Fast update interval (seconds)",
                     "filter_replacement_days": "Filter replacement interval (days)",
-                    "preset_override_minutes": "Preset override duration (minutes)"
+                    "preset_override_minutes": "Preset override duration (minutes)",
+                    "boost_duration": "Boost duration (minutes)"
                 }
             }
         }

@@ -27,7 +27,6 @@
       "already_configured": "Deze EcoStream-unit is al geconfigureerd."
     }
   },
-
   "exceptions": {
     "cannot_connect": {
       "message": "Kan geen verbinding maken met EcoStream op {host}."
@@ -36,22 +35,19 @@
       "message": "Onverwachte fout bij verbinding met EcoStream op {host}."
     }
   },
-
   "options": {
     "step": {
       "init": {
         "title": "EcoStream Opties",
         "description": "Pas geavanceerde instellingen aan voor de EcoStream-integratie.",
         "data": {
-          "push_interval": "Normaal update-interval (seconden)",
-          "fast_push_interval": "Snel update-interval (seconden)",
           "filter_replacement_days": "Filtervervanging interval (dagen)",
-          "preset_override_minutes": "Preset overschrijving duur (minuten)"
+          "preset_override_minutes": "Preset overschrijving duur (minuten)",
+          "boost_duration": "Boost duur (minuten)"
         }
       }
     }
   },
-
   "entity": {
     "fan": {
       "ventilation": {
@@ -68,38 +64,98 @@
       }
     },
     "sensor": {
-      "bypass_position": {"name": "Bypasspositie"},
-      "eco2_return": {"name": "eCO₂ Retour"},
-      "tvoc_return": {"name": "TVOC Retour"},
-      "humidity_return": {"name": "Vochtigheid Retour"},
-      "temperature_eha": {"name": "Temperatuur EHA"},
-      "temperature_eta": {"name": "Temperatuur ETA"},
-      "temperature_oda": {"name": "Temperatuur ODA"},
-      "fan_exhaust_speed": {"name": "Afvoerventilator snelheid"},
-      "fan_supply_speed": {"name": "Toevoerventilator snelheid"},
-      "qset": {"name": "Qset"},
-      "mode_time_left": {"name": "Resterende modestijd"},
-      "frost_protection_active": {"name": "Vorstbeveiliging actief"},
-      "efficiency": {"name": "Warmteterugwinning efficiëntie"},
-      "schedule_enabled": {"name": "Schema ingeschakeld"},
-      "summer_comfort_enabled": {"name": "Zomercomfort ingeschakeld"},
-      "summer_comfort_temp": {"name": "Zomercomfort temperatuur"},
-      "filter_replacement_date": {"name": "Filtervervangingsdatum"},
-      "filter_replacement_warning": {"name": "Filtervervangingswaarschuwing"},
-      "uptime": {"name": "Uptime"},
-      "wifi_ip": {"name": "WiFi IP-adres"},
-      "wifi_ssid": {"name": "WiFi SSID"},
-      "wifi_rssi": {"name": "WiFi signaalsterkte"},
-      "boost_time_remaining": {"name": "Resterende boosttijd"},
-      "setpoint_low": {"name": "Setpoint Laag"},
-      "setpoint_mid": {"name": "Setpoint Middel"},
-      "setpoint_high": {"name": "Setpoint Hoog"},
-      "ext_co2": {"name": "Externe CO₂"}
+      "bypass_position": {
+        "name": "Bypasspositie"
+      },
+      "eco2_return": {
+        "name": "eCO₂ Retour"
+      },
+      "tvoc_return": {
+        "name": "TVOC Retour"
+      },
+      "humidity_return": {
+        "name": "Vochtigheid Retour"
+      },
+      "temperature_eha": {
+        "name": "Temperatuur EHA"
+      },
+      "temperature_eta": {
+        "name": "Temperatuur ETA"
+      },
+      "temperature_oda": {
+        "name": "Temperatuur ODA"
+      },
+      "fan_exhaust_speed": {
+        "name": "Afvoerventilator"
+      },
+      "fan_supply_speed": {
+        "name": "Toevoerventilator"
+      },
+      "qset": {
+        "name": "Qset"
+      },
+      "mode_time_left": {
+        "name": "Resterende modestijd"
+      },
+      "frost_protection_active": {
+        "name": "Vorstbeveiliging actief"
+      },
+      "efficiency": {
+        "name": "WTW efficiëntie"
+      },
+      "schedule_enabled": {
+        "name": "Schema ingeschakeld"
+      },
+      "summer_comfort_enabled": {
+        "name": "Zomercomfort ingeschakeld"
+      },
+      "summer_comfort_temp": {
+        "name": "Zomercomfort temperatuur"
+      },
+      "filter_replacement_date": {
+        "name": "Filtervervangingsdatum"
+      },
+      "filter_replacement_warning": {
+        "name": "Filter vervangen"
+      },
+      "uptime": {
+        "name": "Uptime"
+      },
+      "wifi_ip": {
+        "name": "WiFi IP-adres"
+      },
+      "wifi_ssid": {
+        "name": "WiFi SSID"
+      },
+      "wifi_rssi": {
+        "name": "WiFi signaalsterkte"
+      },
+      "boost_time_remaining": {
+        "name": "Resterende boosttijd"
+      },
+      "setpoint_low": {
+        "name": "Setpoint Laag"
+      },
+      "setpoint_mid": {
+        "name": "Setpoint Middel"
+      },
+      "setpoint_high": {
+        "name": "Setpoint Hoog"
+      },
+      "ext_co2": {
+        "name": "Externe CO₂ sensor"
+      }
     },
     "switch": {
-      "schedule_enabled": {"name": "Schema ingeschakeld"},
-      "summer_comfort": {"name": "Zomercomfort"},
-      "boost": {"name": "Boost"}
+      "schedule_enabled": {
+        "name": "Schema ingeschakeld"
+      },
+      "summer_comfort": {
+        "name": "Zomercomfort"
+      },
+      "boost": {
+        "name": "Boost"
+      }
     },
     "select": {
       "boost_duration": {
@@ -108,16 +164,23 @@
           "5": "5 minuten",
           "10": "10 minuten",
           "15": "15 minuten",
-          "30": "30 minuten"
+          "30": "30 minuten",
+          "60": "60 minuten"
         }
       }
     },
     "number": {
-      "qset_number": {"name": "Qset"},
-      "filter_replacement_days": {"name": "Filtervervanging interval"}
+      "qset_number": {
+        "name": "Qset"
+      },
+      "filter_replacement_days": {
+        "name": "Filtervervanging interval"
+      }
     },
     "valve": {
-      "bypass_valve": {"name": "Bypassklep"}
+      "bypass_valve": {
+        "name": "Bypassklep"
+      }
     }
   }
 }
