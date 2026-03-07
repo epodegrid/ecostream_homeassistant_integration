@@ -6,10 +6,13 @@ from unittest.mock import MagicMock
 import pytest
 
 from custom_components.ecostream.const import (
-    CONF_FAST_PUSH_INTERVAL,
-    CONF_PUSH_INTERVAL,
-    DEFAULT_FAST_PUSH_INTERVAL,
-    DEFAULT_PUSH_INTERVAL,
+    CONF_ALLOW_OVERRIDE_FILTER_DATE,
+    CONF_BOOST_DURATION,
+    CONF_FILTER_REPLACEMENT_DAYS,
+    CONF_PRESET_OVERRIDE_MINUTES,
+    DEFAULT_BOOST_DURATION_MINUTES,
+    DEFAULT_FILTER_REPLACEMENT_DAYS,
+    DEFAULT_PRESET_OVERRIDE_MINUTES,
 )
 from custom_components.ecostream.options_flow import (
     EcostreamOptionsFlow,
@@ -30,8 +33,10 @@ async def test_async_step_init_shows_form_with_existing_defaults():
     entry = _make_entry(
         data={CONF_HOST: "192.168.1.10"},
         options={
-            CONF_PUSH_INTERVAL: 90,
-            CONF_FAST_PUSH_INTERVAL: 12,
+            CONF_FILTER_REPLACEMENT_DAYS: 90,
+            CONF_PRESET_OVERRIDE_MINUTES: 30,
+            CONF_BOOST_DURATION: 20,
+            CONF_ALLOW_OVERRIDE_FILTER_DATE: True,
         },
     )
     flow = EcostreamOptionsFlow(entry)
@@ -52,8 +57,10 @@ async def test_async_step_init_shows_form_with_existing_defaults():
     data_schema = result.get("data_schema")
     assert callable(data_schema)
     defaults = data_schema({})
-    assert defaults[CONF_PUSH_INTERVAL] == 90
-    assert defaults[CONF_FAST_PUSH_INTERVAL] == 12
+    assert defaults[CONF_FILTER_REPLACEMENT_DAYS] == 90
+    assert defaults[CONF_PRESET_OVERRIDE_MINUTES] == 30
+    assert defaults[CONF_BOOST_DURATION] == 20
+    assert defaults[CONF_ALLOW_OVERRIDE_FILTER_DATE] is True
 
 
 @pytest.mark.asyncio
@@ -75,10 +82,18 @@ async def test_async_step_init_shows_form_with_hardcoded_defaults_when_missing()
     data_schema = result.get("data_schema")
     assert callable(data_schema)
     defaults = data_schema({})
-    assert defaults[CONF_PUSH_INTERVAL] == DEFAULT_PUSH_INTERVAL
     assert (
-        defaults[CONF_FAST_PUSH_INTERVAL] == DEFAULT_FAST_PUSH_INTERVAL
+        defaults[CONF_FILTER_REPLACEMENT_DAYS]
+        == DEFAULT_FILTER_REPLACEMENT_DAYS
     )
+    assert (
+        defaults[CONF_PRESET_OVERRIDE_MINUTES]
+        == DEFAULT_PRESET_OVERRIDE_MINUTES
+    )
+    assert (
+        defaults[CONF_BOOST_DURATION] == DEFAULT_BOOST_DURATION_MINUTES
+    )
+    assert defaults[CONF_ALLOW_OVERRIDE_FILTER_DATE] is False
 
 
 @pytest.mark.asyncio
@@ -95,22 +110,32 @@ async def test_async_step_init_valid_input_creates_entry_and_updates_options():
 
     result = await flow.async_step_init(
         {
-            CONF_PUSH_INTERVAL: "60",
-            CONF_FAST_PUSH_INTERVAL: "10",
+            CONF_FILTER_REPLACEMENT_DAYS: 120,
+            CONF_PRESET_OVERRIDE_MINUTES: 45,
+            CONF_BOOST_DURATION: 10,
+            CONF_ALLOW_OVERRIDE_FILTER_DATE: False,
         }
     )
 
     assert result.get("type") == "create_entry"
     assert result.get("title") == "EcoStream Options"
     assert result.get("data", {})["preserve_me"] is True
-    assert result.get("data", {})[CONF_PUSH_INTERVAL] == 60
-    assert result.get("data", {})[CONF_FAST_PUSH_INTERVAL] == 10
+    assert result.get("data", {})[CONF_FILTER_REPLACEMENT_DAYS] == 120
+    assert result.get("data", {})[CONF_PRESET_OVERRIDE_MINUTES] == 45
+    assert result.get("data", {})[CONF_BOOST_DURATION] == 10
+    assert (
+        result.get("data", {})[CONF_ALLOW_OVERRIDE_FILTER_DATE] is False
+    )
 
 
 @pytest.mark.asyncio
-async def test_async_step_init_push_interval_too_short_returns_error():
+async def test_async_step_init_filter_days_too_short_returns_error():
     entry = _make_entry(
-        options={CONF_PUSH_INTERVAL: 100, CONF_FAST_PUSH_INTERVAL: 20}
+        options={
+            CONF_FILTER_REPLACEMENT_DAYS: 180,
+            CONF_PRESET_OVERRIDE_MINUTES: 60,
+            CONF_BOOST_DURATION: 15,
+        }
     )
     flow = EcostreamOptionsFlow(entry)
 
@@ -120,21 +145,25 @@ async def test_async_step_init_push_interval_too_short_returns_error():
 
     result = await flow.async_step_init(
         {
-            CONF_PUSH_INTERVAL: "29",
-            CONF_FAST_PUSH_INTERVAL: "10",
+            CONF_FILTER_REPLACEMENT_DAYS: 20,  # Too short (< 30)
+            CONF_PRESET_OVERRIDE_MINUTES: 60,
+            CONF_BOOST_DURATION: 15,
         }
     )
 
     assert result.get("type") == "form"
-    assert result.get("errors") == {"base": "push_interval_too_short"}
-    assert flow._options[CONF_PUSH_INTERVAL] == 100
-    assert flow._options[CONF_FAST_PUSH_INTERVAL] == 20
+    assert result.get("errors") == {"base": "invalid_number"}
+    assert flow._options[CONF_FILTER_REPLACEMENT_DAYS] == 180
 
 
 @pytest.mark.asyncio
-async def test_async_step_init_fast_interval_too_short_returns_error():
+async def test_async_step_init_preset_override_too_short_returns_error():
     entry = _make_entry(
-        options={CONF_PUSH_INTERVAL: 100, CONF_FAST_PUSH_INTERVAL: 20}
+        options={
+            CONF_FILTER_REPLACEMENT_DAYS: 180,
+            CONF_PRESET_OVERRIDE_MINUTES: 60,
+            CONF_BOOST_DURATION: 15,
+        }
     )
     flow = EcostreamOptionsFlow(entry)
 
@@ -144,15 +173,43 @@ async def test_async_step_init_fast_interval_too_short_returns_error():
 
     result = await flow.async_step_init(
         {
-            CONF_PUSH_INTERVAL: "30",
-            CONF_FAST_PUSH_INTERVAL: "4",
+            CONF_FILTER_REPLACEMENT_DAYS: 180,
+            CONF_PRESET_OVERRIDE_MINUTES: 3,  # Too short (< 5)
+            CONF_BOOST_DURATION: 15,
         }
     )
 
     assert result.get("type") == "form"
-    assert result.get("errors") == {"base": "fast_interval_too_short"}
-    assert flow._options[CONF_PUSH_INTERVAL] == 100
-    assert flow._options[CONF_FAST_PUSH_INTERVAL] == 20
+    assert result.get("errors") == {"base": "invalid_number"}
+    assert flow._options[CONF_PRESET_OVERRIDE_MINUTES] == 60
+
+
+@pytest.mark.asyncio
+async def test_async_step_init_boost_duration_too_short_returns_error():
+    entry = _make_entry(
+        options={
+            CONF_FILTER_REPLACEMENT_DAYS: 180,
+            CONF_PRESET_OVERRIDE_MINUTES: 60,
+            CONF_BOOST_DURATION: 15,
+        }
+    )
+    flow = EcostreamOptionsFlow(entry)
+
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {"type": "form", **kwargs}
+    )
+
+    result = await flow.async_step_init(
+        {
+            CONF_FILTER_REPLACEMENT_DAYS: 180,
+            CONF_PRESET_OVERRIDE_MINUTES: 60,
+            CONF_BOOST_DURATION: 3,  # Too short (< 5)
+        }
+    )
+
+    assert result.get("type") == "form"
+    assert result.get("errors") == {"base": "invalid_number"}
+    assert flow._options[CONF_BOOST_DURATION] == 15
 
 
 @pytest.mark.asyncio
@@ -166,8 +223,9 @@ async def test_async_step_init_invalid_number_returns_error():
 
     result = await flow.async_step_init(
         {
-            CONF_PUSH_INTERVAL: "not-a-number",
-            CONF_FAST_PUSH_INTERVAL: "10",
+            CONF_FILTER_REPLACEMENT_DAYS: "not-a-number",
+            CONF_PRESET_OVERRIDE_MINUTES: 60,
+            CONF_BOOST_DURATION: 15,
         }
     )
 
