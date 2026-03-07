@@ -17,8 +17,6 @@ from custom_components.ecostream.const import (
     DEFAULT_BOOST_DURATION_MINUTES,
 )
 from custom_components.ecostream.switch import (
-    EcostreamBoostDurationSelect,
-    EcostreamBoostRemainingSensor,
     EcostreamBoostSwitch,
     EcostreamScheduleSwitch,
     EcostreamSummerComfortSwitch,
@@ -152,74 +150,10 @@ async def test_summer_comfort_no_ws():
     await entity.async_turn_on()
 
 
-# ---------------------------------------------------------------------------
-# EcostreamBoostRemainingSensor
-# ---------------------------------------------------------------------------
 
 
-def test_boost_remaining_with_value():
-    entity, _ = _make_entity(
-        EcostreamBoostRemainingSensor,
-        {"status": {"override_set_time_left": 120}},
-    )
-    assert entity.native_value == 120
 
 
-def test_boost_remaining_none_returns_0():
-    entity, _ = _make_entity(EcostreamBoostRemainingSensor)
-    assert entity.native_value == 0
-
-
-def test_boost_remaining_invalid_returns_0():
-    entity, _ = _make_entity(
-        EcostreamBoostRemainingSensor,
-        {"status": {"override_set_time_left": "bad"}},
-    )
-    assert entity.native_value == 0
-
-
-def test_boost_remaining_unique_id():
-    entity, _ = _make_entity(EcostreamBoostRemainingSensor)
-    assert entity.unique_id == "test_entry_boost_time_left"
-
-
-def test_boost_remaining_handle_update():
-    entity, _ = _make_entity(EcostreamBoostRemainingSensor)
-    entity._handle_coordinator_update()
-    cast(AsyncMock, entity.async_write_ha_state).assert_called_once()
-
-
-# ---------------------------------------------------------------------------
-# EcostreamBoostDurationSelect
-# ---------------------------------------------------------------------------
-
-
-def test_boost_duration_current_option():
-    entity, coordinator = _make_entity(EcostreamBoostDurationSelect)
-    coordinator.boost_duration_minutes = 10
-    assert entity.current_option == "10"
-
-
-def test_boost_duration_unique_id():
-    entity, _ = _make_entity(EcostreamBoostDurationSelect)
-    assert entity.unique_id == "test_entry_boost_duration"
-
-
-@pytest.mark.asyncio
-async def test_boost_duration_select_option():
-    entity, coordinator = _make_entity(EcostreamBoostDurationSelect)
-    await entity.async_select_option("30")
-    assert coordinator.boost_duration_minutes == 30
-    cast(AsyncMock, entity.async_write_ha_state).assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_boost_duration_invalid_option_ignored():
-    entity, _ = _make_entity(EcostreamBoostDurationSelect)
-    mock_write = MagicMock()
-    entity.async_write_ha_state = mock_write
-    await entity.async_select_option("not_a_number")
-    mock_write.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,9 @@ from custom_components.ecostream.const import (
     DEVICE_MODEL,
     DEVICE_NAME,
     DOMAIN,
+    PRESET_HIGH,
+    PRESET_LOW,
+    PRESET_MID,
 )
 from custom_components.ecostream.fan import EcostreamVentilationFan
 
@@ -32,6 +35,7 @@ def _make_fan(data=None, ws=True, last_update_success=True):
     coordinator.mark_control_action = MagicMock()
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry"
+    entry.options = {}
     with patch.object(
         CoordinatorEntity,
         "__init__",
@@ -40,11 +44,6 @@ def _make_fan(data=None, ws=True, last_update_success=True):
         fan = EcostreamVentilationFan(coordinator, entry)
     fan.async_write_ha_state = MagicMock()
     return fan, coordinator
-
-
-# ---------------------------------------------------------------------------
-# Basic attributes
-# ---------------------------------------------------------------------------
 
 
 def test_supported_features_includes_turn_on():
@@ -57,19 +56,14 @@ def test_supported_features_includes_turn_off():
     assert FanEntityFeature.TURN_OFF in fan.supported_features
 
 
-def test_supported_features_includes_set_speed():
+def test_supported_features_includes_preset_mode():
     fan, _ = _make_fan()
-    assert FanEntityFeature.SET_SPEED in fan.supported_features
+    assert FanEntityFeature.PRESET_MODE in fan.supported_features
 
 
 def test_unique_id():
     fan, _ = _make_fan()
     assert fan._attr_unique_id == "test_entry_ventilation"
-
-
-def test_name_attribute():
-    fan, _ = _make_fan()
-    assert fan._attr_name == "Ventilation"
 
 
 def test_has_entity_name():
@@ -106,27 +100,11 @@ def test_handle_coordinator_update_writes_state():
     fan, _ = _make_fan(
         {
             "status": {"qset": 100},
-            "config": {"capacity_min": 0, "capacity_max": 200},
+            "config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270},
         }
     )
     fan._handle_coordinator_update()
     cast(MagicMock, fan.async_write_ha_state).assert_called_once()
-
-
-def test_handle_coordinator_update_calculates_percentage():
-    fan, _ = _make_fan(
-        {
-            "status": {"qset": 100},
-            "config": {"capacity_min": 0, "capacity_max": 200},
-        }
-    )
-    fan._handle_coordinator_update()
-    assert fan.percentage == 50
-
-
-# ---------------------------------------------------------------------------
-# is_on
-# ---------------------------------------------------------------------------
 
 
 def test_is_on_when_qset_positive():
@@ -144,222 +122,97 @@ def test_is_on_false_when_no_data():
     assert fan.is_on is False
 
 
-# ---------------------------------------------------------------------------
-# percentage
-# ---------------------------------------------------------------------------
-
-
-def test_percentage_midpoint():
-    fan, _ = _make_fan(
-        {
-            "status": {"qset": 175},
-            "config": {"capacity_min": 100, "capacity_max": 350},
-        }
-    )
-    assert fan.percentage == 30
-
-
-def test_percentage_at_max():
-    fan, _ = _make_fan(
-        {
-            "status": {"qset": 350},
-            "config": {"capacity_min": 100, "capacity_max": 350},
-        }
-    )
-    assert fan.percentage == 100
-
-
-def test_percentage_at_min():
-    fan, _ = _make_fan(
-        {
-            "status": {"qset": 100},
-            "config": {"capacity_min": 100, "capacity_max": 350},
-        }
-    )
-    assert fan.percentage == 0
-
-
-def test_percentage_no_config():
-    fan, _ = _make_fan({"status": {"qset": 100}})
-    assert fan.percentage is None
-
-
-def test_percentage_cap_max_equals_min():
-    fan, _ = _make_fan(
-        {
-            "status": {"qset": 100},
-            "config": {"capacity_min": 100, "capacity_max": 100},
-        }
-    )
-    assert fan.percentage is None
-
-
-def test_percentage_clamped_to_0():
-    fan, _ = _make_fan(
-        {
-            "status": {"qset": 50},
-            "config": {"capacity_min": 100, "capacity_max": 350},
-        }
-    )
-    assert fan.percentage == 0
-
-
-def test_percentage_clamped_to_100():
-    fan, _ = _make_fan(
-        {
-            "status": {"qset": 999},
-            "config": {"capacity_min": 100, "capacity_max": 350},
-        }
-    )
-    assert fan.percentage == 100
-
-
-# ---------------------------------------------------------------------------
-# async_set_percentage
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
-async def test_set_percentage_sends_correct_qset():
+async def test_turn_off_sets_preset_low():
     fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
-    )
-    await fan.async_set_percentage(50)
-    payload = coordinator.ws.send_json.call_args[0][0]
-    assert payload["config"]["man_override_set"] == 100.0
-
-
-@pytest.mark.asyncio
-async def test_set_percentage_no_ws_returns_early():
-    fan, _ = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}, ws=False
-    )
-    await fan.async_set_percentage(50)
-
-
-@pytest.mark.asyncio
-async def test_set_percentage_no_config_returns_early():
-    fan, _ = _make_fan()
-    await fan.async_set_percentage(50)
-
-
-@pytest.mark.asyncio
-async def test_set_percentage_clamps_below_0():
-    fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
-    )
-    await fan.async_set_percentage(-10)
-    payload = coordinator.ws.send_json.call_args[0][0]
-    assert payload["config"]["man_override_set"] == 0.0
-
-
-@pytest.mark.asyncio
-async def test_set_percentage_clamps_above_100():
-    fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
-    )
-    await fan.async_set_percentage(200)
-    payload = coordinator.ws.send_json.call_args[0][0]
-    assert payload["config"]["man_override_set"] == 200.0
-
-
-@pytest.mark.asyncio
-async def test_set_percentage_marks_control_action():
-    fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
-    )
-    await fan.async_set_percentage(50)
-    coordinator.mark_control_action.assert_called_once()
-
-
-# ---------------------------------------------------------------------------
-# async_turn_on / async_turn_off
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_turn_off_sets_percentage_0():
-    fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}}
     )
     await fan.async_turn_off()
     payload = coordinator.ws.send_json.call_args[0][0]
-    assert payload["config"]["man_override_set"] == 0.0
+    assert payload["config"]["man_override_set"] == 90.0
 
 
 @pytest.mark.asyncio
-async def test_turn_on_with_percentage_kwarg():
+async def test_turn_on_defaults_to_preset_mid():
     fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
-    )
-    await fan.async_turn_on(percentage=50)
-    payload = coordinator.ws.send_json.call_args[0][0]
-    assert payload["config"]["man_override_set"] == 100.0
-
-
-@pytest.mark.asyncio
-async def test_turn_on_without_percentage_uses_stored_percentage():
-    fan, coordinator = _make_fan(
-        {
-            "status": {"qset": 100},
-            "config": {"capacity_min": 0, "capacity_max": 200},
-        }
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}}
     )
     await fan.async_turn_on()
     payload = coordinator.ws.send_json.call_args[0][0]
-    assert payload["config"]["man_override_set"] == 100.0
+    assert payload["config"]["man_override_set"] == 180.0
 
 
 @pytest.mark.asyncio
-async def test_turn_on_defaults_to_30_percent_when_no_stored_percentage():
+async def test_turn_on_with_preset_mode():
     fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}}
     )
-    await fan.async_turn_on()
+    await fan.async_turn_on(preset_mode=PRESET_HIGH)
     payload = coordinator.ws.send_json.call_args[0][0]
-    assert payload["config"]["man_override_set"] == 60.0  # 30% of 200
+    assert payload["config"]["man_override_set"] == 270.0
 
 
 @pytest.mark.asyncio
-async def test_turn_on_with_kwargs():
+async def test_set_preset_mode_low():
     fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}}
     )
-    await fan.async_turn_on(percentage=75, extra_arg="ignored")
+    await fan.async_set_preset_mode(PRESET_LOW)
     payload = coordinator.ws.send_json.call_args[0][0]
-    assert payload["config"]["man_override_set"] == 150.0
-
-
-# ---------------------------------------------------------------------------
-# Payload structure validation
-# ---------------------------------------------------------------------------
+    assert payload["config"]["man_override_set"] == 90.0
 
 
 @pytest.mark.asyncio
-async def test_set_percentage_payload_structure():
+async def test_set_preset_mode_mid():
     fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}}
     )
-    await fan.async_set_percentage(50)
+    await fan.async_set_preset_mode(PRESET_MID)
     payload = coordinator.ws.send_json.call_args[0][0]
-    assert "config" in payload
-    assert "man_override_set" in payload["config"]
-    assert "man_override_set_time" in payload["config"]
-    assert payload["config"]["man_override_set_time"] == 0
+    assert payload["config"]["man_override_set"] == 180.0
 
 
 @pytest.mark.asyncio
-async def test_set_percentage_writes_state_after_send():
+async def test_set_preset_mode_high():
+    fan, coordinator = _make_fan(
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}}
+    )
+    await fan.async_set_preset_mode(PRESET_HIGH)
+    payload = coordinator.ws.send_json.call_args[0][0]
+    assert payload["config"]["man_override_set"] == 270.0
+
+
+@pytest.mark.asyncio
+async def test_set_preset_mode_no_ws_returns_early():
     fan, _ = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}},
+        ws=False,
     )
-    await fan.async_set_percentage(50)
+    await fan.async_set_preset_mode(PRESET_MID)
+
+
+@pytest.mark.asyncio
+async def test_set_preset_mode_no_setpoint_returns_early():
+    fan, _ = _make_fan({"config": {}})
+    await fan.async_set_preset_mode(PRESET_MID)
+
+
+@pytest.mark.asyncio
+async def test_set_preset_mode_marks_control_action():
+    fan, coordinator = _make_fan(
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}}
+    )
+    await fan.async_set_preset_mode(PRESET_MID)
+    coordinator.mark_control_action.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_set_preset_mode_writes_state():
+    fan, _ = _make_fan(
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}}
+    )
+    await fan.async_set_preset_mode(PRESET_MID)
     cast(MagicMock, fan.async_write_ha_state).assert_called_once()
-
-
-# ---------------------------------------------------------------------------
-# Type casting and error handling
-# ---------------------------------------------------------------------------
 
 
 def test_get_qset_with_string_value():
@@ -377,103 +230,60 @@ def test_get_qset_with_none():
     assert fan._get_qset() == 0.0
 
 
-def test_get_capacity_min_with_string_value():
-    fan, _ = _make_fan({"config": {"capacity_min": "50"}})
-    assert fan._get_capacity_min() == 50.0
+def test_get_setpoint_with_string_value():
+    fan, _ = _make_fan({"config": {"setpoint_low": "90"}})
+    assert fan._get_setpoint(PRESET_LOW) == 90.0
 
 
-def test_get_capacity_min_with_none():
-    fan, _ = _make_fan({"config": {"capacity_min": None}})
-    assert fan._get_capacity_min() is None
+def test_get_setpoint_with_none():
+    fan, _ = _make_fan({"config": {"setpoint_low": None}})
+    assert fan._get_setpoint(PRESET_LOW) is None
 
 
-def test_get_capacity_min_with_invalid_string():
-    fan, _ = _make_fan({"config": {"capacity_min": "invalid"}})
-    assert fan._get_capacity_min() is None
+def test_get_setpoint_with_invalid_string():
+    fan, _ = _make_fan({"config": {"setpoint_low": "invalid"}})
+    assert fan._get_setpoint(PRESET_LOW) is None
 
 
-def test_get_capacity_max_with_string_value():
-    fan, _ = _make_fan({"config": {"capacity_max": "300"}})
-    assert fan._get_capacity_max() == 300.0
-
-
-def test_get_capacity_max_with_none():
-    fan, _ = _make_fan({"config": {"capacity_max": None}})
-    assert fan._get_capacity_max() is None
-
-
-def test_get_capacity_max_with_invalid_string():
-    fan, _ = _make_fan({"config": {"capacity_max": "invalid"}})
-    assert fan._get_capacity_max() is None
-
-
-# ---------------------------------------------------------------------------
-# Percentage calculation edge cases
-# ---------------------------------------------------------------------------
-
-
-def test_percentage_with_fractional_qset():
+def test_calculate_preset_closest_to_low():
     fan, _ = _make_fan(
         {
-            "status": {"qset": 175.7},
-            "config": {"capacity_min": 100, "capacity_max": 350},
+            "status": {"qset": 95},
+            "config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270},
         }
     )
-    # (175.7 - 100) / (350 - 100) * 100 = 75.7 / 250 * 100 = 30.28 → rounds to 30
-    assert fan.percentage == 30
+    assert fan._calculate_preset(95) == PRESET_LOW
 
 
-def test_percentage_below_minimum():
+def test_calculate_preset_closest_to_mid():
     fan, _ = _make_fan(
         {
-            "status": {"qset": 50},
-            "config": {"capacity_min": 100, "capacity_max": 350},
+            "status": {"qset": 175},
+            "config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270},
         }
     )
-    assert fan.percentage == 0  # Clamped to 0
+    assert fan._calculate_preset(175) == PRESET_MID
 
 
-def test_percentage_above_maximum():
+def test_calculate_preset_closest_to_high():
     fan, _ = _make_fan(
         {
-            "status": {"qset": 400},
-            "config": {"capacity_min": 100, "capacity_max": 350},
+            "status": {"qset": 265},
+            "config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270},
         }
     )
-    assert fan.percentage == 100  # Clamped to 100
+    assert fan._calculate_preset(265) == PRESET_HIGH
 
 
-def test_percentage_with_missing_status():
-    fan, _ = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
-    )
-    assert fan.percentage is None
-
-
-def test_percentage_with_missing_config():
-    fan, _ = _make_fan({"status": {"qset": 100}})
-    assert fan.percentage is None
-
-
-def test_percentage_with_missing_qset():
-    fan, _ = _make_fan(
-        {
-            "status": {},
-            "config": {"capacity_min": 0, "capacity_max": 200},
-        }
-    )
-    assert fan.percentage == 0  # qset defaults to 0
-
-
-# ---------------------------------------------------------------------------
-# Control action marking
-# ---------------------------------------------------------------------------
+def test_calculate_preset_no_setpoints_returns_none():
+    fan, _ = _make_fan({"config": {}})
+    assert fan._calculate_preset(100) is None
 
 
 @pytest.mark.asyncio
 async def test_turn_off_marks_control_action():
     fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}}
     )
     await fan.async_turn_off()
     coordinator.mark_control_action.assert_called_once()
@@ -482,7 +292,7 @@ async def test_turn_off_marks_control_action():
 @pytest.mark.asyncio
 async def test_turn_on_marks_control_action():
     fan, coordinator = _make_fan(
-        {"config": {"capacity_min": 0, "capacity_max": 200}}
+        {"config": {"setpoint_low": 90, "setpoint_mid": 180, "setpoint_high": 270}}
     )
-    await fan.async_turn_on(percentage=50)
+    await fan.async_turn_on()
     coordinator.mark_control_action.assert_called_once()

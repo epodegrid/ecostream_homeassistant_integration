@@ -3,12 +3,45 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+import json
+from pathlib import Path
 from typing import Any, cast
 
 from .const import (
     CONF_FAST_PUSH_INTERVAL,
     CONF_PUSH_INTERVAL,
 )
+
+
+def _validate_icons() -> dict[str, Any]:
+    icons_path = Path(__file__).parent / "icons.json"
+    if not icons_path.exists():
+        return {"ok": False, "error": "icons_file_missing"}
+    try:
+        raw = icons_path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+    except OSError as exc:
+        return {"ok": False, "error": f"icons_read_error: {exc}"}
+    except json.JSONDecodeError as exc:
+        return {"ok": False, "error": f"icons_json_error: {exc}"}
+    icons = data.get("icons")
+    entities = data.get("entities")
+    if not isinstance(icons, dict) or not isinstance(entities, dict):
+        return {
+            "ok": False,
+            "error": "icons_schema_invalid",
+            "has_icons_dict": isinstance(icons, dict),
+            "has_entities_dict": isinstance(entities, dict),
+        }
+    icons_typed: dict[str, Any] = cast(dict[str, Any], icons)
+    entities_typed: dict[str, Any] = cast(dict[str, Any], entities)
+    return {
+        "ok": True,
+        "error": None,
+        "icons_count": len(icons_typed),
+        "entities_count": len(entities_typed),
+        "sample_entities": list(entities_typed.keys()),
+    }
 
 
 async def async_get_config_entry_diagnostics(
@@ -82,4 +115,8 @@ async def async_get_config_entry_diagnostics(
         # Only the fast-changing part
         # -------------------------
         "raw_status": last_status,
+        # -------------------------
+        # Icons validation
+        # -------------------------
+        "icons": _validate_icons(),
     }

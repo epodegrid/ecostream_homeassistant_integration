@@ -15,7 +15,6 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from custom_components.ecostream.const import (
     CONF_FAST_PUSH_INTERVAL,
     CONF_PUSH_INTERVAL,
-    DOMAIN,
 )
 from custom_components.ecostream.diagnostics import (
     _validate_icons,
@@ -117,8 +116,7 @@ class TestAsyncGetConfigEntryDiagnostics:
         coordinator.ws_reconnects = 2
         coordinator.last_payload = None
         coordinator.last_update_success_time = None
-
-        hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+        entry.runtime_data = coordinator
 
         with patch(
             "custom_components.ecostream.diagnostics._validate_icons",
@@ -153,8 +151,7 @@ class TestAsyncGetConfigEntryDiagnostics:
         coordinator.ws_reconnects = None
         coordinator.last_payload = None
         coordinator.last_update_success_time = now_utc
-
-        hass.data = {DOMAIN: {"test_entry": coordinator}}
+        entry.runtime_data = coordinator
 
         with patch(
             "custom_components.ecostream.diagnostics._validate_icons",
@@ -185,8 +182,7 @@ class TestAsyncGetConfigEntryDiagnostics:
         coordinator.ws_reconnects = None
         coordinator.last_payload = None
         coordinator.last_update_success_time = None
-
-        hass.data = {DOMAIN: {"test_entry": coordinator}}
+        entry.runtime_data = coordinator
 
         with patch(
             "custom_components.ecostream.diagnostics._validate_icons",

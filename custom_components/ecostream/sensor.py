@@ -322,6 +322,63 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
             else int(v)
         ),
     ),
+    # -------------------------------------------------------------------
+    # SETPOINTS (from config, set via app)
+    # -------------------------------------------------------------------
+    EcostreamSensorDescription(
+        key="setpoint_low",
+        name="Setpoint Low",
+        native_unit_of_measurement="m³/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:fan-speed-1",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: (
+            None
+            if (v := _deep_get(d, ["config", "setpoint_low"])) is None
+            else round(float(v), 1)
+        ),
+    ),
+    EcostreamSensorDescription(
+        key="setpoint_mid",
+        name="Setpoint Mid",
+        native_unit_of_measurement="m³/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:fan-speed-2",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: (
+            None
+            if (v := _deep_get(d, ["config", "setpoint_mid"])) is None
+            else round(float(v), 1)
+        ),
+    ),
+    EcostreamSensorDescription(
+        key="setpoint_high",
+        name="Setpoint High",
+        native_unit_of_measurement="m³/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:fan-speed-3",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: (
+            None
+            if (v := _deep_get(d, ["config", "setpoint_high"])) is None
+            else round(float(v), 1)
+        ),
+    ),
+    # -------------------------------------------------------------------
+    # EXTERNAL CO2
+    # -------------------------------------------------------------------
+    EcostreamSensorDescription(
+        key="ext_co2",
+        name="External CO₂",
+        device_class=SensorDeviceClass.CO2,
+        native_unit_of_measurement="ppm",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: (
+            None
+            if (v := _deep_get(d, ["status", "sensor_ext_co2"])) is None
+            else round(float(v))
+        ),
+    ),
 )
 
 

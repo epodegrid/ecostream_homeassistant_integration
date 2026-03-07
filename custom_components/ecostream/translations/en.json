@@ -68,7 +68,11 @@
             "wifi_ip": {"name": "WiFi IP"},
             "wifi_ssid": {"name": "WiFi SSID"},
             "wifi_rssi": {"name": "WiFi Signal Strength"},
-            "boost_time_remaining": {"name": "Boost Time Remaining"}
+            "boost_time_remaining": {"name": "Boost Time Remaining"},
+            "setpoint_low": {"name": "Setpoint Low"},
+            "setpoint_mid": {"name": "Setpoint Mid"},
+            "setpoint_high": {"name": "Setpoint High"},
+            "ext_co2": {"name": "External CO₂"}
         },
         "switch": {
             "schedule_enabled": {"name": "Schedule Enabled"},
@@ -88,9 +92,6 @@
         },
         "number": {
             "qset_number": {"name": "Qset"},
-            "preset_low_pct": {"name": "Preset Low Speed"},
-            "preset_mid_pct": {"name": "Preset Medium Speed"},
-            "preset_high_pct": {"name": "Preset High Speed"},
             "filter_replacement_days": {"name": "Filter Replacement Interval"}
         },
         "valve": {
@@ -105,9 +106,6 @@
                     "push_interval": "Normal update interval (seconds)",
                     "fast_push_interval": "Fast update interval (seconds)",
                     "filter_replacement_days": "Filter replacement interval (days)",
-                    "preset_low_pct": "Preset low speed (%)",
-                    "preset_mid_pct": "Preset medium speed (%)",
-                    "preset_high_pct": "Preset high speed (%)",
                     "preset_override_minutes": "Preset override duration (minutes)"
                 }
             }

@@ -10,7 +10,6 @@ PLATFORMS: list[str] = [
     "button",
     "sensor",
     "fan",
-    "number",
     "select",
     "switch",
     "valve",
@@ -20,9 +19,6 @@ PLATFORMS: list[str] = [
 CONF_PUSH_INTERVAL = "push_interval"
 CONF_FAST_PUSH_INTERVAL = "fast_push_interval"
 CONF_FILTER_REPLACEMENT_DAYS = "filter_replacement_days"
-CONF_PRESET_LOW_PCT = "preset_low_pct"
-CONF_PRESET_MID_PCT = "preset_mid_pct"
-CONF_PRESET_HIGH_PCT = "preset_high_pct"
 CONF_PRESET_OVERRIDE_MINUTES = "preset_override_minutes"
 
 # Boost
@@ -39,9 +35,6 @@ SLOW_PUSH_INTERVAL = 10
 
 # Default options
 DEFAULT_FILTER_REPLACEMENT_DAYS = 180
-DEFAULT_PRESET_LOW_PCT = 10
-DEFAULT_PRESET_MID_PCT = 50
-DEFAULT_PRESET_HIGH_PCT = 90
 DEFAULT_PRESET_OVERRIDE_MINUTES = 30
 
 # Fan presets

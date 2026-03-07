@@ -95,6 +95,7 @@ class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
     ) -> None:
         super().__init__(coordinator, entry)
         self.entity_id = "switch.ecostream_schedule_enabled"
+        self._attr_is_on = bool(self._get_config().get("schedule_enabled", False))
 
     @property
     def unique_id(self) -> str:
@@ -141,6 +142,7 @@ class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
     ) -> None:
         super().__init__(coordinator, entry)
         self.entity_id = "switch.ecostream_summer_comfort"
+        self._attr_is_on = bool(self._get_config().get("sum_com_enabled", False))
 
     @property
     def unique_id(self) -> str:
@@ -191,6 +193,12 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
     ) -> None:
         super().__init__(coordinator, entry)
         self.entity_id = "switch.ecostream_boost"
+        status = self._get_status()
+        val = status.get("override_set_time_left")
+        try:
+            self._attr_is_on = val is not None and int(float(val)) > 0
+        except (TypeError, ValueError):
+            self._attr_is_on = False
 
     @property
     def unique_id(self) -> str:

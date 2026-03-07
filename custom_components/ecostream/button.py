@@ -10,13 +10,7 @@ import logging
 from typing import Any, cast
 
 from .const import (
-    CONF_PRESET_HIGH_PCT,
-    CONF_PRESET_LOW_PCT,
-    CONF_PRESET_MID_PCT,
     CONF_PRESET_OVERRIDE_MINUTES,
-    DEFAULT_PRESET_HIGH_PCT,
-    DEFAULT_PRESET_LOW_PCT,
-    DEFAULT_PRESET_MID_PCT,
     DEFAULT_PRESET_OVERRIDE_MINUTES,
     DEVICE_MODEL,
     DEVICE_NAME,
@@ -70,55 +64,51 @@ class EcostreamPresetButton(
             model=DEVICE_MODEL,
         )
 
-    def _preset_pct(self) -> int:
-        opts = self._entry.options or {}
-        if self._preset == PRESET_LOW:
-            return int(opts.get(CONF_PRESET_LOW_PCT, DEFAULT_PRESET_LOW_PCT))
-        if self._preset == PRESET_MID:
-            return int(opts.get(CONF_PRESET_MID_PCT, DEFAULT_PRESET_MID_PCT))
-        return int(opts.get(CONF_PRESET_HIGH_PCT, DEFAULT_PRESET_HIGH_PCT))
+    def _get_setpoint(self) -> float | None:
+        config = cast(dict[str, Any], (self.coordinator.data or {}).get("config") or {})
+        key = {
+            PRESET_LOW: "setpoint_low",
+            PRESET_MID: "setpoint_mid",
+            PRESET_HIGH: "setpoint_high",
+        }.get(self._preset)
+        if key is None:
+            return None
+        try:
+            value = config.get(key)
+            if value is None:
+                return None
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:  # type: ignore[override]
+        qset = self._get_setpoint()
+        return {"setpoint": qset, "unit": "m³/h"}
 
     async def async_press(self) -> None:
         if not self.coordinator.ws:
             _LOGGER.error("EcoStream WebSocket not connected, cannot set preset")
             return
 
-        pct = self._preset_pct()
+        qset = self._get_setpoint()
 
-        config = cast(dict[str, Any], (self.coordinator.data or {}).get("config") or {})
-        cap_min_raw = config.get("capacity_min")
-        cap_max_raw = config.get("capacity_max")
-
-        if cap_min_raw is None or cap_max_raw is None:
+        if qset is None:
             _LOGGER.warning(
-                "EcoStream capacity_min/capacity_max not in coordinator data (keys: %s), cannot set preset",
-                list(config.keys()),
+                "EcoStream setpoint for preset %s not available in config data", self._preset
             )
             return
-
-        try:
-            cap_min = float(cap_min_raw)
-            cap_max = float(cap_max_raw)
-        except (TypeError, ValueError):
-            _LOGGER.error("Invalid capacity range values: min=%s max=%s", cap_min_raw, cap_max_raw)
-            return
-
-        if cap_max <= cap_min:
-            _LOGGER.error("capacity_max (%s) <= capacity_min (%s), cannot set preset", cap_max, cap_min)
-            return
-
-        qset = cap_min + (pct / 100.0) * (cap_max - cap_min)
 
         opts = self._entry.options or {}
         override_minutes = int(opts.get(CONF_PRESET_OVERRIDE_MINUTES, DEFAULT_PRESET_OVERRIDE_MINUTES))
 
         payload = {
             "config": {
-                "man_override_set": float(qset),
+                "man_override_set": qset,
                 "man_override_set_time": override_minutes * 60,
             }
         }
 
         self.coordinator.mark_control_action()
-        _LOGGER.debug("EcoStream preset %s → %s%% → Qset %.1f", self._preset, pct, qset)
+        _LOGGER.debug("EcoStream preset %s → Qset %.1f", self._preset, qset)
         await self.coordinator.ws.send_json(payload)

@@ -46,9 +46,6 @@
           "push_interval": "Normaal update-interval (seconden)",
           "fast_push_interval": "Snel update-interval (seconden)",
           "filter_replacement_days": "Filtervervanging interval (dagen)",
-          "preset_low_pct": "Preset laag toerental (%)",
-          "preset_mid_pct": "Preset middel toerental (%)",
-          "preset_high_pct": "Preset hoog toerental (%)",
           "preset_override_minutes": "Preset overschrijving duur (minuten)"
         }
       }
@@ -93,7 +90,11 @@
       "wifi_ip": {"name": "WiFi IP-adres"},
       "wifi_ssid": {"name": "WiFi SSID"},
       "wifi_rssi": {"name": "WiFi signaalsterkte"},
-      "boost_time_remaining": {"name": "Resterende boosttijd"}
+      "boost_time_remaining": {"name": "Resterende boosttijd"},
+      "setpoint_low": {"name": "Setpoint Laag"},
+      "setpoint_mid": {"name": "Setpoint Middel"},
+      "setpoint_high": {"name": "Setpoint Hoog"},
+      "ext_co2": {"name": "Externe CO₂"}
     },
     "switch": {
       "schedule_enabled": {"name": "Schema ingeschakeld"},
@@ -113,9 +114,6 @@
     },
     "number": {
       "qset_number": {"name": "Qset"},
-      "preset_low_pct": {"name": "Preset laag toerental"},
-      "preset_mid_pct": {"name": "Preset middel toerental"},
-      "preset_high_pct": {"name": "Preset hoog toerental"},
       "filter_replacement_days": {"name": "Filtervervanging interval"}
     },
     "valve": {

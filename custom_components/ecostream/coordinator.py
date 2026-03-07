@@ -15,7 +15,7 @@ from homeassistant.helpers.update_coordinator import (
 import logging
 import random
 import time
-from typing import Any
+from typing import Any, cast
 
 from .const import (
     CONF_FAST_PUSH_INTERVAL,
@@ -220,8 +220,10 @@ class EcostreamDataUpdateCoordinator(
     # Message Handling
     # ==========================================================
 
-    async def handle_ws_message(self, message: dict[str, Any]) -> None:
-        self._merge_payload(message)
+    async def handle_ws_message(self, message: Any) -> None:
+        if not isinstance(message, dict):
+            return
+        self._merge_payload(cast(dict[str, Any], message))
 
         now = time.time()
 

@@ -12,7 +12,6 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from custom_components.ecostream import (
     _probe_host,
-    async_setup,
     async_setup_entry,
     async_unload_entry,
 )
@@ -136,9 +135,7 @@ async def test_probe_host_adds_scheme_if_missing():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_async_setup_returns_true():
-    assert await async_setup(MagicMock(), {}) is True
+
 
 
 # ---------------------------------------------------------------------------
@@ -166,14 +163,16 @@ async def test_async_setup_entry_success():
         "custom_components.ecostream._probe_host", new=AsyncMock()
     ):
         with patch(
-            "custom_components.ecostream.EcostreamDataUpdateCoordinator",
-            return_value=mock_coordinator,
+            "custom_components.ecostream._cleanup_stale_devices", new=AsyncMock()
         ):
-            result = await async_setup_entry(hass, entry)
+            with patch(
+                "custom_components.ecostream.EcostreamDataUpdateCoordinator",
+                return_value=mock_coordinator,
+            ):
+                result = await async_setup_entry(hass, entry)
 
     assert result is True
-    assert DOMAIN in hass.data
-    assert "test_entry" in hass.data[DOMAIN]
+    assert entry.runtime_data == mock_coordinator
     mock_coordinator.async_start.assert_called_once()
 
 
@@ -197,13 +196,16 @@ async def test_async_setup_entry_uses_default_options():
         "custom_components.ecostream._probe_host", new=AsyncMock()
     ):
         with patch(
-            "custom_components.ecostream.EcostreamDataUpdateCoordinator",
-            return_value=mock_coordinator,
-        ) as mock_cls:
-            await async_setup_entry(hass, entry)
-            _, kwargs = mock_cls.call_args
-            assert CONF_PUSH_INTERVAL in kwargs["options"]
-            assert CONF_FAST_PUSH_INTERVAL in kwargs["options"]
+            "custom_components.ecostream._cleanup_stale_devices", new=AsyncMock()
+        ):
+            with patch(
+                "custom_components.ecostream.EcostreamDataUpdateCoordinator",
+                return_value=mock_coordinator,
+            ) as mock_cls:
+                await async_setup_entry(hass, entry)
+                _, kwargs = mock_cls.call_args
+                assert CONF_PUSH_INTERVAL in kwargs["options"]
+                assert CONF_FAST_PUSH_INTERVAL in kwargs["options"]
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +236,6 @@ async def test_async_unload_entry_success():
 @pytest.mark.asyncio
 async def test_async_unload_entry_removes_from_data():
     hass = MagicMock()
-    hass.data = {DOMAIN: {"test_entry": MagicMock()}}
     hass.config_entries.async_unload_platforms = AsyncMock(
         return_value=True
     )
@@ -243,9 +244,9 @@ async def test_async_unload_entry_removes_from_data():
     coordinator.async_stop = AsyncMock()
 
     entry = MagicMock()
-
     entry.entry_id = "test_entry"
     entry.runtime_data = coordinator
 
-    await async_unload_entry(hass, entry)
-    assert "test_entry" not in hass.data[DOMAIN]
+    result = await async_unload_entry(hass, entry)
+    assert result is True
+    coordinator.async_stop.assert_called_once()

@@ -10,13 +10,7 @@ import logging
 from typing import Any
 
 from .const import (
-    CONF_PRESET_HIGH_PCT,
-    CONF_PRESET_LOW_PCT,
-    CONF_PRESET_MID_PCT,
     CONF_PRESET_OVERRIDE_MINUTES,
-    DEFAULT_PRESET_HIGH_PCT,
-    DEFAULT_PRESET_LOW_PCT,
-    DEFAULT_PRESET_MID_PCT,
     DEFAULT_PRESET_OVERRIDE_MINUTES,
     DEVICE_MODEL,
     DEVICE_NAME,
@@ -75,9 +69,8 @@ class EcostreamVentilationFan(
             model=DEVICE_MODEL,
         )
 
-        # Set supported features
         features = FanEntityFeature(0)
-        for name in ("TURN_ON", "TURN_OFF", "SET_PERCENTAGE", "PRESET_MODE"):
+        for name in ("TURN_ON", "TURN_OFF", "PRESET_MODE"):
             val = getattr(FanEntityFeature, name, None)
             if val is not None:
                 features |= val
@@ -100,45 +93,34 @@ class EcostreamVentilationFan(
         except (TypeError, ValueError):
             return 0.0
 
-    def _get_capacity_min(self) -> float | None:
+    def _get_setpoint(self, preset: str) -> float | None:
+        config = self._config()
+        key = {
+            PRESET_LOW: "setpoint_low",
+            PRESET_MID: "setpoint_mid",
+            PRESET_HIGH: "setpoint_high",
+        }.get(preset)
+        if key is None:
+            return None
         try:
-            value = self._config().get("capacity_min")
+            value = config.get(key)
             if value is None:
                 return None
             return float(value)
         except (TypeError, ValueError):
             return None
 
-    def _get_capacity_max(self) -> float | None:
-        try:
-            value = self._config().get("capacity_max")
-            if value is None:
-                return None
-            return float(value)
-        except (TypeError, ValueError):
+    def _calculate_preset(self, qset: float) -> str | None:
+        low = self._get_setpoint(PRESET_LOW)
+        mid = self._get_setpoint(PRESET_MID)
+        high = self._get_setpoint(PRESET_HIGH)
+        if low is None or mid is None or high is None:
             return None
-
-    def _preset_pct(self, preset: str) -> int:
-        opts = self._entry.options or {}
-        if preset == PRESET_LOW:
-            return int(opts.get(CONF_PRESET_LOW_PCT, DEFAULT_PRESET_LOW_PCT))
-        if preset == PRESET_MID:
-            return int(opts.get(CONF_PRESET_MID_PCT, DEFAULT_PRESET_MID_PCT))
-        return int(opts.get(CONF_PRESET_HIGH_PCT, DEFAULT_PRESET_HIGH_PCT))
-
-    def _calculate_preset(self, pct: int | None) -> str | None:
-        if pct is None:
-            return None
-        low = self._preset_pct(PRESET_LOW)
-        mid = self._preset_pct(PRESET_MID)
-        high = self._preset_pct(PRESET_HIGH)
-        if pct <= low:
+        if abs(qset - low) <= abs(qset - mid) and abs(qset - low) <= abs(qset - high):
             return PRESET_LOW
-        if pct <= mid:
+        if abs(qset - mid) <= abs(qset - high):
             return PRESET_MID
-        if pct <= high:
-            return PRESET_HIGH
-        return None
+        return PRESET_HIGH
 
     # ------------------------------------------------------------------
     # State → Home Assistant
@@ -146,18 +128,6 @@ class EcostreamVentilationFan(
     @property
     def is_on(self) -> bool:
         return self._get_qset() > 0
-
-    def _calculate_percentage(self) -> int | None:
-        """Map qset to 0  100% based on capacity range."""
-        qset = self._get_qset()
-        cap_min = self._get_capacity_min()
-        cap_max = self._get_capacity_max()
-
-        if cap_min is None or cap_max is None or cap_max <= cap_min:
-            return None
-
-        pct = round((qset - cap_min) / (cap_max - cap_min) * 100)
-        return max(0, min(100, pct))
 
     # ------------------------------------------------------------------
     # Commands
@@ -168,70 +138,39 @@ class EcostreamVentilationFan(
         preset_mode: str | None = None,
         **kwargs: Any,
     ) -> None:
-        if preset_mode is not None:
-            await self.async_set_preset_mode(preset_mode)
-            return
-        pct = (
-            percentage
-            if percentage is not None
-            else kwargs.get("percentage", self._attr_percentage or 30)
-        )
-        await self.async_set_percentage(pct)
+        await self.async_set_preset_mode(preset_mode or PRESET_MID)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self.async_set_percentage(0)
+        await self.async_set_preset_mode(PRESET_LOW)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        pct = self._preset_pct(preset_mode)
-        self._attr_preset_mode = preset_mode
-        await self.async_set_percentage(pct)
-
-    async def async_set_percentage(self, percentage: int) -> None:
-        percentage = max(0, min(100, int(percentage)))
-
-        cap_min = self._get_capacity_min()
-        cap_max = self._get_capacity_max()
-
-        if cap_min is None or cap_max is None or cap_max <= cap_min:
-            _LOGGER.error(
-                "Invalid EcoStream capacity range (min=%s, max=%s). Cannot set fan.",
-                cap_min,
-                cap_max,
-            )
+        qset = self._get_setpoint(preset_mode)
+        if qset is None:
+            _LOGGER.error("EcoStream: no setpoint available for preset %s", preset_mode)
             return
 
-        qset = cap_min + (percentage / 100.0) * (cap_max - cap_min)
-
         if not self.coordinator.ws:
-            _LOGGER.error(
-                "EcoStream WebSocket not connected → cannot set fan"
-            )
+            _LOGGER.error("EcoStream WebSocket not connected → cannot set preset")
             return
 
         opts = self._entry.options or {}
         override_minutes = int(opts.get(CONF_PRESET_OVERRIDE_MINUTES, DEFAULT_PRESET_OVERRIDE_MINUTES))
         payload = {
             "config": {
-                "man_override_set": float(qset),
+                "man_override_set": qset,
                 "man_override_set_time": override_minutes * 60,
             }
         }
 
+        self._attr_preset_mode = preset_mode
         self.coordinator.mark_control_action()
-        _LOGGER.debug(
-            "EcoStream ventilation: %s%% → Qset %.1f (min=%.1f max=%.1f)",
-            percentage,
-            qset,
-            cap_min,
-            cap_max,
-        )
+        _LOGGER.debug("EcoStream preset %s → Qset %.1f", preset_mode, qset)
 
         await self.coordinator.ws.send_json(payload)
         self.async_write_ha_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        pct = self._calculate_percentage()
-        self._attr_percentage = pct
-        self._attr_preset_mode = self._calculate_preset(pct)
+        qset = self._get_qset()
+        self._attr_preset_mode = self._calculate_preset(qset) if qset > 0 else None
         self.async_write_ha_state()
