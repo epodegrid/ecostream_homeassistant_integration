@@ -383,9 +383,9 @@ This includes:
 
 ## ❤️ Credits
 
-- Original integration engineering: @epodegrid
-- Rewrite to Bronze level and Apple-style UI: @Uber1337NL
-- Thanks to contributers: @ricohageman and @jelle514
+- Original integration architecture and (reverse) engineering: @epodegrid
+- Rewrite to Platinum level quality_scale and Apple-style UI: @Uber1337NL
+- Thanks to contributers and great testers: @jelle514 and @ricohageman
 - Special thanks to the HA community for guidance
 
 ---
