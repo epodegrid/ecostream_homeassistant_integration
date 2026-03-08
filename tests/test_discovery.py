@@ -24,7 +24,15 @@ def _make_hass(configured_hosts: Sequence[str] | None = None):
         entries.append(entry)
     hass.config_entries.async_entries.return_value = entries
     hass.config_entries.flow.async_init = AsyncMock()
-    hass.async_create_task = MagicMock()
+
+    def _consume_task(coro):
+        try:
+            coro.close()
+        except Exception:
+            pass
+        return MagicMock()
+
+    hass.async_create_task = MagicMock(side_effect=_consume_task)
     return hass
 
 

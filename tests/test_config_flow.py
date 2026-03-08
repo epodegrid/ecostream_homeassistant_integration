@@ -10,7 +10,7 @@ from homeassistant.helpers.service_info.zeroconf import (
 )
 from ipaddress import ip_address
 from typing import Any, cast
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from custom_components.ecostream.config_flow import CannotConnect
 from custom_components.ecostream.const import DOMAIN
@@ -536,8 +536,8 @@ async def test_probe_ecostream_non_text_message(
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
     mock_ws.__aexit__ = AsyncMock(return_value=False)
 
-    mock_session = AsyncMock()
-    mock_session.ws_connect = AsyncMock(return_value=mock_ws)
+    mock_session = MagicMock()
+    mock_session.ws_connect = MagicMock(return_value=mock_ws)
 
     with patch(
         "custom_components.ecostream.config_flow.async_get_clientsession",
@@ -569,8 +569,8 @@ async def test_probe_ecostream_json_decode_error(
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
     mock_ws.__aexit__ = AsyncMock(return_value=False)
 
-    mock_session = AsyncMock()
-    mock_session.ws_connect = AsyncMock(return_value=mock_ws)
+    mock_session = MagicMock()
+    mock_session.ws_connect = MagicMock(return_value=mock_ws)
 
     with patch(
         "custom_components.ecostream.config_flow.async_get_clientsession",
@@ -602,8 +602,8 @@ async def test_probe_ecostream_invalid_payload_type(
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
     mock_ws.__aexit__ = AsyncMock(return_value=False)
 
-    mock_session = AsyncMock()
-    mock_session.ws_connect = AsyncMock(return_value=mock_ws)
+    mock_session = MagicMock()
+    mock_session.ws_connect = MagicMock(return_value=mock_ws)
 
     with patch(
         "custom_components.ecostream.config_flow.async_get_clientsession",
@@ -626,8 +626,8 @@ async def test_probe_ecostream_timeout_error(
     flow = EcostreamConfigFlow()
     flow.hass = hass
 
-    mock_session = AsyncMock()
-    mock_session.ws_connect = AsyncMock(side_effect=TimeoutError())
+    mock_session = MagicMock()
+    mock_session.ws_connect = MagicMock(side_effect=TimeoutError())
 
     with patch(
         "custom_components.ecostream.config_flow.async_get_clientsession",
@@ -650,8 +650,8 @@ async def test_probe_ecostream_generic_exception(
     flow = EcostreamConfigFlow()
     flow.hass = hass
 
-    mock_session = AsyncMock()
-    mock_session.ws_connect = AsyncMock(
+    mock_session = MagicMock()
+    mock_session.ws_connect = MagicMock(
         side_effect=RuntimeError("Unexpected error")
     )
 

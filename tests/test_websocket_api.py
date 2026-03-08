@@ -103,8 +103,18 @@ def test_init_default_state():
 @pytest.mark.asyncio
 async def test_async_start_creates_task():
     ws, hass, _ = _make_ws()
+    ws._run = AsyncMock()
+
+    created = {"count": 0}
+
+    def _create_task(coro, name=None):
+        created["count"] += 1
+        return asyncio.create_task(coro)
+
+    hass.loop.create_task = _create_task
     await ws.async_start()
-    _get_create_task_mock(hass).assert_called_once()
+    assert created["count"] == 1
+    await asyncio.sleep(0)
     assert ws._stopping is False
 
 
@@ -121,11 +131,21 @@ async def test_async_start_idempotent_when_task_running():
 @pytest.mark.asyncio
 async def test_async_start_restarts_when_task_done():
     ws, hass, _ = _make_ws()
+    ws._run = AsyncMock()
+
+    created = {"count": 0}
+
+    def _create_task(coro, name=None):
+        created["count"] += 1
+        return asyncio.create_task(coro)
+
+    hass.loop.create_task = _create_task
     fake_task = MagicMock()
     fake_task.done = MagicMock(return_value=True)
     ws._task = fake_task
     await ws.async_start()
-    _get_create_task_mock(hass).assert_called_once()
+    assert created["count"] == 1
+    await asyncio.sleep(0)
 
 
 # ---------------------------------------------------------------------------
@@ -485,3 +505,96 @@ async def test_run_resets_has_received_payload_on_reconnect():
     ws._has_received_payload = True
 
     await ws._run()
+
+
+@pytest.mark.asyncio
+async def test_run_timeout_sends_heartbeat_and_checks_stale():
+    ws, _, _ = _make_ws()
+
+    aio_ws = _make_aiohttp_ws([], stop_ws=ws)
+    ws._session.ws_connect = MagicMock(return_value=aio_ws)
+
+    def stop_on_check_stale():
+        ws._stopping = True
+
+    with patch(
+        "custom_components.ecostream.websocket_api.asyncio.wait",
+        new=AsyncMock(return_value=(set(), set())),
+    ):
+        with patch.object(
+            ws, "_send_heartbeat", new=AsyncMock()
+        ) as heartbeat:
+            with patch.object(
+                ws, "_check_stale", side_effect=stop_on_check_stale
+            ) as check_stale:
+                await ws._run()
+
+    heartbeat.assert_called_once()
+    check_stale.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_run_client_error_creates_issue_once():
+    ws, _, _ = _make_ws()
+
+    ws._session.ws_connect = MagicMock(
+        side_effect=ClientError("connection refused")
+    )
+
+    async def stop_after_sleep(_delay):
+        ws._stopping = True
+
+    with patch(
+        "custom_components.ecostream.websocket_api.ir.async_create_issue"
+    ) as create_issue:
+        with patch(
+            "custom_components.ecostream.websocket_api.asyncio.sleep",
+            new=AsyncMock(side_effect=stop_after_sleep),
+        ):
+            await ws._run()
+
+    create_issue.assert_called_once()
+    assert ws._logged_unavailable is True
+
+
+@pytest.mark.asyncio
+async def test_run_client_error_skips_issue_when_already_unavailable():
+    ws, _, _ = _make_ws()
+    ws._logged_unavailable = True
+
+    ws._session.ws_connect = MagicMock(
+        side_effect=ClientError("connection refused")
+    )
+
+    async def stop_after_sleep(_delay):
+        ws._stopping = True
+
+    with patch(
+        "custom_components.ecostream.websocket_api.ir.async_create_issue"
+    ) as create_issue:
+        with patch(
+            "custom_components.ecostream.websocket_api.asyncio.sleep",
+            new=AsyncMock(side_effect=stop_after_sleep),
+        ):
+            await ws._run()
+
+    create_issue.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_run_reconnect_clears_issue():
+    ws, _, _ = _make_ws()
+    ws._logged_unavailable = True
+
+    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSE)], stop_ws=ws)
+    ws._session.ws_connect = MagicMock(return_value=aio_ws)
+
+    with patch(
+        "custom_components.ecostream.websocket_api.ir.async_delete_issue"
+    ) as delete_issue:
+        await ws._run()
+
+    delete_issue.assert_called_once_with(
+        ws._hass, "ecostream", "connection_lost"
+    )
+    assert ws._logged_unavailable is False

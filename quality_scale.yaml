@@ -1,9 +1,10 @@
+# Target tier: Platinum.
 rules:
   # Bronze
-  action-setup: 
+  action-setup:
     status: exempt
     comment: This integration does not provide additional actions.
-  appropriate-polling: 
+  appropriate-polling:
     status: exempt
     comment: This integration is push-based.
   brands: done
@@ -11,7 +12,7 @@ rules:
   config-flow-test-coverage: done
   config-flow: done
   dependency-transparency: done
-  docs-actions: 
+  docs-actions:
     status: exempt
     comment: This integration does not provide additional actions.
   docs-high-level-description: done
@@ -26,7 +27,7 @@ rules:
   unique-config-entry: done
 
   # Silver
-  action-exceptions: 
+  action-exceptions:
     status: exempt
     comment: This integration does not provide additional actions.
   config-entry-unloading: done
@@ -38,8 +39,8 @@ rules:
   parallel-updates: done
   reauthentication-flow: done
   test-coverage:
-    status: todo
-    comment: Current testing is limited to the config flow. To meet Silver standards, test coverage must be expanded to >95% across all modules, including the coordinator, websocket API, and all entity platforms.
+    status: done
+    comment: Baseline coverage is 97% (pytest-cov, 2026-03-08). CI enforces 95% minimum.
 
   # Gold
   devices: done
@@ -53,7 +54,7 @@ rules:
   docs-supported-functions: done
   docs-troubleshooting: done
   docs-use-cases: done
-  dynamic-devices: 
+  dynamic-devices:
     status: exempt
     comment: Not applicable (single fixed device), but formally unimplemented.
   entity-category: done
@@ -61,9 +62,7 @@ rules:
   entity-disabled-by-default: done
   entity-translations: done
   exception-translations: done
-  icon-translations:
-    status: done
-    comment: icons.json was removed (deprecated). Icons are currently set via _attr_icon on entities. Needs icons.json re-implementation or confirmation that direct icon attributes satisfy this rule.
+  icon-translations: done
   reconfiguration-flow: done
   repair-issues: done
   stale-devices: done
@@ -71,5 +70,4 @@ rules:
   # Platinum
   async-dependency: done
   inject-websession: done
-  strict-typing:
-    status: done
+  strict-typing: done

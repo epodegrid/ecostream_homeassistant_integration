@@ -38,7 +38,7 @@ def _make_select(coordinator_boost_duration=None):
     ):
         entity = EcostreamBoostDurationSelect(coordinator, entry)
 
-    entity.async_write_ha_state = AsyncMock()
+    entity.async_write_ha_state = MagicMock()
 
     return entity, coordinator
 

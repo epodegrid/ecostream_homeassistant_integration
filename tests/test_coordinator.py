@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 import sys
 from typing import Any
@@ -237,6 +238,110 @@ async def test_force_ws_reconnect_disconnects_and_reconnects():
     assert coordinator._last_push == 0.0
 
 
+@pytest.mark.asyncio
+async def test_async_handle_hass_stop_calls_async_stop():
+    coordinator, _ = _make_coordinator()
+    with patch.object(
+        coordinator, "async_stop", new=AsyncMock()
+    ) as stop:
+        await coordinator._async_handle_hass_stop(MagicMock())
+    stop.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_start_background_tasks_skips_when_existing():
+    coordinator, _ = _make_coordinator()
+    coordinator._reconnect_task = MagicMock()
+    with patch("asyncio.create_task") as create_task:
+        await coordinator._async_start_background_tasks(MagicMock())
+    create_task.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_start_background_tasks_creates_task():
+    coordinator, _ = _make_coordinator()
+    coordinator._reconnect_task = None
+    fake_task = MagicMock()
+
+    def _consume_task(coro, name=None):
+        coro.close()
+        return fake_task
+
+    with patch(
+        "asyncio.create_task", side_effect=_consume_task
+    ) as create_task:
+        await coordinator._async_start_background_tasks(MagicMock())
+    create_task.assert_called_once()
+    assert coordinator._reconnect_task is fake_task
+
+
+@pytest.mark.asyncio
+async def test_reconnect_loop_handles_cancelled_error():
+    coordinator, _ = _make_coordinator()
+    coordinator._stopping = False
+
+    async def _raise_cancelled(_sleep_s):
+        raise asyncio.CancelledError()
+
+    with patch("asyncio.sleep", new=_raise_cancelled):
+        with pytest.raises(asyncio.CancelledError):
+            await coordinator._async_reconnect_loop()
+
+
+@pytest.mark.asyncio
+async def test_reconnect_loop_handles_generic_exception():
+    coordinator, _ = _make_coordinator()
+    coordinator._stopping = False
+
+    async def _raise_error(_sleep_s):
+        raise RuntimeError("boom")
+
+    with patch("asyncio.sleep", new=_raise_error):
+        await coordinator._async_reconnect_loop()
+
+
+@pytest.mark.asyncio
+async def test_reconnect_loop_calls_force_reconnect_once():
+    coordinator, _ = _make_coordinator()
+    coordinator._stopping = False
+    coordinator._force_ws_reconnect = AsyncMock(
+        side_effect=lambda: setattr(coordinator, "_stopping", True)
+    )
+
+    async def _noop_sleep(_sleep_s):
+        return None
+
+    with patch("asyncio.sleep", new=_noop_sleep):
+        with patch("random.uniform", return_value=0):
+            await coordinator._async_reconnect_loop()
+
+    coordinator._force_ws_reconnect.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_async_send_config_returns_false_without_ws():
+    coordinator, _ = _make_coordinator()
+    coordinator.ws = None
+    ok = await coordinator.async_send_config({"x": 1}, "test")
+    assert ok is False
+
+
+@pytest.mark.asyncio
+async def test_async_send_config_sends_payload_with_ws():
+    coordinator, _ = _make_coordinator()
+    coordinator.ws = MagicMock()
+    coordinator.ws.send_json = AsyncMock()
+    coordinator.mark_control_action = MagicMock()
+
+    ok = await coordinator.async_send_config({"x": 1}, "test")
+
+    assert ok is True
+    coordinator.mark_control_action.assert_called_once()
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"x": 1}}
+    )
+
+
 # ---------------------------------------------------------------------------
 # Fast Mode
 # ---------------------------------------------------------------------------
@@ -341,6 +446,32 @@ async def test_handle_ws_message_slow_key_respects_interval():
             await coordinator.handle_ws_message(message)
 
     mock_update.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_handle_ws_message_slow_key_updates_snapshot_when_interval_passed():
+    coordinator, _ = _make_coordinator()
+    coordinator.data = {
+        "config": {"setpoint_low": 90},
+        "status": {"qset": 100},
+    }
+    coordinator._last_push = 100.0
+    coordinator._last_slow_push = 100.0
+
+    with patch.object(
+        coordinator, "async_set_updated_data"
+    ) as mock_update:
+        with patch.object(coordinator, "_update_filter_issue"):
+            with patch(
+                "time.time", return_value=100.0 + SLOW_PUSH_INTERVAL + 1
+            ):
+                await coordinator.handle_ws_message(
+                    {"config": {"setpoint_mid": 180}}
+                )
+
+    mock_update.assert_called_once()
+    assert coordinator._last_slow_push > 100.0
+    assert "config" in coordinator._last_slow_snapshot
 
 
 @pytest.mark.asyncio

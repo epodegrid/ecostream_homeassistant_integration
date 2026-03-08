@@ -6,6 +6,8 @@ import sys
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from homeassistant.config_entries import ConfigEntry
@@ -16,8 +18,12 @@ from custom_components.ecostream.sensor import (
     EcostreamBaseSensor,
     EcostreamSensorDescription,
     _calc_efficiency,  # pyright: ignore[reportPrivateUsage]
+    _bool_value,  # pyright: ignore[reportPrivateUsage]
     _deep_get,  # pyright: ignore[reportPrivateUsage]
     _format_uptime,  # pyright: ignore[reportPrivateUsage]
+    _int_value,  # pyright: ignore[reportPrivateUsage]
+    _number_value,  # pyright: ignore[reportPrivateUsage]
+    async_setup_entry,
 )
 
 
@@ -99,6 +105,41 @@ def test_format_uptime_zero():
 
 def test_format_uptime_exact_day():
     assert _format_uptime(86400) == "1d 0h 0m"
+
+
+def test_number_value_none_returns_none():
+    fn = _number_value(["a", "b"])
+    assert fn({}) is None
+
+
+def test_number_value_round_int():
+    fn = _number_value(["a"], round_int=True)
+    assert fn({"a": 9.6}) == 10
+
+
+def test_number_value_decimals():
+    fn = _number_value(["a"], decimals=1)
+    assert fn({"a": 1.26}) == 1.3
+
+
+def test_number_value_returns_float_when_not_rounded():
+    fn = _number_value(["a"])
+    assert fn({"a": "2.5"}) == 2.5
+
+
+def test_int_value_none_returns_none():
+    fn = _int_value(["a"])
+    assert fn({}) is None
+
+
+def test_int_value_converts():
+    fn = _int_value(["a"])
+    assert fn({"a": "12"}) == 12
+
+
+def test_bool_value_uses_default():
+    fn = _bool_value(["x"], default=True)
+    assert fn({}) is True
 
 
 # ---------------------------------------------------------------------------
@@ -220,12 +261,34 @@ def test_sensor_native_value_date_from_datetime():
     assert result.day == 15
 
 
+def test_sensor_native_value_date_parse_exception_returns_none():
+    desc = EcostreamSensorDescription(
+        key="d", is_date=True, value_fn=lambda d: float("nan")
+    )
+    assert _make_sensor(desc).native_value is None
+
+
+def test_sensor_native_value_date_non_datetime_passthrough():
+    raw = "2024-01-15"
+    desc = EcostreamSensorDescription(
+        key="d", is_date=True, value_fn=lambda d: raw
+    )
+    assert _make_sensor(desc).native_value == raw
+
+
 def test_sensor_native_value_uptime_formatted():
     desc = EcostreamSensorDescription(
         key="uptime", value_fn=lambda d: d.get("uptime")
     )
     sensor = _make_sensor(desc, {"uptime": 3661})
     assert sensor.native_value == "1h 1m"
+
+
+def test_sensor_native_value_uptime_invalid_returns_none():
+    desc = EcostreamSensorDescription(
+        key="uptime", value_fn=lambda d: "not-an-int"
+    )
+    assert _make_sensor(desc).native_value is None
 
 
 def test_sensor_available_connected():
@@ -289,3 +352,29 @@ def test_handle_coordinator_update_writes_state():
     sensor._handle_coordinator_update()  # pyright: ignore[reportPrivateUsage]
 
     sensor.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_adds_all_sensor_entities():
+    coordinator = MagicMock()
+    coordinator.host = "192.168.1.1"
+    coordinator.data = {}
+    entry = MagicMock(spec=ConfigEntry)
+    entry.entry_id = "test_entry"
+    entry.runtime_data = coordinator
+    add_entities = MagicMock()
+
+    def _mock_coordinator_entity_init(
+        self: CoordinatorEntity[Any], c: Any
+    ) -> None:
+        self.coordinator = c
+        self._attr_should_poll = False  # pyright: ignore[reportPrivateUsage]
+
+    with patch.object(
+        CoordinatorEntity, "__init__", _mock_coordinator_entity_init
+    ):
+        await async_setup_entry(MagicMock(), entry, add_entities)
+
+    add_entities.assert_called_once()
+    entities = add_entities.call_args[0][0]
+    assert len(entities) == len(SENSOR_DESCRIPTIONS)

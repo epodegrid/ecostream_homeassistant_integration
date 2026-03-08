@@ -29,6 +29,7 @@ from custom_components.ecostream.const import (
     PRESET_MID,
 )
 from custom_components.ecostream.switch import (
+    async_setup_entry,
     EcostreamBoostSwitch,
     EcostreamBypassSwitch,
     EcostreamPresetSwitch,
@@ -55,8 +56,31 @@ def _make_entity(EntityClass, data=None, ws=True, **kwargs):
         lambda self, c: setattr(self, "coordinator", c),
     ):
         entity = EntityClass(coordinator, entry, **kwargs)
-    entity.async_write_ha_state = AsyncMock()
+    entity.async_write_ha_state = MagicMock()
     return entity, coordinator
+
+
+@pytest.mark.asyncio
+async def test_switch_async_setup_entry_adds_entities():
+    coordinator = MagicMock()
+    coordinator.host = "192.168.1.1"
+    coordinator.data = {}
+    entry = MagicMock(spec=ConfigEntry)
+    entry.entry_id = "test_entry"
+    entry.runtime_data = coordinator
+
+    def _mock_coordinator_entity_init(self, c):
+        self.coordinator = c
+
+    with patch.object(
+        CoordinatorEntity, "__init__", _mock_coordinator_entity_init
+    ):
+        add_entities = MagicMock()
+        await async_setup_entry(MagicMock(), entry, add_entities)
+
+    add_entities.assert_called_once()
+    entities = add_entities.call_args[0][0]
+    assert len(entities) == 7
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +108,7 @@ def test_schedule_unique_id():
 def test_schedule_handle_update():
     entity, _ = _make_entity(EcostreamScheduleSwitch)
     entity._handle_coordinator_update()
-    cast(AsyncMock, entity.async_write_ha_state).assert_called_once()
+    cast(MagicMock, entity.async_write_ha_state).assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -157,6 +181,26 @@ async def test_summer_comfort_turn_on_uses_option_temp():
     await entity.async_turn_on()
     coordinator.ws.send_json.assert_called_once_with(
         {"config": {"sum_com_enabled": True, "sum_com_temp": 26}}
+    )
+
+
+@pytest.mark.asyncio
+async def test_summer_comfort_turn_on_invalid_temp_uses_default():
+    entity, coordinator = _make_entity(EcostreamSummerComfortSwitch)
+    entity._entry.options = {CONF_SUMMER_COMFORT_TEMP: "bad"}
+    await entity.async_turn_on()
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"sum_com_enabled": True, "sum_com_temp": 22}}
+    )
+
+
+@pytest.mark.asyncio
+async def test_summer_comfort_turn_on_out_of_range_uses_default():
+    entity, coordinator = _make_entity(EcostreamSummerComfortSwitch)
+    entity._entry.options = {CONF_SUMMER_COMFORT_TEMP: 99}
+    await entity.async_turn_on()
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"sum_com_enabled": True, "sum_com_temp": 22}}
     )
 
 
@@ -308,6 +352,29 @@ async def test_boost_turn_on_duration_below_1_uses_default():
 
 
 @pytest.mark.asyncio
+async def test_boost_turn_on_invalid_duration_uses_default():
+    entity, coordinator = _make_entity(
+        EcostreamBoostSwitch, {"config": {"setpoint_high": 350}}
+    )
+    coordinator.boost_duration_minutes = "bad"
+    await entity.async_turn_on()
+    payload = coordinator.ws.send_json.call_args[0][0]
+    assert (
+        payload["config"]["man_override_set_time"]
+        == DEFAULT_BOOST_DURATION_MINUTES * 60
+    )
+
+
+def test_boost_handle_update_invalid_timer_sets_off():
+    entity, _ = _make_entity(
+        EcostreamBoostSwitch,
+        {"status": {"override_set_time_left": "bad"}},
+    )
+    entity._handle_coordinator_update()
+    assert entity.is_on is False
+
+
+@pytest.mark.asyncio
 async def test_boost_turn_off_clears_timer():
     entity, coordinator = _make_entity(EcostreamBoostSwitch)
     await entity.async_turn_off()
@@ -351,6 +418,64 @@ def test_preset_switch_is_on_matches_qset():
         preset=PRESET_MID,
     )
     assert entity.is_on is True
+
+
+def test_preset_switch_get_setpoint_unknown_preset():
+    entity, _ = _make_entity(
+        EcostreamPresetSwitch,
+        {"config": {"setpoint_low": 90}},
+        preset="unknown",
+    )
+    assert entity._get_setpoint() is None
+
+
+def test_preset_switch_get_setpoint_invalid_value():
+    entity, _ = _make_entity(
+        EcostreamPresetSwitch,
+        {"config": {"setpoint_low": "bad"}},
+        preset=PRESET_LOW,
+    )
+    assert entity._get_setpoint() is None
+
+
+def test_preset_switch_is_active_invalid_qset_returns_false():
+    entity, _ = _make_entity(
+        EcostreamPresetSwitch,
+        {"config": {"setpoint_low": 90}, "status": {"qset": "bad"}},
+        preset=PRESET_LOW,
+    )
+    assert entity.is_on is False
+
+
+def test_preset_switch_handle_update_writes_state():
+    entity, _ = _make_entity(
+        EcostreamPresetSwitch,
+        {"config": {"setpoint_low": 90}, "status": {"qset": 90}},
+        preset=PRESET_LOW,
+    )
+    entity._handle_coordinator_update()
+    cast(MagicMock, entity.async_write_ha_state).assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_preset_switch_turn_on_without_setpoint_skips_send():
+    entity, coordinator = _make_entity(
+        EcostreamPresetSwitch,
+        {"config": {}},
+        preset=PRESET_LOW,
+    )
+    await entity.async_turn_on()
+    coordinator.ws.send_json.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_apply_config_uses_async_send_config_awaitable():
+    entity, coordinator = _make_entity(EcostreamScheduleSwitch)
+    coordinator.async_send_config = AsyncMock(return_value=True)
+    await entity.async_turn_on()
+    coordinator.async_send_config.assert_awaited_once_with(
+        {"schedule_enabled": True}, "schedule"
+    )
 
 
 @pytest.mark.asyncio

@@ -32,7 +32,7 @@ def _make_bypass_switch(data=None, ws=True):
         lambda self, c: setattr(self, "coordinator", c),
     ):
         bypass = EcostreamBypassSwitch(coordinator, entry)
-    bypass.async_write_ha_state = AsyncMock()
+    bypass.async_write_ha_state = MagicMock()
     return bypass, coordinator
 
 
@@ -56,11 +56,16 @@ def test_is_on_false_when_position_missing():
     assert bypass.is_on is False
 
 
+def test_is_on_false_when_position_invalid():
+    bypass, _ = _make_bypass_switch({"status": {"bypass_pos": "bad"}})
+    assert bypass.is_on is False
+
+
 def test_handle_coordinator_update_writes_state():
     bypass, _ = _make_bypass_switch({"status": {"bypass_pos": 100}})
     bypass._handle_coordinator_update()
     assert bypass.is_on is True
-    cast(AsyncMock, bypass.async_write_ha_state).assert_called_once()
+    cast(MagicMock, bypass.async_write_ha_state).assert_called_once()
 
 
 @pytest.mark.asyncio
