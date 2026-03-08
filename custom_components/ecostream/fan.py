@@ -61,7 +61,6 @@ class EcostreamVentilationFan(
         self._entry = entry
 
         self._attr_unique_id = f"{entry.entry_id}_ventilation"
-        self.entity_id = "fan.ecostream_ventilation"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.host)},
             manufacturer="BUVA",
@@ -116,7 +115,9 @@ class EcostreamVentilationFan(
         high = self._get_setpoint(PRESET_HIGH)
         if low is None or mid is None or high is None:
             return None
-        if abs(qset - low) <= abs(qset - mid) and abs(qset - low) <= abs(qset - high):
+        if abs(qset - low) <= abs(qset - mid) and abs(
+            qset - low
+        ) <= abs(qset - high):
             return PRESET_LOW
         if abs(qset - mid) <= abs(qset - high):
             return PRESET_MID
@@ -146,15 +147,25 @@ class EcostreamVentilationFan(
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         qset = self._get_setpoint(preset_mode)
         if qset is None:
-            _LOGGER.error("EcoStream: no setpoint available for preset %s", preset_mode)
+            _LOGGER.error(
+                "EcoStream: no setpoint available for preset %s",
+                preset_mode,
+            )
             return
 
         if not self.coordinator.ws:
-            _LOGGER.error("EcoStream WebSocket not connected → cannot set preset")
+            _LOGGER.error(
+                "EcoStream WebSocket not connected → cannot set preset"
+            )
             return
 
         opts = self._entry.options or {}
-        override_minutes = int(opts.get(CONF_PRESET_OVERRIDE_MINUTES, DEFAULT_PRESET_OVERRIDE_MINUTES))
+        override_minutes = int(
+            opts.get(
+                CONF_PRESET_OVERRIDE_MINUTES,
+                DEFAULT_PRESET_OVERRIDE_MINUTES,
+            )
+        )
         payload = {
             "config": {
                 "man_override_set": qset,
@@ -164,7 +175,9 @@ class EcostreamVentilationFan(
 
         self._attr_preset_mode = preset_mode
         self.coordinator.mark_control_action()
-        _LOGGER.debug("EcoStream preset %s → Qset %.1f", preset_mode, qset)
+        _LOGGER.debug(
+            "EcoStream preset %s → Qset %.1f", preset_mode, qset
+        )
 
         await self.coordinator.ws.send_json(payload)
         self.async_write_ha_state()
@@ -172,5 +185,7 @@ class EcostreamVentilationFan(
     @callback
     def _handle_coordinator_update(self) -> None:
         qset = self._get_qset()
-        self._attr_preset_mode = self._calculate_preset(qset) if qset > 0 else None
+        self._attr_preset_mode = (
+            self._calculate_preset(qset) if qset > 0 else None
+        )
         self.async_write_ha_state()

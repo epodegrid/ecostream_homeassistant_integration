@@ -27,7 +27,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
-    async_add_entities([EcostreamBoostDurationSelect(coordinator, entry)], update_before_add=True)
+    async_add_entities(
+        [EcostreamBoostDurationSelect(coordinator, entry)],
+        update_before_add=True,
+    )
 
 
 class EcostreamBoostDurationSelect(
@@ -46,7 +49,6 @@ class EcostreamBoostDurationSelect(
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_boost_duration"
-        self.entity_id = "select.ecostream_boost_duration"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.host)},
             manufacturer="BUVA",

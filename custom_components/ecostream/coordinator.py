@@ -233,7 +233,7 @@ class EcostreamDataUpdateCoordinator(
         elif has_fast and (now - self._last_push >= interval):
             should_push = True
         elif has_slow and (
-            now - self._last_slow_push >= RECONNECT_INTERVAL
+            now - self._last_slow_push >= self._push_interval
         ):
             should_push = True
 

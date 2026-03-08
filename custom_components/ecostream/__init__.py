@@ -140,8 +140,6 @@ async def _async_options_updated(
 ) -> None:
     """Update device configuration when options change."""
     coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
-    if not coordinator.ws:
-        return
 
     # Update boost duration
     boost_duration = int(
@@ -157,6 +155,13 @@ async def _async_options_updated(
     )
 
     if allow_override:
+        if not coordinator.ws:
+            _LOGGER.debug(
+                "EcoStream options updated locally (boost_duration=%sm), skipping filter_datetime update because WS is disconnected",
+                boost_duration,
+            )
+            return
+
         filter_days = int(
             entry.options.get(
                 CONF_FILTER_REPLACEMENT_DAYS,

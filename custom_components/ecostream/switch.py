@@ -94,7 +94,6 @@ class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
         entry: ConfigEntry,
     ) -> None:
         super().__init__(coordinator, entry)
-        self.entity_id = "switch.ecostream_schedule_enabled"
         self._attr_is_on = bool(
             self._get_config().get("schedule_enabled", False)
         )
@@ -143,7 +142,6 @@ class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
         entry: ConfigEntry,
     ) -> None:
         super().__init__(coordinator, entry)
-        self.entity_id = "switch.ecostream_summer_comfort"
         self._attr_is_on = bool(
             self._get_config().get("sum_com_enabled", False)
         )
@@ -194,12 +192,11 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         entry: ConfigEntry,
     ) -> None:
         super().__init__(coordinator, entry)
-        self.entity_id = "switch.ecostream_boost"
         status = self._get_status()
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             self._attr_is_on = False
 
     @property
@@ -213,7 +210,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             self._attr_is_on = False
         self.async_write_ha_state()
 
@@ -241,7 +238,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
 
         try:
             qset = float(qset_raw)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             qset = float(BOOST_QSET)
 
         # ----------------------------
@@ -254,7 +251,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         )
         try:
             minutes = int(minutes)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             minutes = DEFAULT_BOOST_DURATION_MINUTES
 
         if minutes < 1:

@@ -60,7 +60,6 @@ class EcostreamPresetButton(
         self._entry = entry
         self._preset = preset
         self._attr_unique_id = f"{entry.entry_id}_preset_{preset}"
-        self.entity_id = f"button.ecostream_{preset}"
         self._attr_name = preset
         self._attr_icon = "mdi:fan"
         self._attr_device_info = DeviceInfo(
@@ -87,7 +86,7 @@ class EcostreamPresetButton(
             if value is None:
                 return None
             return float(value)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return None
 
     @property
@@ -150,7 +149,6 @@ class EcostreamResetFilterButton(
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_reset_filter"
-        self.entity_id = "button.ecostream_reset_filter"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.host)},
             manufacturer="BUVA",
