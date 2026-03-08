@@ -1,8 +1,9 @@
 blueprint:
   name: EcoStream Intelligent Ventilation Control
   description: >
-    PID-achtige regeling voor BUVA EcoStream op basis van CO₂, RV%, TVOC,
-    met dag/nachtprofielen en ramping (60–300 m³/h).
+    Automatische regeling voor BUVA EcoStream op basis van CO₂, RV%, en TVOC,
+    met dag/nachtprofielen. Schakelt tussen Low, Mid en High presets op basis
+    van luchtkwaliteit scores.
     Filters zijn ingesteld op de 'ecostream' integratie voor makkelijk selecteren.
   domain: automation
   input:
@@ -32,15 +33,13 @@ blueprint:
           domain: sensor
           integration: ecostream
 
-    qset_number:
-      name: Qset (Capaciteit instelling)
-      description: >
-        Een helper input_number entity om de ventilatie capaciteit in te stellen.
-        Maak eerst een helper aan via Settings > Devices & Services > Helpers > Create Helper > Number.
-        Stel min=60, max=350, step=5, unit=m³/h in.
+    ventilation_fan:
+      name: EcoStream Ventilatie Fan
+      description: De fan entity van de EcoStream ventilatie unit (fan.ecostream_ventilation).
       selector:
         entity:
-          domain: number
+          domain: fan
+          integration: ecostream
 
     day_start:
       name: Start dagmodus
@@ -54,23 +53,27 @@ blueprint:
       selector:
         time: {}
 
-    min_qset:
-      name: Minimum ventilatie (m³/h)
-      default: 60
+    low_threshold:
+      name: Drempel voor Low preset
+      description: Score onder deze waarde → Low (0.0 - 1.0)
+      default: 0.30
       selector:
         number:
-          min: 30
-          max: 150
-          step: 5
+          min: 0.0
+          max: 1.0
+          step: 0.05
+          mode: slider
 
-    max_qset:
-      name: Maximum ventilatie (m³/h)
-      default: 300
+    high_threshold:
+      name: Drempel voor High preset
+      description: Score boven deze waarde → High (0.0 - 1.0)
+      default: 0.70
       selector:
         number:
-          min: 200
-          max: 350
-          step: 10
+          min: 0.0
+          max: 1.0
+          step: 0.05
+          mode: slider
 
 mode: single
 max_exceeded: silent
@@ -84,11 +87,11 @@ variables:
   co2_ent: !input co2_sensor
   rv_ent: !input humidity_sensor
   tvoc_ent: !input tvoc_sensor
-  qset_ent: !input qset_number
+  fan_ent: !input ventilation_fan
   day_start_val: !input day_start
   night_start_val: !input night_start
-  qset_min: !input min_qset
-  qset_max: !input max_qset
+  low_thresh: !input low_threshold
+  high_thresh: !input high_threshold
 
   # Sensorwaarden ophalen
   co2: '{{ states(co2_ent) | float(400) }}'
@@ -127,29 +130,28 @@ variables:
   profile_gain: '{{ 1.4 if is_day else 0.7 }}'
   final_score: '{{ [score * profile_gain, 1] | min }}'
 
-  # Berekening van de gewenste Qset
-  target_qset: >
-    {{
-      (qset_min + (final_score * (qset_max - qset_min)))
-      | round(0) | int
-    }}
+  # Bepaal gewenste preset op basis van score
+  target_preset: >
+    {%- if final_score < low_thresh -%}
+      low
+    {%- elif final_score > high_thresh -%}
+      high
+    {%- else -%}
+      mid
+    {%- endif -%}
 
 action:
   - variables:
-      # We lezen de huidige stand van de number-entity
-      current: '{{ states(qset_ent) | float(0) }}'
-      target: '{{ target_qset }}'
-      diff: '{{ target - current }}'
+      # Lees huidige preset van de fan
+      current_preset: '{{ state_attr(fan_ent, "preset_mode") }}'
+      target: '{{ target_preset }}'
 
-  # Anti-jitter: Alleen aanpassen als het verschil groot genoeg is (>= 10 m³/h)
-  - choose:
-      - conditions: '{{ diff | abs >= 10 }}'
-        sequence:
-          - service: number.set_value
-            target:
-              entity_id: '{{ qset_ent }}'
-            data:
-              # Ramping: we gaan niet in één keer naar target, maar 1/3e van het verschil
-              # Dit zorgt voor een rustige overgang van de motor
-              value: '{{ (current + (diff / 3)) | round(0) | int }}'
-    default: []
+  # Alleen aanpassen als de gewenste preset anders is dan de huidige
+  - condition: template
+    value_template: '{{ current_preset != target }}'
+
+  - service: fan.set_preset_mode
+    target:
+      entity_id: '{{ fan_ent }}'
+    data:
+      preset_mode: '{{ target }}'
