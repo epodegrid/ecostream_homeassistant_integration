@@ -18,13 +18,6 @@ from custom_components.ecostream.diagnostics import (
     async_get_config_entry_diagnostics,
 )
 
-CONF_PUSH_INTERVAL = getattr(
-    ecostream_const, "CONF_PUSH_INTERVAL", "push_interval"
-)
-CONF_FAST_PUSH_INTERVAL = getattr(
-    ecostream_const, "CONF_FAST_PUSH_INTERVAL", "fast_push_interval"
-)
-
 
 class TestValidateIcons:
     """Tests for _validate_icons function."""
@@ -146,8 +139,8 @@ class TestAsyncGetConfigEntryDiagnostics:
         now_utc = datetime.now(UTC)
         coordinator = MagicMock()
         coordinator.options = {
-            CONF_PUSH_INTERVAL: 60,
-            CONF_FAST_PUSH_INTERVAL: 5,
+            "filter_replacement_days": 180,
+            "boost_duration": 15,
         }
         coordinator.data = {}
         coordinator.last_update_success = True
@@ -167,8 +160,8 @@ class TestAsyncGetConfigEntryDiagnostics:
 
         assert result["coordinator"]["last_update_utc"] is not None
         assert result["coordinator"]["seconds_since_last_update"] == 0
-        assert result["coordinator"]["slow_push_interval"] == 60
-        assert result["coordinator"]["fast_push_interval"] == 5
+        assert result["coordinator"]["filter_replacement_days"] == 180
+        assert result["coordinator"]["boost_duration_minutes"] == 15
 
     @pytest.mark.asyncio
     async def test_diagnostics_with_raw_status(self):

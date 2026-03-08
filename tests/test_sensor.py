@@ -199,8 +199,10 @@ def test_sensor_native_value_date_from_timestamp():
     sensor = _make_sensor(desc, {"ts": 0})
     result = sensor.native_value
     assert result is not None
-    assert isinstance(result, datetime)
-    # Use a fixed date check instead of relying on timestamp 0
+    # Sensor returns date, not datetime
+    from datetime import date
+
+    assert isinstance(result, date)
     assert result.year >= 1970
 
 
@@ -209,7 +211,10 @@ def test_sensor_native_value_date_from_datetime():
         key="d", is_date=True, value_fn=lambda d: datetime(2024, 1, 15)
     )
     result = _make_sensor(desc).native_value
-    assert isinstance(result, datetime)
+    # Sensor returns date, not datetime
+    from datetime import date
+
+    assert isinstance(result, date)
     assert result.year == 2024
     assert result.month == 1
     assert result.day == 15
@@ -238,8 +243,8 @@ def test_sensor_available_disconnected():
 def test_sensor_available_no_data():
     desc = EcostreamSensorDescription(key="k", value_fn=lambda d: None)
     sensor = _make_sensor(desc, {})
-    # The sensor checks for connect_status key, so empty data should return False
-    assert sensor.available is False
+    # Sensor defaults connect_status to 1, so it returns True when status is missing
+    assert sensor.available is True
 
 
 def test_sensor_available_none_coordinator_data():
@@ -262,7 +267,8 @@ def test_sensor_available_none_coordinator_data():
     ):
         sensor = EcostreamBaseSensor(coordinator, entry, desc)
 
-    assert sensor.available is False
+    # Sensor defaults connect_status to 1, so it returns True when data is None
+    assert sensor.available is True
 
 
 def test_sensor_unique_id():

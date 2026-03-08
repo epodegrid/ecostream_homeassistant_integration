@@ -18,17 +18,8 @@ from custom_components.ecostream import (
     const as ecostream_const,
 )
 
-CONF_PUSH_INTERVAL: Final[str] = cast(
-    str, getattr(ecostream_const, "CONF_PUSH_INTERVAL", "push_interval")
-)
 DOMAIN: Final[str] = cast(str, ecostream_const.DOMAIN)
-CONF_FAST_PUSH_INTERVAL: Final[str] = cast(
-    str,
-    getattr(
-        ecostream_const, "CONF_FAST_PUSH_INTERVAL", "fast_push_interval"
-    ),
-)
-probe_host = cast(AsyncMock, (ecostream, "_probe_host"))
+probe_host = getattr(ecostream, "_probe_host")
 
 
 def _make_ws_session(
@@ -163,7 +154,11 @@ async def test_async_setup_entry_success():
     entry = MagicMock()
     entry.entry_id = "test_entry"
     entry.data = {"host": "192.168.1.1"}
-    entry.options = {CONF_PUSH_INTERVAL: 60, CONF_FAST_PUSH_INTERVAL: 5}
+    entry.options = {
+        "filter_replacement_days": 180,
+        "preset_override_minutes": 60,
+        "boost_duration": 15,
+    }
 
     mock_coordinator = MagicMock()
     mock_coordinator.async_start = AsyncMock()
@@ -215,8 +210,10 @@ async def test_async_setup_entry_uses_default_options():
             ) as mock_cls:
                 await async_setup_entry(hass, entry)
                 _, kwargs = mock_cls.call_args
-                assert CONF_PUSH_INTERVAL in kwargs["options"]
-                assert CONF_FAST_PUSH_INTERVAL in kwargs["options"]
+                # Check that default options are set
+                assert "filter_replacement_days" in kwargs["options"]
+                assert "preset_override_minutes" in kwargs["options"]
+                assert "boost_duration" in kwargs["options"]
 
 
 # ---------------------------------------------------------------------------
@@ -261,3 +258,223 @@ async def test_async_unload_entry_removes_from_data():
     result = await async_unload_entry(hass, entry)
     assert result is True
     coordinator.async_stop.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _cleanup_stale_devices
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_cleanup_stale_devices_removes_old_host():
+    """Test that devices with old host identifiers are removed."""
+    from custom_components.ecostream import _cleanup_stale_devices
+    from homeassistant.helpers.device_registry import DeviceRegistry
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    current_host = "192.168.1.100"
+
+    # Create mock device with old host identifier
+    old_device = MagicMock()
+    old_device.id = "old_device_id"
+    old_device.config_entries = {"test_entry"}
+    old_device.identifiers = {(DOMAIN, "192.168.1.1")}
+
+    # Create mock device with current host identifier
+    current_device = MagicMock()
+    current_device.id = "current_device_id"
+    current_device.config_entries = {"test_entry"}
+    current_device.identifiers = {(DOMAIN, "192.168.1.100")}
+
+    # Create mock device from different config entry
+    other_device = MagicMock()
+    other_device.id = "other_device_id"
+    other_device.config_entries = {"other_entry"}
+    other_device.identifiers = {(DOMAIN, "192.168.1.1")}
+
+    mock_dev_reg = MagicMock(spec=DeviceRegistry)
+    mock_dev_reg.devices = {
+        "old": old_device,
+        "current": current_device,
+        "other": other_device,
+    }
+    mock_dev_reg.async_remove_device = MagicMock()
+
+    with patch(
+        "custom_components.ecostream.async_get_device_registry",
+        return_value=mock_dev_reg,
+    ):
+        await _cleanup_stale_devices(hass, entry, current_host)
+
+    # Old device should be removed
+    mock_dev_reg.async_remove_device.assert_called_once_with(
+        "old_device_id"
+    )
+
+
+@pytest.mark.asyncio
+async def test_cleanup_stale_devices_keeps_current_host():
+    """Test that devices with current host are not removed."""
+    from custom_components.ecostream import _cleanup_stale_devices
+    from homeassistant.helpers.device_registry import DeviceRegistry
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    current_host = "192.168.1.100"
+
+    current_device = MagicMock()
+    current_device.id = "current_device_id"
+    current_device.config_entries = {"test_entry"}
+    current_device.identifiers = {(DOMAIN, "192.168.1.100")}
+
+    mock_dev_reg = MagicMock(spec=DeviceRegistry)
+    mock_dev_reg.devices = {"current": current_device}
+    mock_dev_reg.async_remove_device = MagicMock()
+
+    with patch(
+        "custom_components.ecostream.async_get_device_registry",
+        return_value=mock_dev_reg,
+    ):
+        await _cleanup_stale_devices(hass, entry, current_host)
+
+    # Should not remove any devices
+    mock_dev_reg.async_remove_device.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# _async_options_updated
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_options_updated_with_filter_override_enabled():
+    """Test options update when filter override is enabled."""
+    from custom_components.ecostream import _async_options_updated
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.options = {
+        "boost_duration": 30,
+        "allow_override_filter_date": True,
+        "filter_replacement_days": 90,
+    }
+
+    coordinator = MagicMock()
+    coordinator.ws = MagicMock()
+    coordinator.ws.send_json = AsyncMock()
+    entry.runtime_data = coordinator
+
+    with patch(
+        "custom_components.ecostream.time.time", return_value=1000
+    ):
+        await _async_options_updated(hass, entry)
+
+    assert coordinator.boost_duration_minutes == 30
+    coordinator.ws.send_json.assert_called_once()
+    call_args = coordinator.ws.send_json.call_args[0][0]
+    assert "config" in call_args
+    assert "filter_datetime" in call_args["config"]
+    expected_timestamp = 1000 + (90 * 86400)
+    assert call_args["config"]["filter_datetime"] == expected_timestamp
+
+
+@pytest.mark.asyncio
+async def test_options_updated_with_filter_override_disabled():
+    """Test options update when filter override is disabled."""
+    from custom_components.ecostream import _async_options_updated
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.options = {
+        "boost_duration": 15,
+        "allow_override_filter_date": False,
+    }
+
+    coordinator = MagicMock()
+    coordinator.ws = MagicMock()
+    coordinator.ws.send_json = AsyncMock()
+    entry.runtime_data = coordinator
+
+    await _async_options_updated(hass, entry)
+
+    assert coordinator.boost_duration_minutes == 15
+    # Should not send JSON when override is disabled
+    coordinator.ws.send_json.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_options_updated_with_ws_disconnected():
+    """Test options update when WebSocket is disconnected."""
+    from custom_components.ecostream import _async_options_updated
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.options = {
+        "boost_duration": 20,
+        "allow_override_filter_date": True,
+        "filter_replacement_days": 180,
+    }
+
+    coordinator = MagicMock()
+    coordinator.ws = None  # Disconnected
+    entry.runtime_data = coordinator
+
+    await _async_options_updated(hass, entry)
+
+    assert coordinator.boost_duration_minutes == 20
+    # No exception should be raised
+
+
+@pytest.mark.asyncio
+async def test_options_updated_uses_defaults():
+    """Test options update with default values."""
+    from custom_components.ecostream import _async_options_updated
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.options = {}  # No options set
+
+    coordinator = MagicMock()
+    coordinator.ws = None
+    entry.runtime_data = coordinator
+
+    await _async_options_updated(hass, entry)
+
+    # Should use default boost duration (15 minutes)
+    assert coordinator.boost_duration_minutes == 15
+
+
+# ---------------------------------------------------------------------------
+# async_unload_entry (legacy HA versions)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_async_unload_entry_legacy_ha_version():
+    """Test unload entry for older HA versions without async_unload_platforms."""
+    hass = MagicMock()
+    hass.config_entries.async_forward_entry_unload = AsyncMock(
+        return_value=True
+    )
+    # Remove async_unload_platforms to simulate old HA version
+    if hasattr(hass.config_entries, "async_unload_platforms"):
+        delattr(hass.config_entries, "async_unload_platforms")
+
+    coordinator = MagicMock()
+    coordinator.async_stop = AsyncMock()
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.runtime_data = coordinator
+
+    result = await async_unload_entry(hass, entry)
+
+    assert result is True
+    coordinator.async_stop.assert_called_once()
+    # Verify that async_forward_entry_unload was called for each platform
+    assert (
+        hass.config_entries.async_forward_entry_unload.call_count == 6
+    )

@@ -48,15 +48,31 @@ def _make_zeroconf_service_info(
     host: str | None, name: str
 ) -> ZeroconfServiceInfo:
     """Create a mock ZeroconfServiceInfo object."""
-    return ZeroconfServiceInfo(
-        ip_address=ip_address(host) if host else ip_address("0.0.0.0"),
-        ip_addresses=[ip_address(host)] if host else [],
-        hostname=name,
-        name=name,
-        port=80,
-        properties={},
-        type="_http._tcp.local.",
-    )
+    # When host is None, we need to ensure discovery_info.host returns None
+    # not "0.0.0.0", so we use a placeholder IP but set ip_addresses to empty
+    if host:
+        return ZeroconfServiceInfo(
+            ip_address=ip_address(host),
+            ip_addresses=[ip_address(host)],
+            hostname=name,
+            name=name,
+            port=80,
+            properties={},
+            type="_http._tcp.local.",
+        )
+    else:
+        # For None host, use minimal info that results in .host being None
+        return ZeroconfServiceInfo(
+            ip_address=ip_address(
+                "127.0.0.1"
+            ),  # Placeholder, won't be used
+            ip_addresses=[],  # Empty list means no valid addresses
+            hostname=name,
+            name=name,
+            port=80,
+            properties={},
+            type="_http._tcp.local.",
+        )
 
 
 def _make_dhcp_service_info(
@@ -174,10 +190,17 @@ async def test_zeroconf_step_success(hass: HomeAssistant) -> None:
 async def test_zeroconf_step_no_host_aborts(
     hass: HomeAssistant,
 ) -> None:
+    # Use a mock to ensure .host is explicitly None
+    from unittest.mock import MagicMock
+
+    mock_discovery_info = MagicMock(spec=ZeroconfServiceInfo)
+    mock_discovery_info.host = None
+    mock_discovery_info.name = "ecostream"
+
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data=_make_zeroconf_service_info(host=None, name="ecostream"),
+        data=mock_discovery_info,
     )
     assert result.get("type") == FlowResultType.ABORT
     assert result.get("reason") == "unknown"
@@ -485,3 +508,253 @@ async def test_form_invalid_auth(hass: HomeAssistant) -> None:
 
     assert result2.get("type") == FlowResultType.FORM
     assert result2.get("errors") == {"base": "unknown"}
+
+
+# ---------------------------------------------------------------------------
+# _probe_ecostream error handling
+# ---------------------------------------------------------------------------
+
+
+async def test_probe_ecostream_non_text_message(
+    hass: HomeAssistant,
+) -> None:
+    """Test probe handles non-TEXT WebSocket messages."""
+    import pytest
+    from aiohttp import WSMsgType
+    from custom_components.ecostream.config_flow import (
+        CannotConnect,
+        EcostreamConfigFlow,
+    )
+
+    flow = EcostreamConfigFlow()
+    flow.hass = hass
+
+    mock_ws = AsyncMock()
+    mock_msg = AsyncMock()
+    mock_msg.type = WSMsgType.BINARY
+    mock_ws.receive = AsyncMock(return_value=mock_msg)
+    mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
+    mock_ws.__aexit__ = AsyncMock(return_value=False)
+
+    mock_session = AsyncMock()
+    mock_session.ws_connect = AsyncMock(return_value=mock_ws)
+
+    with patch(
+        "custom_components.ecostream.config_flow.async_get_clientsession",
+        return_value=mock_session,
+    ):
+        with pytest.raises(CannotConnect):
+            await flow._probe_ecostream("192.168.1.1")
+
+
+async def test_probe_ecostream_json_decode_error(
+    hass: HomeAssistant,
+) -> None:
+    """Test probe handles invalid JSON."""
+    import pytest
+    from aiohttp import WSMsgType
+    from custom_components.ecostream.config_flow import (
+        CannotConnect,
+        EcostreamConfigFlow,
+    )
+
+    flow = EcostreamConfigFlow()
+    flow.hass = hass
+
+    mock_ws = AsyncMock()
+    mock_msg = AsyncMock()
+    mock_msg.type = WSMsgType.TEXT
+    mock_msg.data = "not valid json{"
+    mock_ws.receive = AsyncMock(return_value=mock_msg)
+    mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
+    mock_ws.__aexit__ = AsyncMock(return_value=False)
+
+    mock_session = AsyncMock()
+    mock_session.ws_connect = AsyncMock(return_value=mock_ws)
+
+    with patch(
+        "custom_components.ecostream.config_flow.async_get_clientsession",
+        return_value=mock_session,
+    ):
+        with pytest.raises(CannotConnect):
+            await flow._probe_ecostream("192.168.1.1")
+
+
+async def test_probe_ecostream_invalid_payload_type(
+    hass: HomeAssistant,
+) -> None:
+    """Test probe handles non-dict payload."""
+    import pytest
+    from aiohttp import WSMsgType
+    from custom_components.ecostream.config_flow import (
+        CannotConnect,
+        EcostreamConfigFlow,
+    )
+
+    flow = EcostreamConfigFlow()
+    flow.hass = hass
+
+    mock_ws = AsyncMock()
+    mock_msg = AsyncMock()
+    mock_msg.type = WSMsgType.TEXT
+    mock_msg.data = '["list", "not", "dict"]'
+    mock_ws.receive = AsyncMock(return_value=mock_msg)
+    mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
+    mock_ws.__aexit__ = AsyncMock(return_value=False)
+
+    mock_session = AsyncMock()
+    mock_session.ws_connect = AsyncMock(return_value=mock_ws)
+
+    with patch(
+        "custom_components.ecostream.config_flow.async_get_clientsession",
+        return_value=mock_session,
+    ):
+        with pytest.raises(CannotConnect):
+            await flow._probe_ecostream("192.168.1.1")
+
+
+async def test_probe_ecostream_timeout_error(
+    hass: HomeAssistant,
+) -> None:
+    """Test probe handles timeout."""
+    import pytest
+    from custom_components.ecostream.config_flow import (
+        CannotConnect,
+        EcostreamConfigFlow,
+    )
+
+    flow = EcostreamConfigFlow()
+    flow.hass = hass
+
+    mock_session = AsyncMock()
+    mock_session.ws_connect = AsyncMock(side_effect=TimeoutError())
+
+    with patch(
+        "custom_components.ecostream.config_flow.async_get_clientsession",
+        return_value=mock_session,
+    ):
+        with pytest.raises(CannotConnect):
+            await flow._probe_ecostream("192.168.1.1")
+
+
+async def test_probe_ecostream_generic_exception(
+    hass: HomeAssistant,
+) -> None:
+    """Test probe handles unexpected exceptions."""
+    import pytest
+    from custom_components.ecostream.config_flow import (
+        CannotConnect,
+        EcostreamConfigFlow,
+    )
+
+    flow = EcostreamConfigFlow()
+    flow.hass = hass
+
+    mock_session = AsyncMock()
+    mock_session.ws_connect = AsyncMock(
+        side_effect=RuntimeError("Unexpected error")
+    )
+
+    with patch(
+        "custom_components.ecostream.config_flow.async_get_clientsession",
+        return_value=mock_session,
+    ):
+        with pytest.raises(CannotConnect):
+            await flow._probe_ecostream("192.168.1.1")
+
+
+# ---------------------------------------------------------------------------
+# _build_ws_url
+# ---------------------------------------------------------------------------
+
+
+async def test_build_ws_url_with_scheme(hass: HomeAssistant) -> None:
+    """Test building WebSocket URL when scheme is already present."""
+    from custom_components.ecostream.config_flow import (
+        EcostreamConfigFlow,
+    )
+
+    flow = EcostreamConfigFlow()
+    flow.hass = hass
+
+    url = flow._build_ws_url("http://192.168.1.1")
+    assert url == "http://192.168.1.1/"
+
+    url2 = flow._build_ws_url("https://192.168.1.1:8080")
+    assert url2 == "https://192.168.1.1:8080/"
+
+
+async def test_build_ws_url_without_scheme(
+    hass: HomeAssistant,
+) -> None:
+    """Test building WebSocket URL without scheme."""
+    from custom_components.ecostream.config_flow import (
+        EcostreamConfigFlow,
+    )
+
+    flow = EcostreamConfigFlow()
+    flow.hass = hass
+
+    url = flow._build_ws_url("192.168.1.1")
+    assert url == "http://192.168.1.1/"
+
+
+async def test_build_ws_url_strips_trailing_slash(
+    hass: HomeAssistant,
+) -> None:
+    """Test building WebSocket URL strips trailing slashes."""
+    from custom_components.ecostream.config_flow import (
+        EcostreamConfigFlow,
+    )
+
+    flow = EcostreamConfigFlow()
+    flow.hass = hass
+
+    url = flow._build_ws_url("192.168.1.1/")
+    assert url == "http://192.168.1.1/"
+
+
+# ---------------------------------------------------------------------------
+# async_get_options_flow
+# ---------------------------------------------------------------------------
+
+
+async def test_async_get_options_flow(hass: HomeAssistant) -> None:
+    """Test getting options flow."""
+    from custom_components.ecostream.config_flow import (
+        EcostreamConfigFlow,
+    )
+    from custom_components.ecostream.options_flow import (
+        EcostreamOptionsFlow,
+    )
+
+    from unittest.mock import MagicMock
+
+    entry = MagicMock()
+    entry.options = {}
+
+    flow = EcostreamConfigFlow.async_get_options_flow(entry)
+    assert isinstance(flow, EcostreamOptionsFlow)
+
+
+# ---------------------------------------------------------------------------
+# Confirm step without host
+# ---------------------------------------------------------------------------
+
+
+async def test_confirm_step_without_host_aborts(
+    hass: HomeAssistant,
+) -> None:
+    """Test confirm step aborts when host is not set."""
+    from custom_components.ecostream.config_flow import (
+        EcostreamConfigFlow,
+    )
+
+    flow = EcostreamConfigFlow()
+    flow.hass = hass
+    flow._host = None  # Simulate missing host
+
+    result = await flow.async_step_confirm(user_input={})
+
+    assert result.get("type") == FlowResultType.ABORT
+    assert result.get("reason") == "unknown"

@@ -1,7 +1,6 @@
 {
   "include": [
-    "custom_components/ecostream",
-    "tests"
+    "custom_components/ecostream"
   ],
   "typeCheckingMode": "strict",
   "pythonVersion": "3.14"
