@@ -359,7 +359,7 @@ action:
       entity_id: switch.ecostream_preset_low
 ```
 
-### Set custom Qset from automation
+### Set custom Qset from automation [unsupported dev-only feature]
 
 ```yaml
 alias: EcoStream - Set custom Qset
