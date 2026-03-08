@@ -97,4 +97,6 @@ class EcostreamResetFilterButton(
             filter_days,
             new_filter_datetime,
         )
-        await self.coordinator.ws.send_json(payload)
+        await self.coordinator.async_send_config(
+            payload["config"], "reset_filter"
+        )

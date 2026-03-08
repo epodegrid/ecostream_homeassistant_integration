@@ -36,7 +36,7 @@ CONF_ALLOW_OVERRIDE_FILTER_DATE = "allow_override_filter_date"
 CONF_SUMMER_COMFORT_TEMP = "summer_comfort_temp"
 
 # Default push intervals (seconds)
-FAST_MODE_SECONDS = 20
+FAST_MODE_SECONDS = 5
 SLOW_PUSH_INTERVAL = 10
 
 # Fan presets
