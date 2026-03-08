@@ -3,7 +3,7 @@
 ![HA Compatibility](https://img.shields.io/badge/Home%20Assistant-2024.12+-blue.svg)  ![HACS Default](https://img.shields.io/badge/HACS-Custom-orange.svg)  ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 A **full-featured, modern and high-performance** Home Assistant integration for the **BUVA EcoStream** balanced ventilation unit.
-Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*, *diagnostics*, *WiFi info*, and an **Apple Home-style dashboard**.
+Supports *live push updates*, *fan control*, *boost automation*, *bypass switch control*, *diagnostics*, *WiFi info*, and an **Apple Home-style dashboard**.
 
 ![dashboard](https://github.com/Uber1337NL/ecostream_homeassistant_integration/blob/v2.0/custom_components/ecostream/docs/dashboard.png)
 ---
@@ -21,24 +21,20 @@ Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,
 ### 🌬 Ventilation Control
 
 - Modern HA FanEntity API
-- Percentage-based control (Qset)
-- Fast-mode when adjusting ventilation
-- Automatic restoration after Boost mode
+- Preset-based control (low / mid / high)
+- Fast-mode window after manual control actions
 
 ### 🚀 Advanced Boost Mode
 
-- Configurable duration (5/10/15/30 min)
-- Automatic CO₂-based cancellation
-- Countdown sensor (`boost_time_remaining`)
+- Configurable duration (5/10/15/30/60 min)
+- Uses `setpoint_high` as boost setpoint source
+- Remaining override time via sensor (`mode_time_left`)
 - Visual dashboard tile (optional Apple-style card)
 
-### 🔁 Bypass Valve
+### 🔁 Bypass Control
 
-- Supports:
-  - `OPEN`
-  - `CLOSE`
-  - `SET_POSITION (0–100%)`
-- Reports exact valve position
+- Bypass is exposed as a binary switch (`open` / `closed`)
+- Includes a diagnostic sensor for current bypass position
 
 ### 🌡 Sensors (rounded & refined)
 
@@ -87,33 +83,39 @@ Supports *live push updates*, *fan control*, *boost automation*, *bypass valve*,
 | Temperature ODA            | °C   | Outside air temperature                 | ✅                  |
 | Bypass Position            | %    | Current bypass valve position           | ✅                  |
 | Qset                       | m³/h | Active ventilation flow setpoint        | ✅                  |
-| Heat Recovery Efficiency   | %    | Calculated heat recovery efficiency     | ❌                  |
+| Heat Recovery Efficiency   | %    | Calculated heat recovery efficiency     | ✅                  |
 | Mode Time Left             | s    | Remaining time for active override mode | ✅                  |
 | Frost Protection Active    | —    | Whether frost protection is active      | ✅                  |
-| Fan Exhaust Speed          | rpm  | Exhaust fan speed                       | ❌                  |
-| Fan Supply Speed           | rpm  | Supply fan speed                        | ❌                  |
+| Fan Exhaust Speed          | rpm  | Exhaust fan speed                       | ✅                  |
+| Fan Supply Speed           | rpm  | Supply fan speed                        | ✅                  |
 | Schedule Enabled           | —    | Whether a schedule is active            | ✅                  |
 | Summer Comfort Enabled     | —    | Whether summer comfort mode is active   | ✅                  |
 | Summer Comfort Temp        | °C   | Summer comfort temperature threshold    | ✅                  |
 | Filter Replacement Date    | date | Date of last filter reset               | ✅ (diagnostic)     |
 | Filter Replacement Warning | —    | Whether filter replacement is overdue   | ✅ (diagnostic)     |
-| Uptime                     | —    | Device uptime formatted as `Xd Yh Zm`   | ❌ (diagnostic)     |
+| Uptime                     | —    | Device uptime formatted as `Xd Yh Zm`   | ✅ (diagnostic)     |
 | WiFi IP                    | —    | Device IP address                       | ✅                  |
 | WiFi SSID                  | —    | Connected WiFi network name             | ✅                  |
 | WiFi RSSI                  | dBm  | WiFi signal strength                    | ✅                  |
-| Boost Time Remaining       | s    | Remaining boost mode countdown          | ✅                  |
+| Setpoint Low               | m³/h | Configured low airflow preset           | ✅ (diagnostic)     |
+| Setpoint Mid               | m³/h | Configured mid airflow preset           | ✅ (diagnostic)     |
+| Setpoint High              | m³/h | Configured high airflow preset          | ✅ (diagnostic)     |
+| External CO₂               | ppm  | External CO₂ sensor value               | ✅                  |
 
 ### Controls
 
-| Entity         | Platform | Description                                                   |
-| -------------- | -------- | ------------------------------------------------------------- |
-| Ventilation    | Fan      | Set ventilation speed (percentage / preset: low / mid / high) |
-| Qset           | Number   | Directly set the ventilation flow in m³/h                     |
-| Bypass Valve   | Valve    | Open, close, or set bypass valve position (0–100%)            |
-| Schedule       | Switch   | Enable or disable the ventilation schedule                    |
-| Summer Comfort | Switch   | Enable or disable summer comfort mode                         |
-| Boost          | Switch   | Start or stop boost mode                                      |
-| Boost Duration | Select   | Configure boost duration (5 / 10 / 15 / 30 min)               |
+| Entity         | Platform | Description                                       |
+| -------------- | -------- | ------------------------------------------------- |
+| Ventilation    | Fan      | Preset control (`low` / `mid` / `high`)           |
+| Preset Low     | Switch   | Activate low preset override                      |
+| Preset Mid     | Switch   | Activate mid preset override                      |
+| Preset High    | Switch   | Activate high preset override                     |
+| Bypass Valve   | Switch   | Open or close bypass override                     |
+| Schedule       | Switch   | Enable or disable the ventilation schedule        |
+| Summer Comfort | Switch   | Enable or disable summer comfort mode             |
+| Boost          | Switch   | Start or stop boost mode                          |
+| Boost Duration | Select   | Configure boost duration (5 / 10 / 15 / 30 / 60)  |
+| Reset Filter   | Button   | Reset filter replacement date (if option enabled) |
 
 ---
 
@@ -130,14 +132,14 @@ This integration uses a **local push** model — the EcoStream device sends data
 
 ### Throttling
 
-To avoid excessive entity writes during rapid changes (e.g., when adjusting fan speed), the integration applies two configurable throttle windows:
+To avoid excessive entity writes during rapid changes (e.g., when adjusting fan speed), the integration applies two throttle windows:
 
 | Mode                 | Default | When active                  |
 | -------------------- | ------- | ---------------------------- |
-| Normal push interval | 3 s     | Idle / steady state          |
-| Fast push interval   | 1 s     | During active manual control |
+| Normal push interval | 10 s    | Idle / steady state          |
+| Fast-mode window     | 20 s    | After manual control actions |
 
-These can be adjusted under **Settings → Devices & Services → EcoStream → Configure**.
+These are currently fixed in the integration code.
 
 ### Reconnection
 
@@ -174,7 +176,7 @@ Monitor the outdoor temperature sensor and toggle Summer Comfort mode automatica
 ### 🔹 Option A — HACS (Custom Repository)
 
 1. Go to **HACS → Integrations → Custom repositories**
-2. Add:  [](https://github.com/epodegrid/ecostream_homeassistant_integration)
+2. Add: `https://github.com/epodegrid/ecostream_homeassistant_integration`
 3. Category: **Integration**
 4. Install & restart Home Assistant
 
@@ -232,14 +234,15 @@ If you installed manually, also delete the folder `config/custom_components/ecos
 
 ## ⚙️ Options
 
-### Update intervals
+### Available options
 
-You can adjust:
+You can configure:
 
-- Normal push interval
-- Fast push interval during manual control
-
-These settings are available in **Options → Integration settings**.
+- Filter replacement interval (days)
+- Preset override duration (minutes)
+- Boost duration (minutes)
+- Summer comfort target temperature (15-30 C)
+- Allow override filter date
 
 ---
 
@@ -268,10 +271,10 @@ These settings are available in **Options → Integration settings**.
 - Ensure the Schedule switch is **off** — an active schedule may override manual control.
 - Check if Boost mode is active; boost takes priority over manual fan control.
 
-### Boost does not cancel automatically
+### Boost does not stop automatically
 
-- Automatic CO₂-based cancellation only triggers if the eCO₂ sensor reports a value below the threshold.
-- Verify the eCO₂ sensor is returning valid data (not `unavailable`).
+- Boost runs for the configured boost duration.
+- You can stop it manually with `switch.ecostream_boost`.
 
 ### Enable debug logging
 
@@ -318,8 +321,8 @@ action:
 alias: EcoStream — Filter replacement reminder
 trigger:
   - platform: state
-    entity_id: binary_sensor.ecostream_filter_replacement_warning
-    to: "on"
+    entity_id: sensor.ecostream_filter_replacement_warning
+    to: "True"
 action:
   - service: notify.mobile_app
     data:
@@ -349,11 +352,9 @@ trigger:
   - platform: time
     at: "23:00:00"
 action:
-  - service: fan.set_percentage
+  - service: switch.turn_on
     target:
-      entity_id: fan.ecostream_ventilation
-    data:
-      percentage: 20
+      entity_id: switch.ecostream_preset_low
 ```
 
 ---
