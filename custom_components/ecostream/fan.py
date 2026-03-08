@@ -46,7 +46,7 @@ class EcostreamVentilationFan(
     """EcoStream main ventilation fan."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "ventilation"
+    _attr_name = "Ventilation"
     _attr_should_poll = False
     _attr_icon = "mdi:fan"
     coordinator: EcostreamDataUpdateCoordinator

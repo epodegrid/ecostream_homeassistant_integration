@@ -42,7 +42,7 @@ class EcostreamResetFilterButton(
     """Button to reset the filter replacement date."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "reset_filter"
+    _attr_name = "Reset Filter"
     _attr_icon = "mdi:air-filter"
 
     def __init__(

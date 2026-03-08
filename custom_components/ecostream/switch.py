@@ -148,7 +148,7 @@ class EcostreamConfigSwitch(EcostreamBaseEntity, SwitchEntity):
 
 
 class EcostreamScheduleSwitch(EcostreamConfigSwitch):
-    _attr_translation_key = "schedule_enabled"
+    _attr_name = "Schedule Enabled"
     _attr_icon = "mdi:calendar-clock"
     _config_key = "schedule_enabled"
     _log_action = "schedule"
@@ -171,7 +171,7 @@ class EcostreamScheduleSwitch(EcostreamConfigSwitch):
 
 
 class EcostreamSummerComfortSwitch(EcostreamConfigSwitch):
-    _attr_translation_key = "summer_comfort"
+    _attr_name = "Summer Comfort"
     _attr_icon = "mdi:weather-sunny"
     _config_key = "sum_com_enabled"
     _log_action = "summer comfort"
@@ -224,7 +224,7 @@ class EcostreamSummerComfortSwitch(EcostreamConfigSwitch):
 class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
     """Boost: tijdelijk hoge Qset met timer (default: 15 minuten)."""
 
-    _attr_translation_key = "boost"
+    _attr_name = "Boost"
     _attr_icon = "mdi:weather-windy"
 
     def __init__(
@@ -361,7 +361,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
 
 
 class EcostreamBypassSwitch(EcostreamBaseEntity, SwitchEntity):
-    _attr_translation_key = "bypass_valve"
+    _attr_name = "Bypass Valve"
     _attr_icon = "mdi:valve"
 
     def __init__(
@@ -414,7 +414,7 @@ class EcostreamPresetSwitch(EcostreamBaseEntity, SwitchEntity):
     ) -> None:
         super().__init__(coordinator, entry)
         self._preset = preset
-        self._attr_translation_key = f"preset_{preset}"
+        self._attr_name = f"Preset {preset.capitalize()}"
         self._attr_unique_id = f"{entry.entry_id}_preset_{preset}"
         self._attr_is_on = self._is_active()
 

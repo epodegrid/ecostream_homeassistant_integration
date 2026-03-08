@@ -37,7 +37,7 @@ class EcostreamBoostDurationSelect(
     CoordinatorEntity[EcostreamDataUpdateCoordinator], SelectEntity
 ):
     _attr_has_entity_name = True
-    _attr_translation_key = "boost_duration"
+    _attr_name = "Boost Duration"
     _attr_options = BOOST_OPTIONS
     _attr_icon = "mdi:timer-outline"
 
