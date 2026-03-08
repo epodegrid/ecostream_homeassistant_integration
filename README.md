@@ -467,7 +467,7 @@ This includes:
 
 - Original integration architecture and (reverse) engineering: @epodegrid
 - Rewrite and quality-scale improvements plus Apple-style UI: @Uber1337NL
-- Thanks to contributers and great testers: @jelle514 and @ricohageman
+- Thanks to contributers and testers: @bartw91, @jelle514 and @ricohageman
 - Special thanks to the HA community for guidance
 
 ---
