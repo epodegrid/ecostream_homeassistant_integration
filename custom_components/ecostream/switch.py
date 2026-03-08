@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import inspect
 import logging
 from typing import Any
 
@@ -79,15 +80,30 @@ class EcostreamBaseEntity(
     def _get_status(self) -> dict[str, Any]:
         return (self.coordinator.data or {}).get("status", {}) or {}
 
+    async def _apply_config(
+        self, cfg: dict[str, Any], action: str
+    ) -> None:
+        sender = getattr(self.coordinator, "async_send_config", None)
+        if sender is not None:
+            result = sender(cfg, action)
+            if inspect.isawaitable(result):
+                await result
+                return
 
-# ============================================================================
-# Schedule switch
-# ============================================================================
+        if not self.coordinator.ws:
+            _LOGGER.error(
+                "EcoStream WebSocket not connected, cannot send %s command",
+                action,
+            )
+            return
+
+        self.coordinator.mark_control_action()
+        await self.coordinator.ws.send_json({"config": cfg})
 
 
-class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
-    _attr_translation_key = "schedule_enabled"
-    _attr_icon = "mdi:calendar-clock"
+class EcostreamConfigSwitch(EcostreamBaseEntity, SwitchEntity):
+    _config_key: str
+    _log_action: str
 
     def __init__(
         self,
@@ -96,36 +112,48 @@ class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
     ) -> None:
         super().__init__(coordinator, entry)
         self._attr_is_on = bool(
-            self._get_config().get("schedule_enabled", False)
+            self._get_config().get(self._config_key, False)
         )
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._entry.entry_id}_schedule_enabled"
 
     @callback
     def _handle_coordinator_update(self) -> None:
         self._attr_is_on = bool(
-            self._get_config().get("schedule_enabled", False)
+            self._get_config().get(self._config_key, False)
         )
         self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self._apply({"schedule_enabled": True})
+        await self._apply_config(
+            {self._config_key: True}, self._log_action
+        )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self._apply({"schedule_enabled": False})
+        await self._apply_config(
+            {self._config_key: False}, self._log_action
+        )
 
-    async def _apply(self, cfg: dict[str, Any]) -> None:
-        if not self.coordinator.ws:
-            _LOGGER.error(
-                "EcoStream WebSocket not connected, cannot send schedule command"
-            )
-            return
 
-        payload = {"config": cfg}
-        self.coordinator.mark_control_action()
-        await self.coordinator.ws.send_json(payload)
+# ============================================================================
+# Schedule switch
+# ============================================================================
+
+
+class EcostreamScheduleSwitch(EcostreamConfigSwitch):
+    _attr_translation_key = "schedule_enabled"
+    _attr_icon = "mdi:calendar-clock"
+    _config_key = "schedule_enabled"
+    _log_action = "schedule"
+
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, entry)
+
+    @property
+    def unique_id(self) -> str:
+        return f"{self._entry.entry_id}_schedule_enabled"
 
 
 # ============================================================================
@@ -133,9 +161,11 @@ class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
 # ============================================================================
 
 
-class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
+class EcostreamSummerComfortSwitch(EcostreamConfigSwitch):
     _attr_translation_key = "summer_comfort"
     _attr_icon = "mdi:weather-sunny"
+    _config_key = "sum_com_enabled"
+    _log_action = "summer comfort"
 
     def __init__(
         self,
@@ -143,20 +173,10 @@ class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
         entry: ConfigEntry,
     ) -> None:
         super().__init__(coordinator, entry)
-        self._attr_is_on = bool(
-            self._get_config().get("sum_com_enabled", False)
-        )
 
     @property
     def unique_id(self) -> str:
         return f"{self._entry.entry_id}_summer_comfort"
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        self._attr_is_on = bool(
-            self._get_config().get("sum_com_enabled", False)
-        )
-        self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         opts = getattr(self._entry, "options", {}) or {}
@@ -181,23 +201,10 @@ class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
             )
             target_temp = DEFAULT_SUMMER_COMFORT_TEMP
 
-        await self._apply(
-            {"sum_com_enabled": True, "sum_com_temp": target_temp}
+        await self._apply_config(
+            {"sum_com_enabled": True, "sum_com_temp": target_temp},
+            self._log_action,
         )
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        await self._apply({"sum_com_enabled": False})
-
-    async def _apply(self, cfg: dict[str, Any]) -> None:
-        if not self.coordinator.ws:
-            _LOGGER.error(
-                "EcoStream WebSocket not connected, cannot send summer comfort command"
-            )
-            return
-
-        payload = {"config": cfg}
-        self.coordinator.mark_control_action()
-        await self.coordinator.ws.send_json(payload)
 
 
 # ============================================================================
@@ -301,15 +308,13 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
             }
         }
 
-        self.coordinator.mark_control_action()
-
         _LOGGER.debug(
             "Boost → ON (qset=%.1f, duration=%ss)",
             qset,
             duration,
         )
 
-        await self.coordinator.ws.send_json(payload)
+        await self._apply_config(payload["config"], "boost")
 
     # ------------------------------
     # Boost UIT (handmatig)
@@ -336,8 +341,6 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
             }
         }
 
-        self.coordinator.mark_control_action()
-
         _LOGGER.debug("Boost → OFF (clear man_override_set_time)")
 
-        await self.coordinator.ws.send_json(payload)
+        await self._apply_config(payload["config"], "boost")

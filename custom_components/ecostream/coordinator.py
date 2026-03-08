@@ -207,6 +207,20 @@ class EcostreamDataUpdateCoordinator(
     def mark_control_action(self) -> None:
         self._fast_mode_until = time.time() + FAST_MODE_SECONDS
 
+    async def async_send_config(
+        self, cfg: dict[str, Any], action: str
+    ) -> bool:
+        if not self.ws:
+            _LOGGER.error(
+                "EcoStream WebSocket not connected, cannot send %s command",
+                action,
+            )
+            return False
+
+        self.mark_control_action()
+        await self.ws.send_json({"config": cfg})
+        return True
+
     # ==========================================================
     # Message Handling
     # ==========================================================
