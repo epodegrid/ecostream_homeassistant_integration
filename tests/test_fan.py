@@ -551,7 +551,7 @@ async def test_async_setup_entry_registers_service():
     ) as mock_platform_module:
         mock_platform_module.get.return_value = platform
 
-        await async_setup_entry(hass, entry, AsyncMock())
+        await async_setup_entry(hass, entry, MagicMock())
 
         platform.async_register_entity_service.assert_called_once()
         call_args = platform.async_register_entity_service.call_args
