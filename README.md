@@ -221,6 +221,67 @@ Click the discovered device → **the IP address will now be pre-filled automati
 
 ---
 
+## 📊 Dashboard Setup (Optional)
+
+The repository includes a ready-to-use Lovelace dashboard template:
+
+- `custom_components/ecostream/docs/dashboard.yaml`
+
+### Can this dashboard be added automatically during integration install?
+
+Short answer: **not reliably in a supported way**.
+
+Home Assistant custom integrations are not intended to auto-create or auto-inject complete Lovelace dashboards during install. Dashboards are user-owned UI configuration (YAML or storage mode), so setup is normally a manual one-time step.
+
+### Requirements
+
+For `dashboard.yaml` to render correctly, install these Lovelace frontend packages/resources:
+
+1. `mini-graph-card`
+2. `button-card`
+3. `Mushroom` (for `mushroom-title-card`)
+4. `card-mod`
+
+Recommended install method: **HACS → Frontend**.
+
+Also ensure:
+
+1. The EcoStream integration is installed and entities exist.
+2. You are on a modern Home Assistant version (the dashboard uses `sections` view layout).
+3. Theme `ios-light-mode` is optional; if missing, remove/replace the `theme:` line.
+
+### Install dashboard.yaml manually
+
+1. Copy `custom_components/ecostream/docs/dashboard.yaml` to your HA config folder, for example:
+   - `/config/dashboards/ecostream.yaml`
+2. Add a Lovelace dashboard entry to `configuration.yaml`:
+
+```yaml
+lovelace:
+  dashboards:
+    ecostream:
+      mode: yaml
+      title: EcoStream
+      icon: mdi:fan
+      show_in_sidebar: true
+      filename: dashboards/ecostream.yaml
+```
+
+3. Restart Home Assistant (or reload Lovelace/resources where applicable).
+
+### Add required frontend resources
+
+If HACS did not auto-register resources, add them manually in **Settings → Dashboards → Resources**:
+
+1. `/hacsfiles/mini-graph-card/mini-graph-card-bundle.js` (type: `module`)
+2. `/hacsfiles/button-card/button-card.js` (type: `module`)
+3. `/hacsfiles/lovelace-mushroom/mushroom.js` (type: `module`)
+4. `/hacsfiles/lovelace-card-mod/card-mod.js` (type: `module`)
+
+Note: if you use a custom icon set for `far:sun`, make sure that icon pack is installed. Otherwise replace it with an `mdi:` icon.
+
+---
+
 ## 🗑 Removing the Integration
 
 1. Go to **Settings → Devices & Services**
