@@ -12,13 +12,17 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from custom_components.ecostream.const import (
-    CONF_FAST_PUSH_INTERVAL,
-    CONF_PUSH_INTERVAL,
-)
+from custom_components.ecostream import const as ecostream_const
 from custom_components.ecostream.diagnostics import (
     _validate_icons,
     async_get_config_entry_diagnostics,
+)
+
+CONF_PUSH_INTERVAL = getattr(
+    ecostream_const, "CONF_PUSH_INTERVAL", "push_interval"
+)
+CONF_FAST_PUSH_INTERVAL = getattr(
+    ecostream_const, "CONF_FAST_PUSH_INTERVAL", "fast_push_interval"
 )
 
 

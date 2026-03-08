@@ -3,6 +3,7 @@ from __future__ import annotations
 from homeassistant.exceptions import ConfigEntryNotReady
 from pathlib import Path
 import sys
+from typing import Final, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiohttp import ClientError, WSMsgType
@@ -10,19 +11,30 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+import custom_components.ecostream as ecostream
 from custom_components.ecostream import (
-    _probe_host,
     async_setup_entry,
     async_unload_entry,
-)
-from custom_components.ecostream.const import (
-    CONF_FAST_PUSH_INTERVAL,
-    CONF_PUSH_INTERVAL,
-    DOMAIN,
+    const as ecostream_const,
 )
 
+CONF_PUSH_INTERVAL: Final[str] = cast(
+    str, getattr(ecostream_const, "CONF_PUSH_INTERVAL", "push_interval")
+)
+DOMAIN: Final[str] = cast(str, ecostream_const.DOMAIN)
+CONF_FAST_PUSH_INTERVAL: Final[str] = cast(
+    str,
+    getattr(
+        ecostream_const, "CONF_FAST_PUSH_INTERVAL", "fast_push_interval"
+    ),
+)
+probe_host = cast(AsyncMock, (ecostream, "_probe_host"))
 
-def _make_ws_session(msg_type=WSMsgType.TEXT, side_effect=None):
+
+def _make_ws_session(
+    msg_type: WSMsgType = WSMsgType.TEXT,
+    side_effect: Exception | None = None,
+):
     mock_ws = AsyncMock()
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
     mock_ws.__aexit__ = AsyncMock(return_value=False)
@@ -50,7 +62,7 @@ async def test_probe_host_success():
         "custom_components.ecostream.async_get_clientsession",
         return_value=session,
     ):
-        await _probe_host(hass, "192.168.1.1")
+        await probe_host(hass, "192.168.1.1")
 
 
 @pytest.mark.asyncio
@@ -61,7 +73,7 @@ async def test_probe_host_binary_message_success():
         "custom_components.ecostream.async_get_clientsession",
         return_value=session,
     ):
-        await _probe_host(hass, "192.168.1.1")
+        await probe_host(hass, "192.168.1.1")
 
 
 @pytest.mark.asyncio
@@ -73,7 +85,7 @@ async def test_probe_host_unexpected_ws_type_raises():
         return_value=session,
     ):
         with pytest.raises(ConfigEntryNotReady):
-            await _probe_host(hass, "192.168.1.1")
+            await probe_host(hass, "192.168.1.1")
 
 
 @pytest.mark.asyncio
@@ -86,7 +98,7 @@ async def test_probe_host_client_error_raises():
         return_value=session,
     ):
         with pytest.raises(ConfigEntryNotReady):
-            await _probe_host(hass, "192.168.1.1")
+            await probe_host(hass, "192.168.1.1")
 
 
 @pytest.mark.asyncio
@@ -99,7 +111,7 @@ async def test_probe_host_timeout_raises():
         return_value=session,
     ):
         with pytest.raises(ConfigEntryNotReady):
-            await _probe_host(hass, "192.168.1.1")
+            await probe_host(hass, "192.168.1.1")
 
 
 @pytest.mark.asyncio
@@ -114,7 +126,7 @@ async def test_probe_host_unexpected_exception_raises():
         return_value=session,
     ):
         with pytest.raises(ConfigEntryNotReady):
-            await _probe_host(hass, "192.168.1.1")
+            await probe_host(hass, "192.168.1.1")
 
 
 @pytest.mark.asyncio
@@ -125,7 +137,7 @@ async def test_probe_host_adds_scheme_if_missing():
         "custom_components.ecostream.async_get_clientsession",
         return_value=session,
     ):
-        await _probe_host(hass, "192.168.1.1")
+        await probe_host(hass, "192.168.1.1")
     call_url = session.ws_connect.call_args[0][0]
     assert call_url.startswith("http://")
 
@@ -133,9 +145,6 @@ async def test_probe_host_adds_scheme_if_missing():
 # ---------------------------------------------------------------------------
 # async_setup
 # ---------------------------------------------------------------------------
-
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +172,8 @@ async def test_async_setup_entry_success():
         "custom_components.ecostream._probe_host", new=AsyncMock()
     ):
         with patch(
-            "custom_components.ecostream._cleanup_stale_devices", new=AsyncMock()
+            "custom_components.ecostream._cleanup_stale_devices",
+            new=AsyncMock(),
         ):
             with patch(
                 "custom_components.ecostream.EcostreamDataUpdateCoordinator",
@@ -196,7 +206,8 @@ async def test_async_setup_entry_uses_default_options():
         "custom_components.ecostream._probe_host", new=AsyncMock()
     ):
         with patch(
-            "custom_components.ecostream._cleanup_stale_devices", new=AsyncMock()
+            "custom_components.ecostream._cleanup_stale_devices",
+            new=AsyncMock(),
         ):
             with patch(
                 "custom_components.ecostream.EcostreamDataUpdateCoordinator",

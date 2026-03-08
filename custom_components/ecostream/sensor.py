@@ -311,11 +311,11 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
     EcostreamSensorDescription(
         key="wifi_rssi",
         name="WiFi RSSI",
-        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
         native_unit_of_measurement="dBm",
+        state_class=SensorStateClass.MEASUREMENT,
         translation_key="wifi_rssi",
         icon="mdi:wifi-strength-2",
-        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: (
             None
             if (v := _deep_get(d, ["comm_wifi", "rssi"])) is None

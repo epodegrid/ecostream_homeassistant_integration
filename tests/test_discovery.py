@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 import sys
 from unittest.mock import AsyncMock, MagicMock
@@ -14,9 +15,9 @@ from custom_components.ecostream.discovery import (
 )
 
 
-def _make_hass(configured_hosts=None):
+def _make_hass(configured_hosts: Sequence[str] | None = None):
     hass = MagicMock()
-    entries = []
+    entries: list[MagicMock] = []
     for host in configured_hosts or []:
         entry = MagicMock()
         entry.data = {"host": host}
@@ -57,7 +58,9 @@ async def test_zeroconf_skips_already_configured():
     hass = _make_hass(configured_hosts=["192.168.1.1"])
     info = MagicMock()
     info.name = "EcoStream._tcp.local."
-    info.ip_address = MagicMock(__str__=lambda self: "192.168.1.1")
+    ip_address = MagicMock()
+    ip_address.__str__ = MagicMock(return_value="192.168.1.1")
+    info.ip_address = ip_address
     await async_process_zeroconf(hass, info)
     hass.async_create_task.assert_not_called()
 
@@ -67,7 +70,9 @@ async def test_zeroconf_starts_config_flow_for_new_device():
     hass = _make_hass()
     info = MagicMock()
     info.name = "EcoStream._tcp.local."
-    info.ip_address = MagicMock(__str__=lambda self: "192.168.1.99")
+    ip_address = MagicMock()
+    ip_address.__str__ = MagicMock(return_value="192.168.1.99")
+    info.ip_address = ip_address
     await async_process_zeroconf(hass, info)
     hass.async_create_task.assert_called_once()
 

@@ -95,7 +95,9 @@ class EcostreamScheduleSwitch(EcostreamBaseEntity, SwitchEntity):
     ) -> None:
         super().__init__(coordinator, entry)
         self.entity_id = "switch.ecostream_schedule_enabled"
-        self._attr_is_on = bool(self._get_config().get("schedule_enabled", False))
+        self._attr_is_on = bool(
+            self._get_config().get("schedule_enabled", False)
+        )
 
     @property
     def unique_id(self) -> str:
@@ -142,7 +144,9 @@ class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
     ) -> None:
         super().__init__(coordinator, entry)
         self.entity_id = "switch.ecostream_summer_comfort"
-        self._attr_is_on = bool(self._get_config().get("sum_com_enabled", False))
+        self._attr_is_on = bool(
+            self._get_config().get("sum_com_enabled", False)
+        )
 
     @property
     def unique_id(self) -> str:
@@ -173,15 +177,13 @@ class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
         await self.coordinator.ws.send_json(payload)
 
 
-
-
 # ============================================================================
 # Boost switch
 # ============================================================================
 
 
 class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
-    """Boost: tijdelijk hoge Qset met timer op de unit zelf."""
+    """Boost: tijdelijk hoge Qset met timer (default: 15 minuten)."""
 
     _attr_translation_key = "boost"
     _attr_icon = "mdi:weather-windy"
@@ -197,7 +199,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             self._attr_is_on = False
 
     @property
@@ -211,7 +213,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             self._attr_is_on = False
         self.async_write_ha_state()
 
@@ -239,7 +241,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
 
         try:
             qset = float(qset_raw)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             qset = float(BOOST_QSET)
 
         # ----------------------------
@@ -252,7 +254,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         )
         try:
             minutes = int(minutes)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             minutes = DEFAULT_BOOST_DURATION_MINUTES
 
         if minutes < 1:
