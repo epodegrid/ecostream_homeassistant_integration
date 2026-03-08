@@ -1,14 +1,14 @@
 blueprint:
-  name: EcoStream Intelligent Ventilation Control 
+  name: EcoStream Intelligent Ventilation Control
   description: >
     PID-achtige regeling voor BUVA EcoStream op basis van CO₂, RV%, TVOC,
     met dag/nachtprofielen en ramping (60–300 m³/h).
     Filters zijn ingesteld op de 'ecostream' integratie voor makkelijk selecteren.
   domain: automation
-
   input:
     co2_sensor:
-      name: CO₂ sensor
+      name: eCO₂ Return sensor
+      description: De eCO₂ sensor in de retourlucht (sensor.ecostream_eco2_return).
       selector:
         entity:
           domain: sensor
@@ -16,7 +16,8 @@ blueprint:
           integration: ecostream
 
     humidity_sensor:
-      name: Humidity (RV%) sensor
+      name: Humidity Return sensor
+      description: De luchtvochtigheid sensor in de retourlucht (sensor.ecostream_humidity_return).
       selector:
         entity:
           domain: sensor
@@ -24,29 +25,32 @@ blueprint:
           integration: ecostream
 
     tvoc_sensor:
-      name: TVOC sensor
+      name: TVOC Return sensor
+      description: De TVOC sensor in de retourlucht (sensor.ecostream_tvoc_return).
       selector:
         entity:
           domain: sensor
           integration: ecostream
 
     qset_number:
-      name: EcoStream Qset (SET)
-      description: De number-entity om de capaciteit in te stellen (bijv. number.qset).
+      name: Qset (Capaciteit instelling)
+      description: >
+        Een helper input_number entity om de ventilatie capaciteit in te stellen.
+        Maak eerst een helper aan via Settings > Devices & Services > Helpers > Create Helper > Number.
+        Stel min=60, max=350, step=5, unit=m³/h in.
       selector:
         entity:
           domain: number
-          integration: ecostream
 
     day_start:
       name: Start dagmodus
-      default: "07:00"
+      default: '07:00'
       selector:
         time: {}
 
     night_start:
       name: Start nachtmodus
-      default: "23:00"
+      default: '23:00'
       selector:
         time: {}
 
@@ -73,7 +77,7 @@ max_exceeded: silent
 
 trigger:
   - platform: time_pattern
-    minutes: "/1"
+    minutes: '/1'
 
 variables:
   # Mapping inputs naar variabelen (geen templates hier!)
@@ -87,9 +91,9 @@ variables:
   qset_max: !input max_qset
 
   # Sensorwaarden ophalen
-  co2: "{{ states(co2_ent) | float(400) }}"
-  rv: "{{ states(rv_ent) | float(40) }}"
-  tvoc: "{{ states(tvoc_ent) | float(0) }}"
+  co2: '{{ states(co2_ent) | float(400) }}'
+  rv: '{{ states(rv_ent) | float(40) }}'
+  tvoc: '{{ states(tvoc_ent) | float(0) }}'
 
   now_time: "{{ now().strftime('%H:%M') }}"
 
@@ -103,9 +107,9 @@ variables:
 
   # Normalisatie (Fix voor 'float object is not iterable')
   # We gebruiken de [waarde, limiet] | min/max syntax
-  co2_norm: "{{ [[(co2 - 400) / 1600, 0] | max, 1] | min }}"
-  rv_norm: "{{ [[(rv - 35) / 35, 0] | max, 1] | min }}"
-  tvoc_norm: "{{ [[(tvoc / 600), 0] | max, 1] | min }}"
+  co2_norm: '{{ [[(co2 - 400) / 1600, 0] | max, 1] | min }}'
+  rv_norm: '{{ [[(rv - 35) / 35, 0] | max, 1] | min }}'
+  tvoc_norm: '{{ [[(tvoc / 600), 0] | max, 1] | min }}'
 
   # Gewichtsfactoren (totaal = 1.0)
   w_co2: 0.60
@@ -120,8 +124,8 @@ variables:
     }}
 
   # Overdag mag hij harder boosten (gain 1.4), 's nachts rustiger (gain 0.7)
-  profile_gain: "{{ 1.4 if is_day else 0.7 }}"
-  final_score: "{{ [score * profile_gain, 1] | min }}"
+  profile_gain: '{{ 1.4 if is_day else 0.7 }}'
+  final_score: '{{ [score * profile_gain, 1] | min }}'
 
   # Berekening van de gewenste Qset
   target_qset: >
@@ -133,19 +137,19 @@ variables:
 action:
   - variables:
       # We lezen de huidige stand van de number-entity
-      current: "{{ states(qset_ent) | float(0) }}"
-      target: "{{ target_qset }}"
-      diff: "{{ target - current }}"
+      current: '{{ states(qset_ent) | float(0) }}'
+      target: '{{ target_qset }}'
+      diff: '{{ target - current }}'
 
   # Anti-jitter: Alleen aanpassen als het verschil groot genoeg is (>= 10 m³/h)
   - choose:
-      - conditions: "{{ diff | abs >= 10 }}"
+      - conditions: '{{ diff | abs >= 10 }}'
         sequence:
           - service: number.set_value
             target:
-              entity_id: "{{ qset_ent }}"
+              entity_id: '{{ qset_ent }}'
             data:
               # Ramping: we gaan niet in één keer naar target, maar 1/3e van het verschil
               # Dit zorgt voor een rustige overgang van de motor
-              value: "{{ (current + (diff / 3)) | round(0) | int }}"
+              value: '{{ (current + (diff / 3)) | round(0) | int }}'
     default: []
