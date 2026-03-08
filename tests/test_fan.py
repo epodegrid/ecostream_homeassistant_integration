@@ -398,6 +398,167 @@ def test_calculate_preset_no_setpoints_returns_none():
     assert fan._calculate_preset(100) is None
 
 
+# Additional tests for coverage improvement
+def test_get_setpoint_with_invalid_value():
+    """Test _get_setpoint when setpoint value cannot be converted to float."""
+    fan, _ = _make_fan(
+        {
+            "config": {
+                "setpoint_low": "invalid",
+                "setpoint_mid": 180,
+                "setpoint_high": 270,
+            }
+        }
+    )
+    assert fan._get_setpoint(PRESET_LOW) is None
+
+
+def test_get_setpoint_with_none_value():
+    """Test _get_setpoint when setpoint value is None."""
+    fan, _ = _make_fan(
+        {
+            "config": {
+                "setpoint_low": None,
+                "setpoint_mid": 180,
+                "setpoint_high": 270,
+            }
+        }
+    )
+    assert fan._get_setpoint(PRESET_LOW) is None
+
+
+def test_get_setpoint_with_invalid_preset():
+    """Test _get_setpoint with invalid preset name."""
+    fan, _ = _make_fan(
+        {
+            "config": {
+                "setpoint_low": 90,
+                "setpoint_mid": 180,
+                "setpoint_high": 270,
+            }
+        }
+    )
+    assert fan._get_setpoint("invalid_preset") is None
+
+
+@pytest.mark.asyncio
+async def test_set_preset_mode_with_async_send_config_awaitable():
+    """Test async_set_preset_mode when coordinator has async_send_config that returns awaitable."""
+    fan, coordinator = _make_fan(
+        {
+            "config": {
+                "setpoint_low": 90,
+                "setpoint_mid": 180,
+                "setpoint_high": 270,
+            }
+        }
+    )
+    coordinator.async_send_config = AsyncMock(return_value=None)
+
+    await fan.async_set_preset_mode(PRESET_MID)
+
+    coordinator.async_send_config.assert_called_once()
+    cast(MagicMock, fan.async_write_ha_state).assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_set_preset_mode_with_async_send_config_non_awaitable():
+    """Test async_set_preset_mode when coordinator has async_send_config that returns non-awaitable."""
+    fan, coordinator = _make_fan(
+        {
+            "config": {
+                "setpoint_low": 90,
+                "setpoint_mid": 180,
+                "setpoint_high": 270,
+            }
+        }
+    )
+    coordinator.async_send_config = MagicMock(return_value=None)
+
+    await fan.async_set_preset_mode(PRESET_MID)
+
+    coordinator.async_send_config.assert_called_once()
+    coordinator.mark_control_action.assert_called_once()
+    coordinator.ws.send_json.assert_called_once()
+    cast(MagicMock, fan.async_write_ha_state).assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_set_qset_with_async_send_config_awaitable():
+    """Test async_set_qset when coordinator has async_send_config that returns awaitable."""
+    fan, coordinator = _make_fan()
+    coordinator.async_send_config = AsyncMock(return_value=None)
+
+    await fan.async_set_qset(200)
+
+    coordinator.async_send_config.assert_called_once()
+    cast(MagicMock, fan.async_write_ha_state).assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_set_qset_with_async_send_config_non_awaitable():
+    """Test async_set_qset when coordinator has async_send_config that returns non-awaitable."""
+    fan, coordinator = _make_fan()
+    coordinator.async_send_config = MagicMock(return_value=None)
+
+    await fan.async_set_qset(200)
+
+    coordinator.async_send_config.assert_called_once()
+    coordinator.mark_control_action.assert_called_once()
+    coordinator.ws.send_json.assert_called_once()
+    cast(MagicMock, fan.async_write_ha_state).assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_set_qset_stores_calculated_preset():
+    """Test that async_set_qset stores the calculated preset mode."""
+    fan, _ = _make_fan(
+        {
+            "config": {
+                "setpoint_low": 90,
+                "setpoint_mid": 180,
+                "setpoint_high": 270,
+            }
+        }
+    )
+
+    await fan.async_set_qset(95)
+
+    assert fan._attr_preset_mode == PRESET_LOW
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_registers_service():
+    """Test that async_setup_entry registers the set_qset service."""
+    import custom_components.ecostream.fan as fan_module
+    from custom_components.ecostream.fan import async_setup_entry
+
+    # Reset the global flag for testing
+    fan_module._qset_service_registered = False
+
+    coordinator = MagicMock()
+    entry = MagicMock(spec=ConfigEntry)
+    entry.runtime_data = coordinator
+    entry.entry_id = "test_entry"
+
+    hass = MagicMock()
+
+    platform = MagicMock()
+    platform.async_register_entity_service = MagicMock()
+
+    with patch(
+        "custom_components.ecostream.fan.current_platform"
+    ) as mock_platform_module:
+        mock_platform_module.get.return_value = platform
+
+        await async_setup_entry(hass, entry, AsyncMock())
+
+        platform.async_register_entity_service.assert_called_once()
+        call_args = platform.async_register_entity_service.call_args
+        assert call_args[0][0] == "set_qset"
+        assert "qset" in call_args[0][1]
+
+
 @pytest.mark.asyncio
 async def test_turn_off_marks_control_action():
     fan, coordinator = _make_fan(
