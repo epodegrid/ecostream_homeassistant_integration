@@ -1,5 +1,5 @@
 colorlog
-homeassistant==2026.03
+homeassistant==2026.1.0
 pip
 ruff
 pylint
