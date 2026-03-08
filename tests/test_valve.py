@@ -10,8 +10,13 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.ecostream.const import DOMAIN
 from custom_components.ecostream.valve import EcostreamBypassValve
 
 
@@ -175,3 +180,59 @@ async def test_set_position_updates_local_state():
     cast(
         MagicMock, valve.async_write_ha_state
     ).assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_valve_set_position(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_client: MagicMock,
+) -> None:
+    """Test setting valve position."""
+    from homeassistant.components.valve import (
+        ATTR_CURRENT_POSITION,
+        ATTR_POSITION,
+        DOMAIN as VALVE_DOMAIN,
+        SERVICE_SET_VALVE_POSITION,
+    )
+
+    mock_config_entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.ecostream.EcostreamApiClient",
+        return_value=mock_client,
+    ):
+        await hass.config_entries.async_setup(
+            mock_config_entry.entry_id
+        )
+        await hass.async_block_till_done()
+
+    # Update mock data to reflect new position
+    mock_client.async_get_data.return_value = {
+        "status": {
+            "connect_status": 1,
+            "valve_position": 75,
+        }
+    }
+
+    await hass.services.async_call(
+        VALVE_DOMAIN,
+        SERVICE_SET_VALVE_POSITION,
+        {
+            ATTR_ENTITY_ID: "valve.ecostream_192_168_1_1",
+            ATTR_POSITION: 75,
+        },
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    mock_client.async_set_valve_position.assert_called_once_with(75)
+
+    # Force coordinator update to reflect new state
+    coordinator = hass.data[DOMAIN][mock_config_entry.entry_id]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    state = hass.states.get("valve.ecostream_192_168_1_1")
+    assert state
+    assert state.attributes.get(ATTR_CURRENT_POSITION) == 75

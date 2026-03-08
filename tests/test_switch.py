@@ -9,8 +9,19 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from homeassistant.components.switch import (
+    DOMAIN as SWITCH_DOMAIN,
+    SERVICE_TURN_ON,
+)
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from custom_components.ecostream.api import (
+    EcostreamApiClientCommunicationError,
+)
 
 from custom_components.ecostream.const import (
     BOOST_QSET,
@@ -21,6 +32,7 @@ from custom_components.ecostream.switch import (
     EcostreamScheduleSwitch,
     EcostreamSummerComfortSwitch,
 )
+from tests.common import MockConfigEntry
 
 
 def _make_entity(EntityClass, data=None, ws=True):
@@ -150,12 +162,6 @@ async def test_summer_comfort_no_ws():
     await entity.async_turn_on()
 
 
-
-
-
-
-
-
 # ---------------------------------------------------------------------------
 # EcostreamBoostSwitch
 # ---------------------------------------------------------------------------
@@ -270,3 +276,39 @@ async def test_boost_turn_on_marks_control_action():
     coordinator.boost_duration_minutes = 15
     await entity.async_turn_on()
     coordinator.mark_control_action.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Error handling tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_switch_turn_on_error(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_client: MagicMock,
+) -> None:
+    """Test error handling when turning on switch."""
+    mock_config_entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.ecostream.EcostreamApiClient",
+        return_value=mock_client,
+    ):
+        await hass.config_entries.async_setup(
+            mock_config_entry.entry_id
+        )
+        await hass.async_block_till_done()
+
+    mock_client.async_set_bypass.side_effect = (
+        EcostreamApiClientCommunicationError("Error")
+    )
+
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            SWITCH_DOMAIN,
+            SERVICE_TURN_ON,
+            {ATTR_ENTITY_ID: "switch.ecostream_192_168_1_1_bypass"},
+            blocking=True,
+        )

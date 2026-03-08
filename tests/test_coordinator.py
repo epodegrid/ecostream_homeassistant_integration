@@ -292,3 +292,30 @@ async def test_async_update_data_returns_data():
     coord = _make_coordinator(data={"key": "val"})
     result = await coord._async_update_data()
     assert result == {"key": "val"}
+
+
+@pytest.mark.asyncio
+async def test_coordinator_update_timeout(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+) -> None:
+    """Test coordinator handles timeout errors."""
+    mock_config_entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.ecostream.coordinator.EcostreamApiClient"
+    ) as mock_client:
+        mock_instance = mock_client.return_value
+        mock_instance.async_get_data.side_effect = asyncio.TimeoutError(
+            "Timeout"
+        )
+
+        await hass.config_entries.async_setup(
+            mock_config_entry.entry_id
+        )
+        await hass.async_block_till_done()
+
+        coordinator = hass.data[DOMAIN][mock_config_entry.entry_id]
+
+        # Coordinator should handle timeout gracefully
+        assert coordinator.last_update_success is False

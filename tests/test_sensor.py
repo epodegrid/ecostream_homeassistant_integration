@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 import sys
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -14,20 +15,31 @@ from custom_components.ecostream.sensor import (
     SENSOR_DESCRIPTIONS,
     EcostreamBaseSensor,
     EcostreamSensorDescription,
-    _calc_efficiency,
-    _deep_get,
-    _format_uptime,
+    _calc_efficiency,  # pyright: ignore[reportPrivateUsage]
+    _deep_get,  # pyright: ignore[reportPrivateUsage]
+    _format_uptime,  # pyright: ignore[reportPrivateUsage]
 )
 
 
-def _make_sensor(description, data=None):
+def _make_sensor(
+    description: EcostreamSensorDescription,
+    data: dict[str, Any] | None = None,
+) -> EcostreamBaseSensor:
     coordinator = MagicMock()
     coordinator.data = data or {}
     coordinator.host = "192.168.1.1"
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry"
+
+    def _mock_coordinator_entity_init(
+        self: CoordinatorEntity[Any], c: Any
+    ) -> None:
+        self.coordinator = c
+        # Add required attributes that CoordinatorEntity normally sets
+        self._attr_should_poll = False  # pyright: ignore[reportPrivateUsage]
+
     with patch.object(
-        CoordinatorEntity, "__init__", lambda self, c: setattr(self, "coordinator", c)
+        CoordinatorEntity, "__init__", _mock_coordinator_entity_init
     ):
         sensor = EcostreamBaseSensor(coordinator, entry, description)
     sensor.async_write_ha_state = MagicMock()
@@ -95,17 +107,35 @@ def test_format_uptime_exact_day():
 
 
 def test_calc_efficiency_normal():
-    data = {"status": {"sensor_temp_eta": 20.0, "sensor_temp_eha": 5.0, "sensor_temp_oda": 0.0}}
+    data = {
+        "status": {
+            "sensor_temp_eta": 20.0,
+            "sensor_temp_eha": 5.0,
+            "sensor_temp_oda": 0.0,
+        }
+    }
     assert _calc_efficiency(data) == 75.0
 
 
 def test_calc_efficiency_zero_denominator():
-    data = {"status": {"sensor_temp_eta": 10.0, "sensor_temp_eha": 5.0, "sensor_temp_oda": 10.0}}
+    data = {
+        "status": {
+            "sensor_temp_eta": 10.0,
+            "sensor_temp_eha": 5.0,
+            "sensor_temp_oda": 10.0,
+        }
+    }
     assert _calc_efficiency(data) is None
 
 
 def test_calc_efficiency_negative_denominator():
-    data = {"status": {"sensor_temp_eta": 5.0, "sensor_temp_eha": 10.0, "sensor_temp_oda": 10.0}}
+    data = {
+        "status": {
+            "sensor_temp_eta": 5.0,
+            "sensor_temp_eha": 10.0,
+            "sensor_temp_oda": 10.0,
+        }
+    }
     assert _calc_efficiency(data) is None
 
 
@@ -114,12 +144,24 @@ def test_calc_efficiency_missing_keys():
 
 
 def test_calc_efficiency_clamps_to_100():
-    data = {"status": {"sensor_temp_eta": 20.0, "sensor_temp_eha": -10.0, "sensor_temp_oda": 0.0}}
+    data = {
+        "status": {
+            "sensor_temp_eta": 20.0,
+            "sensor_temp_eha": -10.0,
+            "sensor_temp_oda": 0.0,
+        }
+    }
     assert _calc_efficiency(data) == 100.0
 
 
 def test_calc_efficiency_clamps_to_0():
-    data = {"status": {"sensor_temp_eta": 20.0, "sensor_temp_eha": 25.0, "sensor_temp_oda": 0.0}}
+    data = {
+        "status": {
+            "sensor_temp_eta": 20.0,
+            "sensor_temp_eha": 25.0,
+            "sensor_temp_oda": 0.0,
+        }
+    }
     assert _calc_efficiency(data) == 0.0
 
 
@@ -129,37 +171,54 @@ def test_calc_efficiency_clamps_to_0():
 
 
 def test_sensor_native_value_basic():
-    desc = EcostreamSensorDescription(key="test", value_fn=lambda d: d.get("val"))
+    desc = EcostreamSensorDescription(
+        key="test", value_fn=lambda d: d.get("val")
+    )
     sensor = _make_sensor(desc, {"val": 42})
     assert sensor.native_value == 42
 
 
 def test_sensor_native_value_none():
-    desc = EcostreamSensorDescription(key="test", value_fn=lambda d: None)
+    desc = EcostreamSensorDescription(
+        key="test", value_fn=lambda d: None
+    )
     assert _make_sensor(desc).native_value is None
 
 
 def test_sensor_native_value_exception_in_fn():
-    desc = EcostreamSensorDescription(key="test", value_fn=lambda d: 1 / 0)
+    desc = EcostreamSensorDescription(
+        key="test", value_fn=lambda d: 1 / 0
+    )
     assert _make_sensor(desc).native_value is None
 
 
 def test_sensor_native_value_date_from_timestamp():
-    desc = EcostreamSensorDescription(key="d", is_date=True, value_fn=lambda d: d.get("ts"))
+    desc = EcostreamSensorDescription(
+        key="d", is_date=True, value_fn=lambda d: d.get("ts")
+    )
     sensor = _make_sensor(desc, {"ts": 0})
-    assert sensor.native_value is not None
-    assert hasattr(sensor.native_value, "year")
+    result = sensor.native_value
+    assert result is not None
+    assert isinstance(result, datetime)
+    # Use a fixed date check instead of relying on timestamp 0
+    assert result.year >= 1970
 
 
 def test_sensor_native_value_date_from_datetime():
     desc = EcostreamSensorDescription(
         key="d", is_date=True, value_fn=lambda d: datetime(2024, 1, 15)
     )
-    assert _make_sensor(desc).native_value.year == 2024
+    result = _make_sensor(desc).native_value
+    assert isinstance(result, datetime)
+    assert result.year == 2024
+    assert result.month == 1
+    assert result.day == 15
 
 
 def test_sensor_native_value_uptime_formatted():
-    desc = EcostreamSensorDescription(key="uptime", value_fn=lambda d: d.get("uptime"))
+    desc = EcostreamSensorDescription(
+        key="uptime", value_fn=lambda d: d.get("uptime")
+    )
     sensor = _make_sensor(desc, {"uptime": 3661})
     assert sensor.native_value == "1h 1m"
 
@@ -178,12 +237,39 @@ def test_sensor_available_disconnected():
 
 def test_sensor_available_no_data():
     desc = EcostreamSensorDescription(key="k", value_fn=lambda d: None)
-    assert _make_sensor(desc, {}).available is False
+    sensor = _make_sensor(desc, {})
+    # The sensor checks for connect_status key, so empty data should return False
+    assert sensor.available is False
+
+
+def test_sensor_available_none_coordinator_data():
+    """Test when coordinator.data is None."""
+    desc = EcostreamSensorDescription(key="k", value_fn=lambda d: None)
+    coordinator = MagicMock()
+    coordinator.data = None
+    coordinator.host = "192.168.1.1"
+    entry = MagicMock(spec=ConfigEntry)
+    entry.entry_id = "test_entry"
+
+    def _mock_coordinator_entity_init(
+        self: CoordinatorEntity[Any], c: Any
+    ) -> None:
+        self.coordinator = c
+        self._attr_should_poll = False  # pyright: ignore[reportPrivateUsage]
+
+    with patch.object(
+        CoordinatorEntity, "__init__", _mock_coordinator_entity_init
+    ):
+        sensor = EcostreamBaseSensor(coordinator, entry, desc)
+
+    assert sensor.available is False
 
 
 def test_sensor_unique_id():
-    desc = EcostreamSensorDescription(key="my_sensor", value_fn=lambda d: None)
-    assert _make_sensor(desc)._attr_unique_id == "test_entry_my_sensor"
+    desc = EcostreamSensorDescription(
+        key="my_sensor", value_fn=lambda d: None
+    )
+    assert _make_sensor(desc).unique_id == "test_entry_my_sensor"
 
 
 def test_sensor_descriptions_count():
@@ -194,6 +280,6 @@ def test_handle_coordinator_update_writes_state():
     desc = EcostreamSensorDescription(key="k", value_fn=lambda d: None)
     sensor = _make_sensor(desc)
     sensor.async_write_ha_state = MagicMock()
-    sensor._handle_coordinator_update()
+    sensor._handle_coordinator_update()  # pyright: ignore[reportPrivateUsage]
 
     sensor.async_write_ha_state.assert_called_once()

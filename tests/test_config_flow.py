@@ -8,19 +8,29 @@ from homeassistant.helpers.service_info.dhcp import DhcpServiceInfo
 from homeassistant.helpers.service_info.zeroconf import (
     ZeroconfServiceInfo,
 )
+from ipaddress import ip_address
+from typing import Any, cast
 from unittest.mock import AsyncMock, patch
 
 from custom_components.ecostream.config_flow import CannotConnect
 from custom_components.ecostream.const import DOMAIN
 
 MOCK_HOST = "192.168.1.100"
-MOCK_SYSTEM_NAME = "EcoStream-Test"
+MOCK_SYSTEM_NAME = "ecostream-test"
 PROBE_OK = AsyncMock(return_value={"system_name": MOCK_SYSTEM_NAME})
 PROBE_FAIL = AsyncMock(side_effect=CannotConnect)
 PROBE_UNKNOWN = AsyncMock(side_effect=Exception("boom"))
 
 
-def _patch_probe(return_value=None, side_effect=None):
+def _config_input(data: dict[str, Any]) -> dict[str, Any]:
+    """Cast config input to a typed dict for type checkers."""
+    return data
+
+
+def _patch_probe(
+    return_value: dict[str, Any] | None = None,
+    side_effect: type[Exception] | Exception | None = None,
+):
     mock = AsyncMock()
     if side_effect:
         mock.side_effect = side_effect
@@ -39,8 +49,8 @@ def _make_zeroconf_service_info(
 ) -> ZeroconfServiceInfo:
     """Create a mock ZeroconfServiceInfo object."""
     return ZeroconfServiceInfo(
-        ip_address=host,
-        ip_addresses=[host] if host else [],
+        ip_address=ip_address(host) if host else ip_address("0.0.0.0"),
+        ip_addresses=[ip_address(host)] if host else [],
         hostname=name,
         name=name,
         port=80,
@@ -56,7 +66,7 @@ def _make_dhcp_service_info(
     return DhcpServiceInfo(
         ip=ip or "",
         hostname=hostname,
-        macaddress="00:00:00:00:00:00",
+        macaddress="f0ad4e000000",
     )
 
 
@@ -69,17 +79,17 @@ async def test_user_step_success(hass: HomeAssistant) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "user"
+    assert result.get("type") == FlowResultType.FORM
+    assert result.get("step_id") == "user"
 
     with _patch_probe():
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_HOST: MOCK_HOST}
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"], _config_input({CONF_HOST: MOCK_HOST})
         )
 
-    assert result2["type"] == FlowResultType.CREATE_ENTRY
-    assert result2["title"] == MOCK_SYSTEM_NAME
-    assert result2["data"] == {CONF_HOST: MOCK_HOST}
+    assert result2.get("type") == FlowResultType.CREATE_ENTRY
+    assert result2.get("title") == MOCK_SYSTEM_NAME
+    assert result2.get("data") == {CONF_HOST: MOCK_HOST}
 
 
 async def test_user_step_cannot_connect(hass: HomeAssistant) -> None:
@@ -88,12 +98,14 @@ async def test_user_step_cannot_connect(hass: HomeAssistant) -> None:
     )
 
     with _patch_probe(side_effect=CannotConnect):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_HOST: MOCK_HOST}
+        result2: config_entries.ConfigFlowResult = await cast(  # type: ignore[misc]
+            Any, hass.config_entries.flow
+        ).async_configure(
+            result["flow_id"], _config_input({CONF_HOST: MOCK_HOST})
         )
 
-    assert result2["type"] == FlowResultType.FORM
-    assert result2["errors"] == {"base": "cannot_connect"}
+    assert result2.get("type") == FlowResultType.FORM
+    assert result2.get("errors") == {"base": "cannot_connect"}
 
 
 async def test_user_step_unknown_error(hass: HomeAssistant) -> None:
@@ -102,12 +114,12 @@ async def test_user_step_unknown_error(hass: HomeAssistant) -> None:
     )
 
     with _patch_probe(side_effect=Exception("unexpected")):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_HOST: MOCK_HOST}
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"], _config_input({CONF_HOST: MOCK_HOST})
         )
 
-    assert result2["type"] == FlowResultType.FORM
-    assert result2["errors"] == {"base": "unknown"}
+    assert result2.get("type") == FlowResultType.FORM
+    assert result2.get("errors") == {"base": "unknown"}
 
 
 async def test_user_step_already_configured(
@@ -117,20 +129,20 @@ async def test_user_step_already_configured(
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_HOST: MOCK_HOST}
+        await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"], _config_input({CONF_HOST: MOCK_HOST})
         )
 
     result2 = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     with _patch_probe():
-        result3 = await hass.config_entries.flow.async_configure(
-            result2["flow_id"], {CONF_HOST: MOCK_HOST}
+        result3 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result2["flow_id"], _config_input({CONF_HOST: MOCK_HOST})
         )
 
-    assert result3["type"] == FlowResultType.ABORT
-    assert result3["reason"] == "already_configured"
+    assert result3.get("type") == FlowResultType.ABORT
+    assert result3.get("reason") == "already_configured"
 
 
 # ---------------------------------------------------------------------------
@@ -147,16 +159,16 @@ async def test_zeroconf_step_success(hass: HomeAssistant) -> None:
             name=f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
         ),
     )
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "confirm"
+    assert result.get("type") == FlowResultType.FORM
+    assert result.get("step_id") == "confirm"
 
     with _patch_probe():
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {}
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"], _config_input({})
         )
 
-    assert result2["type"] == FlowResultType.CREATE_ENTRY
-    assert result2["data"] == {CONF_HOST: MOCK_HOST}
+    assert result2.get("type") == FlowResultType.CREATE_ENTRY
+    assert result2.get("data") == {CONF_HOST: MOCK_HOST}
 
 
 async def test_zeroconf_step_no_host_aborts(
@@ -165,10 +177,10 @@ async def test_zeroconf_step_no_host_aborts(
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_ZEROCONF},
-        data=_make_zeroconf_service_info(host=None, name="EcoStream"),
+        data=_make_zeroconf_service_info(host=None, name="ecostream"),
     )
-    assert result["type"] == FlowResultType.ABORT
-    assert result["reason"] == "unknown"
+    assert result.get("type") == FlowResultType.ABORT
+    assert result.get("reason") == "unknown"
 
 
 async def test_zeroconf_step_already_configured(
@@ -178,8 +190,8 @@ async def test_zeroconf_step_already_configured(
         r1 = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.config_entries.flow.async_configure(
-            r1["flow_id"], {CONF_HOST: MOCK_HOST}
+        await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            r1["flow_id"], _config_input({CONF_HOST: MOCK_HOST})
         )
 
     result = await hass.config_entries.flow.async_init(
@@ -190,8 +202,8 @@ async def test_zeroconf_step_already_configured(
             name=f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
         ),
     )
-    assert result["type"] == FlowResultType.ABORT
-    assert result["reason"] == "already_configured"
+    assert result.get("type") == FlowResultType.ABORT
+    assert result.get("reason") == "already_configured"
 
 
 # ---------------------------------------------------------------------------
@@ -207,16 +219,16 @@ async def test_dhcp_step_success(hass: HomeAssistant) -> None:
             ip=MOCK_HOST, hostname=MOCK_SYSTEM_NAME
         ),
     )
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "confirm"
+    assert result.get("type") == FlowResultType.FORM
+    assert result.get("step_id") == "confirm"
 
     with _patch_probe():
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
             result["flow_id"], {}
         )
 
-    assert result2["type"] == FlowResultType.CREATE_ENTRY
-    assert result2["data"] == {CONF_HOST: MOCK_HOST}
+    assert result2.get("type") == FlowResultType.CREATE_ENTRY
+    assert result2.get("data") == {CONF_HOST: MOCK_HOST}
 
 
 async def test_dhcp_step_no_ip_aborts(hass: HomeAssistant) -> None:
@@ -225,8 +237,8 @@ async def test_dhcp_step_no_ip_aborts(hass: HomeAssistant) -> None:
         context={"source": config_entries.SOURCE_DHCP},
         data=_make_dhcp_service_info(ip=None, hostname="ecostream"),
     )
-    assert result["type"] == FlowResultType.ABORT
-    assert result["reason"] == "unknown"
+    assert result.get("type") == FlowResultType.ABORT
+    assert result.get("reason") == "unknown"
 
 
 async def test_dhcp_step_already_configured(
@@ -236,17 +248,19 @@ async def test_dhcp_step_already_configured(
         r1 = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        await hass.config_entries.flow.async_configure(
+        await hass.config_entries.flow.async_configure(  # type: ignore[misc]
             r1["flow_id"], {CONF_HOST: MOCK_HOST}
         )
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
-        context={\"source\": config_entries.SOURCE_DHCP},
-        data=_make_dhcp_service_info(ip=MOCK_HOST, hostname=MOCK_SYSTEM_NAME),
+        context={"source": config_entries.SOURCE_DHCP},
+        data=_make_dhcp_service_info(
+            ip=MOCK_HOST, hostname=MOCK_SYSTEM_NAME
+        ),
     )
-    assert result["type"] == FlowResultType.ABORT
-    assert result["reason"] == "already_configured"
+    assert result.get("type") == FlowResultType.ABORT
+    assert result.get("reason") == "already_configured"
 
 
 # ---------------------------------------------------------------------------
@@ -263,15 +277,15 @@ async def test_confirm_step_cannot_connect(hass: HomeAssistant) -> None:
             name=f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
         ),
     )
-    assert result["step_id"] == "confirm"
+    assert result.get("step_id") == "confirm"
 
     with _patch_probe(side_effect=CannotConnect):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {}
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"], _config_input({})
         )
 
-    assert result2["type"] == FlowResultType.FORM
-    assert result2["errors"] == {"base": "cannot_connect"}
+    assert result2.get("type") == FlowResultType.FORM
+    assert result2.get("errors") == {"base": "cannot_connect"}
 
 
 async def test_confirm_step_unknown_error(hass: HomeAssistant) -> None:
@@ -283,15 +297,15 @@ async def test_confirm_step_unknown_error(hass: HomeAssistant) -> None:
             name=f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
         ),
     )
-    assert result["step_id"] == "confirm"
+    assert result.get("step_id") == "confirm"
 
     with _patch_probe(side_effect=Exception("boom")):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {}
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"], _config_input({})
         )
 
-    assert result2["type"] == FlowResultType.FORM
-    assert result2["errors"] == {"base": "unknown"}
+    assert result2.get("type") == FlowResultType.FORM
+    assert result2.get("errors") == {"base": "unknown"}
 
 
 # ---------------------------------------------------------------------------
@@ -306,11 +320,11 @@ async def test_reauth_step_redirects_to_user(
         init = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        entry_result = await hass.config_entries.flow.async_configure(
-            init["flow_id"], {CONF_HOST: MOCK_HOST}
+        entry_result = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            init["flow_id"], _config_input({CONF_HOST: MOCK_HOST})
         )
-    assert entry_result["type"] == FlowResultType.CREATE_ENTRY
-    entry_id = entry_result["result"].entry_id
+    assert entry_result.get("type") == FlowResultType.CREATE_ENTRY
+    entry_id = entry_result.get("result").entry_id  # type: ignore[union-attr]
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
@@ -320,8 +334,8 @@ async def test_reauth_step_redirects_to_user(
         },
         data={CONF_HOST: MOCK_HOST},
     )
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "user"
+    assert result.get("type") == FlowResultType.FORM
+    assert result.get("step_id") == "user"
 
 
 # ---------------------------------------------------------------------------
@@ -336,11 +350,12 @@ async def test_reconfigure_step_success(hass: HomeAssistant) -> None:
         init = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        entry_result = await hass.config_entries.flow.async_configure(
+        entry_result = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
             init["flow_id"], {CONF_HOST: MOCK_HOST}
         )
-    assert entry_result["type"] == FlowResultType.CREATE_ENTRY
-    entry = entry_result["result"]
+    assert entry_result.get("type") == FlowResultType.CREATE_ENTRY
+    entry = entry_result.get("result")  # type: ignore[assignment]
+    assert entry is not None
 
     # Start reconfigure flow
     result = await hass.config_entries.flow.async_init(
@@ -350,18 +365,18 @@ async def test_reconfigure_step_success(hass: HomeAssistant) -> None:
             "entry_id": entry.entry_id,
         },
     )
-    assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "reconfigure"
+    assert result.get("type") == FlowResultType.FORM
+    assert result.get("step_id") == "reconfigure"
 
     # Submit new host
     new_host = "192.168.1.200"
     with _patch_probe():
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_HOST: new_host}
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"], _config_input({CONF_HOST: new_host})
         )
 
-    assert result2["type"] == FlowResultType.ABORT
-    assert result2["reason"] == "reconfigure_successful"
+    assert result2.get("type") == FlowResultType.ABORT
+    assert result2.get("reason") == "reconfigure_successful"
 
 
 async def test_reconfigure_step_cannot_connect(
@@ -373,10 +388,11 @@ async def test_reconfigure_step_cannot_connect(
         init = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        entry_result = await hass.config_entries.flow.async_configure(
+        entry_result = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
             init["flow_id"], {CONF_HOST: MOCK_HOST}
         )
-    entry = entry_result["result"]
+    entry = entry_result.get("result")  # type: ignore[assignment]
+    assert entry is not None
 
     # Start reconfigure flow
     result = await hass.config_entries.flow.async_init(
@@ -389,12 +405,13 @@ async def test_reconfigure_step_cannot_connect(
 
     # Submit new host that fails to connect
     with _patch_probe(side_effect=CannotConnect):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_HOST: "192.168.1.200"}
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"],
+            _config_input({CONF_HOST: "192.168.1.200"}),
         )
 
-    assert result2["type"] == FlowResultType.FORM
-    assert result2["errors"] == {"base": "cannot_connect"}
+    assert result2.get("type") == FlowResultType.FORM
+    assert result2.get("errors") == {"base": "cannot_connect"}
 
 
 async def test_reconfigure_step_unknown_error(
@@ -406,10 +423,11 @@ async def test_reconfigure_step_unknown_error(
         init = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
-        entry_result = await hass.config_entries.flow.async_configure(
+        entry_result = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
             init["flow_id"], {CONF_HOST: MOCK_HOST}
         )
-    entry = entry_result["result"]
+    entry = entry_result.get("result")  # type: ignore[assignment]
+    assert entry is not None
 
     # Start reconfigure flow
     result = await hass.config_entries.flow.async_init(
@@ -422,9 +440,48 @@ async def test_reconfigure_step_unknown_error(
 
     # Submit new host with unexpected error
     with _patch_probe(side_effect=Exception("boom")):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {CONF_HOST: "192.168.1.200"}
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"],
+            _config_input({CONF_HOST: "192.168.1.200"}),
         )
 
-    assert result2["type"] == FlowResultType.FORM
-    assert result2["errors"] == {"base": "unknown"}
+    assert result2.get("type") == FlowResultType.FORM
+    assert result2.get("errors") == {"base": "unknown"}
+
+
+async def test_form_cannot_connect(hass: HomeAssistant) -> None:
+    """Test we handle cannot connect error."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+
+    with _patch_probe(side_effect=CannotConnect):
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"],
+            _config_input(
+                {
+                    CONF_HOST: "1.1.1.1",
+                }
+            ),
+        )
+
+    assert result2.get("type") == FlowResultType.FORM
+    assert result2.get("errors") == {"base": "cannot_connect"}
+
+
+async def test_form_invalid_auth(hass: HomeAssistant) -> None:
+    """Test we handle invalid auth."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+
+    with _patch_probe(side_effect=Exception("Invalid auth")):
+        result2 = await hass.config_entries.flow.async_configure(  # type: ignore[misc]
+            result["flow_id"],
+            {
+                CONF_HOST: "1.1.1.1",
+            },
+        )
+
+    assert result2.get("type") == FlowResultType.FORM
+    assert result2.get("errors") == {"base": "unknown"}
