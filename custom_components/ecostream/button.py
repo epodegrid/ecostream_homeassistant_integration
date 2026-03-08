@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import inspect
 import logging
 
 from .const import (
@@ -97,6 +98,12 @@ class EcostreamResetFilterButton(
             filter_days,
             new_filter_datetime,
         )
-        await self.coordinator.async_send_config(
-            payload["config"], "reset_filter"
-        )
+        sender = getattr(self.coordinator, "async_send_config", None)
+        if sender is not None:
+            result = sender(payload["config"], "reset_filter")
+            if inspect.isawaitable(result):
+                await result
+                return
+
+        self.coordinator.mark_control_action()
+        await self.coordinator.ws.send_json(payload)
