@@ -7,14 +7,14 @@ set_qset:
   fields:
     qset:
       name: QSET Value
-      description: The QSET value to set for the fan (must be a number)
+      description: The QSET value to set for the fan (whole numbers only)
       required: true
-      example: 50.0
+      example: 150
       selector:
         number:
-          min: 0
-          max: 100
-          step: 0.1
+          min: 60
+          max: 350
+          step: 1
     override_minutes:
       name: Override Minutes
       description: Optional number of minutes to override the setting (minimum 0)

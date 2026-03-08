@@ -58,7 +58,9 @@ async def async_setup_entry(
         platform.async_register_entity_service(
             "set_qset",
             {
-                vol.Required("qset"): vol.Coerce(float),
+                vol.Required("qset"): vol.All(
+                    vol.Coerce(int), vol.Range(min=60, max=350)
+                ),
                 vol.Optional("override_minutes"): vol.All(
                     vol.Coerce(int), vol.Range(min=0)
                 ),
