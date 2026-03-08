@@ -10,7 +10,6 @@ import logging
 from typing import Any
 
 from .const import (
-    BOOST_QSET,
     DEFAULT_BOOST_DURATION_MINUTES,
     DEVICE_MODEL,
     DEVICE_NAME,
@@ -196,7 +195,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             self._attr_is_on = False
 
     @property
@@ -210,7 +209,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             self._attr_is_on = False
         self.async_write_ha_state()
 
@@ -229,17 +228,22 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
 
         config = self._get_config()
 
-        # Preferentie: setpoint_high, anders capacity_max, anders fallback
-        qset_raw = (
-            config.get("setpoint_high")
-            or config.get("capacity_max")
-            or BOOST_QSET
-        )
+        qset_raw = config.get("setpoint_high")
+
+        if qset_raw is None:
+            _LOGGER.error(
+                "Cannot start boost: config.setpoint_high is unavailable"
+            )
+            return
 
         try:
             qset = float(qset_raw)
-        except (TypeError, ValueError):
-            qset = float(BOOST_QSET)
+        except TypeError, ValueError:
+            _LOGGER.error(
+                "Cannot start boost: invalid config.setpoint_high value %r",
+                qset_raw,
+            )
+            return
 
         # ----------------------------
         # DUUR: altijd minstens 1 min
@@ -251,7 +255,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         )
         try:
             minutes = int(minutes)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             minutes = DEFAULT_BOOST_DURATION_MINUTES
 
         if minutes < 1:

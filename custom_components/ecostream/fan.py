@@ -89,7 +89,7 @@ class EcostreamVentilationFan(
     def _get_qset(self) -> float:
         try:
             return float(self._status().get("qset", 0.0))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return 0.0
 
     def _get_setpoint(self, preset: str) -> float | None:
@@ -106,7 +106,7 @@ class EcostreamVentilationFan(
             if value is None:
                 return None
             return float(value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return None
 
     def _calculate_preset(self, qset: float) -> str | None:
@@ -139,6 +139,7 @@ class EcostreamVentilationFan(
         preset_mode: str | None = None,
         **kwargs: Any,
     ) -> None:
+        del percentage
         await self.async_set_preset_mode(preset_mode or PRESET_MID)
 
     async def async_turn_off(self, **kwargs: Any) -> None:

@@ -20,7 +20,6 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from custom_components.ecostream.const import (
-    BOOST_QSET,
     DEFAULT_BOOST_DURATION_MINUTES,
 )
 from custom_components.ecostream.switch import (
@@ -198,7 +197,8 @@ def test_boost_unique_id():
 @pytest.mark.asyncio
 async def test_boost_turn_on_uses_capacity_max():
     entity, coordinator = _make_entity(
-        EcostreamBoostSwitch, {"config": {"capacity_max": 350}}
+        EcostreamBoostSwitch,
+        {"config": {"setpoint_high": 350, "capacity_max": 200}},
     )
     coordinator.boost_duration_minutes = 15
     await entity.async_turn_on()
@@ -220,14 +220,23 @@ async def test_boost_turn_on_prefers_setpoint_high():
 
 
 @pytest.mark.asyncio
-async def test_boost_turn_on_fallback_boost_qset():
+async def test_boost_turn_on_without_setpoint_high_skips_send():
     entity, coordinator = _make_entity(
         EcostreamBoostSwitch, {"config": {}}
     )
     coordinator.boost_duration_minutes = 5
     await entity.async_turn_on()
-    payload = coordinator.ws.send_json.call_args[0][0]
-    assert payload["config"]["man_override_set"] == float(BOOST_QSET)
+    coordinator.ws.send_json.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_boost_turn_on_with_invalid_setpoint_high_skips_send():
+    entity, coordinator = _make_entity(
+        EcostreamBoostSwitch, {"config": {"setpoint_high": "bad"}}
+    )
+    coordinator.boost_duration_minutes = 5
+    await entity.async_turn_on()
+    coordinator.ws.send_json.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -239,7 +248,7 @@ async def test_boost_turn_on_no_ws():
 @pytest.mark.asyncio
 async def test_boost_turn_on_duration_below_1_uses_default():
     entity, coordinator = _make_entity(
-        EcostreamBoostSwitch, {"config": {"capacity_max": 350}}
+        EcostreamBoostSwitch, {"config": {"setpoint_high": 350}}
     )
     coordinator.boost_duration_minutes = 0
     await entity.async_turn_on()
@@ -267,7 +276,7 @@ async def test_boost_turn_off_no_ws():
 @pytest.mark.asyncio
 async def test_boost_turn_on_marks_control_action():
     entity, coordinator = _make_entity(
-        EcostreamBoostSwitch, {"config": {"capacity_max": 350}}
+        EcostreamBoostSwitch, {"config": {"setpoint_high": 350}}
     )
     coordinator.boost_duration_minutes = 15
     await entity.async_turn_on()
