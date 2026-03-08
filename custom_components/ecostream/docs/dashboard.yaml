@@ -321,14 +321,31 @@ views:
                   --card-primary-font-size: 20x;
                   --card-secondary-font-size: 40px;
                 }
-          - type: tile
-            entity: sensor.ecostream_schedule_enabled
+          - type: custom:button-card
+            entity: switch.ecostream_schedule_enabled
             name: Schema actief
             icon: mdi:fan-clock
-            color: deep-purple
-            hide_state: false
-            vertical: true
-            features_position: bottom
+            show_state: true
+            tap_action:
+              action: toggle
+            state:
+              - value: 'on'
+                styles:
+                  card:
+                    - box-shadow: 0 8px 20px rgba(0,122,255,0.35)
+                  icon:
+                    - color: '#007aff'
+            styles:
+              card:
+                - border-radius: 22px
+                - padding: 18px
+                - box-shadow: 0 4px 12px rgba(0,0,0,0.08)
+              icon:
+                - width: 40px
+                - height: 30px
+                - color: '#007aff'
+              name:
+                - font-weight: 100
           - type: tile
             entity: sensor.ecostream_filter_replacement_date
             name: 'Filter vervangen op:'
