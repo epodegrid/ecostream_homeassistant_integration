@@ -10,7 +10,9 @@ import logging
 from typing import Any
 
 from .const import (
+    CONF_SUMMER_COMFORT_TEMP,
     DEFAULT_BOOST_DURATION_MINUTES,
+    DEFAULT_SUMMER_COMFORT_TEMP,
     DEVICE_MODEL,
     DEVICE_NAME,
     DOMAIN,
@@ -157,7 +159,31 @@ class EcostreamSummerComfortSwitch(EcostreamBaseEntity, SwitchEntity):
         self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self._apply({"sum_com_enabled": True})
+        opts = getattr(self._entry, "options", {}) or {}
+        raw_temp = opts.get(
+            CONF_SUMMER_COMFORT_TEMP, DEFAULT_SUMMER_COMFORT_TEMP
+        )
+        try:
+            target_temp = int(raw_temp)
+        except TypeError, ValueError:
+            _LOGGER.error(
+                "Invalid summer comfort temp %r, using default %s",
+                raw_temp,
+                DEFAULT_SUMMER_COMFORT_TEMP,
+            )
+            target_temp = DEFAULT_SUMMER_COMFORT_TEMP
+
+        if target_temp < 15 or target_temp > 30:
+            _LOGGER.error(
+                "Summer comfort temp %s out of range (15-30); using default %s",
+                target_temp,
+                DEFAULT_SUMMER_COMFORT_TEMP,
+            )
+            target_temp = DEFAULT_SUMMER_COMFORT_TEMP
+
+        await self._apply(
+            {"sum_com_enabled": True, "sum_com_temp": target_temp}
+        )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self._apply({"sum_com_enabled": False})

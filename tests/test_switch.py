@@ -20,6 +20,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from custom_components.ecostream.const import (
+    CONF_SUMMER_COMFORT_TEMP,
     DEFAULT_BOOST_DURATION_MINUTES,
 )
 from custom_components.ecostream.switch import (
@@ -138,7 +139,17 @@ async def test_summer_comfort_turn_on():
     entity, coordinator = _make_entity(EcostreamSummerComfortSwitch)
     await entity.async_turn_on()
     coordinator.ws.send_json.assert_called_once_with(
-        {"config": {"sum_com_enabled": True}}
+        {"config": {"sum_com_enabled": True, "sum_com_temp": 22}}
+    )
+
+
+@pytest.mark.asyncio
+async def test_summer_comfort_turn_on_uses_option_temp():
+    entity, coordinator = _make_entity(EcostreamSummerComfortSwitch)
+    entity._entry.options = {CONF_SUMMER_COMFORT_TEMP: 26}
+    await entity.async_turn_on()
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"sum_com_enabled": True, "sum_com_temp": 26}}
     )
 
 

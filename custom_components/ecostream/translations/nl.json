@@ -44,7 +44,8 @@
           "filter_replacement_days": "Filtervervanging interval (dagen)",
           "preset_override_minutes": "Preset overschrijving duur (minuten)",
           "boost_duration": "Boost duur (minuten)",
-          "allow_override_filter_date": "Sta wijzigen filterdatum toe"
+          "allow_override_filter_date": "Sta wijzigen filterdatum toe",
+          "summer_comfort_temp": "Zomercomfort doeltemperatuur (C)"
         },
         "data_description": {
           "allow_override_filter_date": "Wanneer ingeschakeld, wordt de filtervervangingsdatum automatisch bijgewerkt bij het wijzigen van instellingen of gebruik van de reset filter knop. Schakel dit alleen in als je de enige gebruiker van dit apparaat bent."

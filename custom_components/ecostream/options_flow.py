@@ -17,9 +17,11 @@ from .const import (
     CONF_BOOST_DURATION,
     CONF_FILTER_REPLACEMENT_DAYS,
     CONF_PRESET_OVERRIDE_MINUTES,
+    CONF_SUMMER_COMFORT_TEMP,
     DEFAULT_BOOST_DURATION_MINUTES,
     DEFAULT_FILTER_REPLACEMENT_DAYS,
     DEFAULT_PRESET_OVERRIDE_MINUTES,
+    DEFAULT_SUMMER_COMFORT_TEMP,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,6 +57,12 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                 preset_override_minutes = int(
                     user_input[CONF_PRESET_OVERRIDE_MINUTES]
                 )
+                summer_comfort_temp = int(
+                    user_input.get(
+                        CONF_SUMMER_COMFORT_TEMP,
+                        DEFAULT_SUMMER_COMFORT_TEMP,
+                    )
+                )
                 allow_override_filter_date = bool(
                     user_input.get(
                         CONF_ALLOW_OVERRIDE_FILTER_DATE, False
@@ -67,6 +75,8 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                     errors["base"] = "invalid_number"
                 elif preset_override_minutes < 5:
                     errors["base"] = "invalid_number"
+                elif not 15 <= summer_comfort_temp <= 30:
+                    errors["base"] = "invalid_number"
                 else:
                     self._options[CONF_FILTER_REPLACEMENT_DAYS] = (
                         filter_days
@@ -77,6 +87,9 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                     self._options[CONF_BOOST_DURATION] = boost_duration
                     self._options[CONF_ALLOW_OVERRIDE_FILTER_DATE] = (
                         allow_override_filter_date
+                    )
+                    self._options[CONF_SUMMER_COMFORT_TEMP] = (
+                        summer_comfort_temp
                     )
 
                     return self.async_create_entry(
@@ -103,6 +116,10 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
             CONF_ALLOW_OVERRIDE_FILTER_DATE,
             False,
         )
+        current_summer_comfort_temp = self._options.get(
+            CONF_SUMMER_COMFORT_TEMP,
+            DEFAULT_SUMMER_COMFORT_TEMP,
+        )
 
         schema = vol.Schema(
             {
@@ -122,6 +139,10 @@ class EcostreamOptionsFlow(OptionsFlowWithConfigEntry):
                     CONF_ALLOW_OVERRIDE_FILTER_DATE,
                     default=current_allow_override,
                 ): bool,
+                vol.Required(
+                    CONF_SUMMER_COMFORT_TEMP,
+                    default=current_summer_comfort_temp,
+                ): vol.All(int, vol.Range(min=15, max=30)),
             }
         )
 

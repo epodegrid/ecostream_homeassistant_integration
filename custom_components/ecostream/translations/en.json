@@ -175,7 +175,8 @@
                     "filter_replacement_days": "Filter replacement interval (days)",
                     "preset_override_minutes": "Preset override duration (minutes)",
                     "boost_duration": "Boost duration (minutes)",
-                    "allow_override_filter_date": "Allow override filter date"
+                    "allow_override_filter_date": "Allow override filter date",
+                    "summer_comfort_temp": "Summer comfort target temperature (C)"
                 },
                 "data_description": {
                     "allow_override_filter_date": "When enabled, the filter replacement date will be automatically updated when changing settings or using the reset filter button. Only enable this if you are the sole user of this device."
