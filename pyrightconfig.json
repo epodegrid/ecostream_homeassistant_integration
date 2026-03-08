@@ -3,5 +3,5 @@
     "custom_components/ecostream"
   ],
   "typeCheckingMode": "strict",
-  "pythonVersion": "3.14"
+  "pythonVersion": "3.13"
 }

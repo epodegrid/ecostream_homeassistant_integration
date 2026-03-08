@@ -194,7 +194,7 @@ class EcostreamSummerComfortSwitch(EcostreamConfigSwitch):
         )
         try:
             target_temp = int(raw_temp)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             _LOGGER.error(
                 "Invalid summer comfort temp %r, using default %s",
                 raw_temp,
@@ -237,7 +237,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             self._attr_is_on = False
 
     @property
@@ -251,7 +251,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             self._attr_is_on = False
         self.async_write_ha_state()
 
@@ -280,7 +280,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
 
         try:
             qset = float(qset_raw)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             _LOGGER.error(
                 "Cannot start boost: invalid config.setpoint_high value %r",
                 qset_raw,
@@ -297,7 +297,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         )
         try:
             minutes = int(minutes)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             minutes = DEFAULT_BOOST_DURATION_MINUTES
 
         if minutes < 1:
@@ -382,7 +382,7 @@ class EcostreamBypassSwitch(EcostreamBaseEntity, SwitchEntity):
             return False
         try:
             return float(pos_raw) > 0
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return False
 
     @callback
@@ -432,7 +432,7 @@ class EcostreamPresetSwitch(EcostreamBaseEntity, SwitchEntity):
             if value is None:
                 return None
             return float(value)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return None
 
     def _is_active(self) -> bool:
@@ -442,7 +442,7 @@ class EcostreamPresetSwitch(EcostreamBaseEntity, SwitchEntity):
             return False
         try:
             qset = float(qset_raw)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return False
         return abs(qset - setpoint) <= 0.1
 
