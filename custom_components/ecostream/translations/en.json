@@ -131,6 +131,9 @@
             }
         },
         "switch": {
+            "bypass_valve": {
+                "name": "Bypass Valve"
+            },
             "preset_low": {
                 "name": "Preset Low"
             },
@@ -170,11 +173,7 @@
                 "name": "Filter Replacement Interval"
             }
         },
-        "valve": {
-            "bypass_valve": {
-                "name": "Bypass Valve"
-            }
-        }
+        "valve": {}
     },
     "options": {
         "step": {

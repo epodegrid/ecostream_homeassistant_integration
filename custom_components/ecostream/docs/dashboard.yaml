@@ -148,12 +148,19 @@ views:
                   name:
                     - font-weight: 100
               - type: custom:button-card
-                entity: valve.ecostream_bypass_valve
+                entity: switch.ecostream_bypass_valve
                 name: Bypass
                 icon: mdi:valve
                 show_state: true
                 tap_action:
-                  action: none
+                  action: toggle
+                state:
+                  - value: 'on'
+                    styles:
+                      card:
+                        - box-shadow: 0 8px 20px rgba(255,159,10,0.35)
+                      icon:
+                        - color: '#ff9f0a'
                 styles:
                   card:
                     - border-radius: 22px

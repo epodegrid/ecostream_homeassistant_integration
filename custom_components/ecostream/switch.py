@@ -45,6 +45,7 @@ async def async_setup_entry(
     entities: list[Any] = [
         EcostreamScheduleSwitch(coordinator, entry),
         EcostreamSummerComfortSwitch(coordinator, entry),
+        EcostreamBypassSwitch(coordinator, entry),
         EcostreamBoostSwitch(coordinator, entry),
         EcostreamPresetSwitch(coordinator, entry, PRESET_LOW),
         EcostreamPresetSwitch(coordinator, entry, PRESET_MID),
@@ -352,6 +353,48 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         _LOGGER.debug("Boost → OFF (clear man_override_set_time)")
 
         await self._apply_config(payload["config"], "boost")
+
+
+# ============================================================================
+# Bypass switch
+# ============================================================================
+
+
+class EcostreamBypassSwitch(EcostreamBaseEntity, SwitchEntity):
+    _attr_translation_key = "bypass_valve"
+    _attr_icon = "mdi:valve"
+
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_is_on = self._is_bypass_open()
+
+    @property
+    def unique_id(self) -> str:
+        return f"{self._entry.entry_id}_bypass_valve"
+
+    def _is_bypass_open(self) -> bool:
+        pos_raw = self._get_status().get("bypass_pos")
+        if pos_raw is None:
+            return False
+        try:
+            return float(pos_raw) > 0
+        except TypeError, ValueError:
+            return False
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_is_on = self._is_bypass_open()
+        self.async_write_ha_state()
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._apply_config({"man_override_bypass": 100}, "bypass")
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._apply_config({"man_override_bypass": 0}, "bypass")
 
 
 # ==========================================================================

@@ -476,5 +476,5 @@ async def test_async_unload_entry_legacy_ha_version():
     coordinator.async_stop.assert_called_once()
     # Verify that async_forward_entry_unload was called for each platform
     assert (
-        hass.config_entries.async_forward_entry_unload.call_count == 6
+        hass.config_entries.async_forward_entry_unload.call_count == 5
     )

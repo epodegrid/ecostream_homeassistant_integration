@@ -154,6 +154,9 @@
       }
     },
     "switch": {
+      "bypass_valve": {
+        "name": "Bypassklep"
+      },
       "preset_low": {
         "name": "Preset Laag"
       },
@@ -193,10 +196,6 @@
         "name": "Filtervervanging interval"
       }
     },
-    "valve": {
-      "bypass_valve": {
-        "name": "Bypassklep"
-      }
-    }
+    "valve": {}
   }
 }

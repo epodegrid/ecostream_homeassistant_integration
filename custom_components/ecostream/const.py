@@ -12,7 +12,6 @@ PLATFORMS: list[str] = [
     "fan",
     "select",
     "switch",
-    "valve",
 ]
 
 ### THE BOOST AND DEFAULT OPTIONS BELOW ARE THE ONLY ONES YOU SHOULD NEED TO EDIT ###

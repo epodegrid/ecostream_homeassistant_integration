@@ -30,6 +30,7 @@ from custom_components.ecostream.const import (
 )
 from custom_components.ecostream.switch import (
     EcostreamBoostSwitch,
+    EcostreamBypassSwitch,
     EcostreamPresetSwitch,
     EcostreamScheduleSwitch,
     EcostreamSummerComfortSwitch,
@@ -177,6 +178,36 @@ async def test_summer_comfort_no_ws():
 # ---------------------------------------------------------------------------
 # EcostreamBoostSwitch
 # ---------------------------------------------------------------------------
+
+
+def test_bypass_switch_unique_id():
+    entity, _ = _make_entity(EcostreamBypassSwitch)
+    assert entity.unique_id == "test_entry_bypass_valve"
+
+
+def test_bypass_switch_is_on_from_position():
+    entity, _ = _make_entity(
+        EcostreamBypassSwitch, {"status": {"bypass_pos": 100}}
+    )
+    assert entity.is_on is True
+
+
+@pytest.mark.asyncio
+async def test_bypass_switch_turn_on_sends_payload():
+    entity, coordinator = _make_entity(EcostreamBypassSwitch)
+    await entity.async_turn_on()
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"man_override_bypass": 100}}
+    )
+
+
+@pytest.mark.asyncio
+async def test_bypass_switch_turn_off_sends_payload():
+    entity, coordinator = _make_entity(EcostreamBypassSwitch)
+    await entity.async_turn_off()
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"man_override_bypass": 0}}
+    )
 
 
 def test_boost_is_on_with_timer():
