@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
-from typing import cast
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,7 +15,9 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from custom_components.ecostream.switch import EcostreamBypassSwitch
 
 
-def _make_bypass_switch(data=None, ws=True):
+def _make_bypass_switch(
+    data: dict[str, Any] | None = None, ws: bool = True
+):
     coordinator = MagicMock()
     coordinator.data = data or {}
     coordinator.host = "192.168.1.1"
@@ -29,7 +31,7 @@ def _make_bypass_switch(data=None, ws=True):
     with patch.object(
         CoordinatorEntity,
         "__init__",
-        lambda self, c: setattr(self, "coordinator", c),
+        lambda self, c: setattr(self, "coordinator", c) or None,  # type: ignore[misc]
     ):
         bypass = EcostreamBypassSwitch(coordinator, entry)
     bypass.async_write_ha_state = MagicMock()

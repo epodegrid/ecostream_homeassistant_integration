@@ -265,6 +265,16 @@ class EcostreamDataUpdateCoordinator(
             self._restore_schedule_after_override = False
             return
 
+        # Check if a schedule actually exists before enabling it
+        if not self._has_valid_schedule(config):
+            _LOGGER.warning(
+                "Preset override expired, but no schedule configured. "
+                "EcoStream will remain in last state. Configure a schedule "
+                "or manually adjust ventilation."
+            )
+            self._restore_schedule_after_override = False
+            return
+
         ok = await self.async_send_config(
             {"schedule_enabled": True},
             "schedule restore after preset",
@@ -274,6 +284,33 @@ class EcostreamDataUpdateCoordinator(
                 "Preset override expired; re-enabled schedule"
             )
             self._restore_schedule_after_override = False
+
+    def _has_valid_schedule(self, config: dict[str, Any]) -> bool:
+        """Check if EcoStream has a valid schedule configuration.
+
+        The EcoStream stores schedule in various fields like schedule_0_time,
+        schedule_0_value, etc. If none exist, there's no schedule to enable.
+        """
+        # Check for any schedule_X_time or schedule_X_value fields
+        schedule_keys = [
+            k
+            for k in config.keys()
+            if k.startswith("schedule_")
+            and ("_time" in k or "_value" in k)
+        ]
+
+        if not schedule_keys:
+            return False
+
+        # Verify at least one schedule entry has both time and value
+        for i in range(10):  # Most likely max 7-10 schedule items
+            time_key = f"schedule_{i}_time"
+            value_key = f"schedule_{i}_value"
+            if time_key in config and value_key in config:
+                # At least one valid schedule entry exists
+                return True
+
+        return False
 
     # ==========================================================
     # Message Handling

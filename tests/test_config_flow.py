@@ -519,8 +519,9 @@ async def test_probe_ecostream_non_text_message(
     hass: HomeAssistant,
 ) -> None:
     """Test probe handles non-TEXT WebSocket messages."""
-    import pytest
     from aiohttp import WSMsgType
+    import pytest
+
     from custom_components.ecostream.config_flow import (
         CannotConnect,
         EcostreamConfigFlow,
@@ -551,8 +552,9 @@ async def test_probe_ecostream_json_decode_error(
     hass: HomeAssistant,
 ) -> None:
     """Test probe handles invalid JSON."""
-    import pytest
     from aiohttp import WSMsgType
+    import pytest
+
     from custom_components.ecostream.config_flow import (
         CannotConnect,
         EcostreamConfigFlow,
@@ -584,8 +586,9 @@ async def test_probe_ecostream_invalid_payload_type(
     hass: HomeAssistant,
 ) -> None:
     """Test probe handles non-dict payload."""
-    import pytest
     from aiohttp import WSMsgType
+    import pytest
+
     from custom_components.ecostream.config_flow import (
         CannotConnect,
         EcostreamConfigFlow,
@@ -618,6 +621,7 @@ async def test_probe_ecostream_timeout_error(
 ) -> None:
     """Test probe handles timeout."""
     import pytest
+
     from custom_components.ecostream.config_flow import (
         CannotConnect,
         EcostreamConfigFlow,
@@ -642,6 +646,7 @@ async def test_probe_ecostream_generic_exception(
 ) -> None:
     """Test probe handles unexpected exceptions."""
     import pytest
+
     from custom_components.ecostream.config_flow import (
         CannotConnect,
         EcostreamConfigFlow,
@@ -721,14 +726,14 @@ async def test_build_ws_url_strips_trailing_slash(
 
 async def test_async_get_options_flow(hass: HomeAssistant) -> None:
     """Test getting options flow."""
+    from unittest.mock import MagicMock
+
     from custom_components.ecostream.config_flow import (
         EcostreamConfigFlow,
     )
     from custom_components.ecostream.options_flow import (
         EcostreamOptionsFlow,
     )
-
-    from unittest.mock import MagicMock
 
     entry = MagicMock()
     entry.options = {}

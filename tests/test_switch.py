@@ -2,26 +2,27 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
-from typing import cast
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from homeassistant.components.switch import (
+from homeassistant.components.switch.const import (
     DOMAIN as SWITCH_DOMAIN,
-    SERVICE_TURN_ON,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from custom_components.ecostream.const import (
-    CONF_SUMMER_COMFORT_TEMP,
     CONF_PRESET_OVERRIDE_MINUTES,
+    CONF_SUMMER_COMFORT_TEMP,
     DEFAULT_BOOST_DURATION_MINUTES,
     DEFAULT_PRESET_OVERRIDE_MINUTES,
     PRESET_HIGH,
@@ -29,17 +30,21 @@ from custom_components.ecostream.const import (
     PRESET_MID,
 )
 from custom_components.ecostream.switch import (
-    async_setup_entry,
     EcostreamBoostSwitch,
     EcostreamBypassSwitch,
     EcostreamPresetSwitch,
     EcostreamScheduleSwitch,
     EcostreamSummerComfortSwitch,
+    async_setup_entry,
 )
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 
-def _make_entity(EntityClass, data=None, ws=True, **kwargs):
+def _make_entity(
+    EntityClass: type[Any],
+    data: dict[str, Any] | None = None,
+    ws: bool = True,
+    **kwargs: Any,
+) -> tuple[Any, MagicMock]:
     coordinator = MagicMock()
     coordinator.data = data or {}
     coordinator.host = "192.168.1.1"
@@ -50,10 +55,16 @@ def _make_entity(EntityClass, data=None, ws=True, **kwargs):
     coordinator.boost_duration_minutes = DEFAULT_BOOST_DURATION_MINUTES
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry"
+
+    def _mock_coordinator_entity_init(
+        self: CoordinatorEntity, c: Any
+    ) -> None:
+        self.coordinator = c
+
     with patch.object(
         CoordinatorEntity,
         "__init__",
-        lambda self, c: setattr(self, "coordinator", c),
+        _mock_coordinator_entity_init,
     ):
         entity = EntityClass(coordinator, entry, **kwargs)
     entity.async_write_ha_state = MagicMock()
@@ -69,7 +80,9 @@ async def test_switch_async_setup_entry_adds_entities():
     entry.entry_id = "test_entry"
     entry.runtime_data = coordinator
 
-    def _mock_coordinator_entity_init(self, c):
+    def _mock_coordinator_entity_init(
+        self: CoordinatorEntity, c: Any
+    ) -> None:
         self.coordinator = c
 
     with patch.object(

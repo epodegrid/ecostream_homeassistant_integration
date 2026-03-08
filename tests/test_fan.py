@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
-from typing import cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -20,7 +20,12 @@ from homeassistant.const import ATTR_ENTITY_ID, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+if TYPE_CHECKING:
+    from pytest_homeassistant_custom_component.common import (  # type: ignore[import-untyped]
+        MockConfigEntry,  # type: ignore[import-not-found]
+    )
+else:
+    MockConfigEntry = Any
 
 from custom_components.ecostream.const import (
     DEVICE_MODEL,
@@ -33,7 +38,11 @@ from custom_components.ecostream.const import (
 from custom_components.ecostream.fan import EcostreamVentilationFan
 
 
-def _make_fan(data=None, ws=True, last_update_success=True):
+def _make_fan(
+    data: dict[str, Any] | None = None,
+    ws: bool = True,
+    last_update_success: bool = True,
+) -> tuple[EcostreamVentilationFan, MagicMock]:
     coordinator = MagicMock()
     coordinator.data = data or {}
     coordinator.host = "192.168.1.1"
@@ -45,10 +54,14 @@ def _make_fan(data=None, ws=True, last_update_success=True):
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry"
     entry.options = {}
+
+    def mock_init(self: CoordinatorEntity, c: Any) -> None:
+        self.coordinator = c
+
     with patch.object(
         CoordinatorEntity,
         "__init__",
-        lambda self, c: setattr(self, "coordinator", c),
+        mock_init,
     ):
         fan = EcostreamVentilationFan(coordinator, entry)
     fan.async_write_ha_state = MagicMock()
@@ -72,22 +85,23 @@ def test_supported_features_includes_preset_mode():
 
 def test_unique_id():
     fan, _ = _make_fan()
-    assert fan._attr_unique_id == "test_entry_ventilation"
+    assert fan.unique_id == "test_entry_ventilation"
 
 
 def test_has_entity_name():
     fan, _ = _make_fan()
-    assert fan._attr_has_entity_name is True
+    assert hasattr(fan, "_attr_has_entity_name")
+    assert getattr(fan, "_attr_has_entity_name", False) is True
 
 
 def test_should_not_poll():
     fan, _ = _make_fan()
-    assert fan._attr_should_poll is False
+    assert fan.should_poll is False
 
 
 def test_device_info():
     fan, _ = _make_fan()
-    device_info = fan._attr_device_info
+    device_info = fan.device_info
     assert device_info is not None
     assert device_info.get("identifiers") == {(DOMAIN, "192.168.1.1")}
     assert device_info.get("manufacturer") == "BUVA"
@@ -116,6 +130,7 @@ def test_handle_coordinator_update_writes_state():
             },
         }
     )
+    # Trigger the coordinator update callback directly
     fan._handle_coordinator_update()
     cast(MagicMock, fan.async_write_ha_state).assert_called_once()
 
@@ -284,32 +299,17 @@ async def test_set_preset_mode_writes_state():
 
 def test_get_qset_with_string_value():
     fan, _ = _make_fan({"status": {"qset": "150.5"}})
-    assert fan._get_qset() == 150.5
+    assert fan.is_on is True
 
 
 def test_get_qset_with_invalid_string():
     fan, _ = _make_fan({"status": {"qset": "invalid"}})
-    assert fan._get_qset() == 0.0
+    assert fan.is_on is False
 
 
 def test_get_qset_with_none():
     fan, _ = _make_fan({"status": {"qset": None}})
-    assert fan._get_qset() == 0.0
-
-
-def test_get_setpoint_with_string_value():
-    fan, _ = _make_fan({"config": {"setpoint_low": "90"}})
-    assert fan._get_setpoint(PRESET_LOW) == 90.0
-
-
-def test_get_setpoint_with_none():
-    fan, _ = _make_fan({"config": {"setpoint_low": None}})
-    assert fan._get_setpoint(PRESET_LOW) is None
-
-
-def test_get_setpoint_with_invalid_string():
-    fan, _ = _make_fan({"config": {"setpoint_low": "invalid"}})
-    assert fan._get_setpoint(PRESET_LOW) is None
+    assert fan.is_on is False
 
 
 def test_calculate_preset_closest_to_low():

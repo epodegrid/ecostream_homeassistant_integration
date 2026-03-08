@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Coroutine, Iterable
 from pathlib import Path
 import sys
 import time
-from typing import cast
+from types import TracebackType
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiohttp import ClientError, WSMsgType
@@ -18,7 +20,7 @@ from custom_components.ecostream.const import (
 from custom_components.ecostream.websocket_api import EcostreamWebsocket
 
 
-def _make_ws(host="192.168.1.1"):
+def _make_ws(host: str = "192.168.1.1"):
     hass = MagicMock()
     hass.loop.create_task = MagicMock(return_value=MagicMock())
     callback = AsyncMock()
@@ -36,12 +38,20 @@ def _get_create_task_mock(hass: MagicMock) -> MagicMock:
     return cast(MagicMock, hass.loop.create_task)
 
 
-def _make_aiohttp_ws(messages=None, stop_ws=None):
+def _make_aiohttp_ws(
+    messages: Iterable[MagicMock] | None = None,
+    stop_ws: EcostreamWebsocket | None = None,
+) -> AsyncMock:
     """Build a mock aiohttp WS connection that yields messages then stops."""
     mock_ws = AsyncMock()
     mock_ws.__aenter__ = AsyncMock(return_value=mock_ws)
 
-    async def fake_aexit(exc_type, exc, tb):
+    async def fake_aexit(
+        _exc_type: type[BaseException] | None,
+        _exc: BaseException | None,
+        _tb: TracebackType | None,
+    ) -> bool:
+        _ = (_exc_type, _exc, _tb)
         if stop_ws is not None:
             stop_ws._stopping = True
         return False
@@ -50,11 +60,11 @@ def _make_aiohttp_ws(messages=None, stop_ws=None):
     mock_ws.closed = False
     mock_ws.exception = MagicMock(return_value=None)
 
-    msg_queue = list(messages or [])
+    msg_queue: list[MagicMock] = list(messages or [])
 
-    async def fake_receive():
+    async def fake_receive() -> MagicMock | None:
         if msg_queue:
-            msg = msg_queue.pop(0)
+            msg: MagicMock = msg_queue.pop(0)
             if not msg_queue and stop_ws is not None:
                 stop_ws._stopping = True
             return msg
@@ -64,7 +74,9 @@ def _make_aiohttp_ws(messages=None, stop_ws=None):
     return mock_ws
 
 
-def _msg(msg_type, data=None):
+def _msg(
+    msg_type: WSMsgType, data: str | bytes | None = None
+) -> MagicMock:
     m = MagicMock()
     m.type = msg_type
     m.data = data
@@ -107,7 +119,10 @@ async def test_async_start_creates_task():
 
     created = {"count": 0}
 
-    def _create_task(coro, name=None):
+    def _create_task(
+        coro: Coroutine[Any, Any, Any], name: str | None = None
+    ) -> asyncio.Task[Any]:
+        _ = name
         created["count"] += 1
         return asyncio.create_task(coro)
 
@@ -135,7 +150,10 @@ async def test_async_start_restarts_when_task_done():
 
     created = {"count": 0}
 
-    def _create_task(coro, name=None):
+    def _create_task(
+        coro: Coroutine[Any, Any, Any], name: str | None = None
+    ) -> asyncio.Task[Any]:
+        _ = name
         created["count"] += 1
         return asyncio.create_task(coro)
 
@@ -457,7 +475,8 @@ async def test_run_handles_client_error_and_stops():
 
     call_count = 0
 
-    def fake_connect(*args, **kwargs):
+    def fake_connect(*_args: object, **_kwargs: object):
+        _ = (_args, _kwargs)
         nonlocal call_count
         call_count += 1
         ws._stopping = True
@@ -473,7 +492,8 @@ async def test_run_handles_client_error_and_stops():
 async def test_run_handles_unexpected_exception_and_stops():
     ws, _, _ = _make_ws()
 
-    def fake_connect(*args, **kwargs):
+    def fake_connect(*_args: object, **_kwargs: object):
+        _ = (_args, _kwargs)
         ws._stopping = True
         raise RuntimeError("unexpected")
 
@@ -541,7 +561,8 @@ async def test_run_client_error_creates_issue_once():
         side_effect=ClientError("connection refused")
     )
 
-    async def stop_after_sleep(_delay):
+    async def stop_after_sleep(_delay: float) -> None:
+        _ = _delay
         ws._stopping = True
 
     with patch(
@@ -566,7 +587,8 @@ async def test_run_client_error_skips_issue_when_already_unavailable():
         side_effect=ClientError("connection refused")
     )
 
-    async def stop_after_sleep(_delay):
+    async def stop_after_sleep(_delay: float) -> None:
+        _ = _delay
         ws._stopping = True
 
     with patch(

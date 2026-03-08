@@ -19,7 +19,10 @@ from custom_components.ecostream import (
 )
 
 DOMAIN: Final[str] = cast(str, ecostream_const.DOMAIN)
-probe_host = getattr(ecostream, "_probe_host")
+# Access private functions for testing purposes
+probe_host = ecostream._probe_host  # type: ignore[attr-defined]
+async_options_updated = ecostream._async_options_updated  # type: ignore[attr-defined]
+cleanup_stale_devices = ecostream._cleanup_stale_devices  # type: ignore[attr-defined]
 
 
 def _make_ws_session(
@@ -268,7 +271,6 @@ async def test_async_unload_entry_removes_from_data():
 @pytest.mark.asyncio
 async def test_cleanup_stale_devices_removes_old_host():
     """Test that devices with old host identifiers are removed."""
-    from custom_components.ecostream import _cleanup_stale_devices
     from homeassistant.helpers.device_registry import DeviceRegistry
 
     hass = MagicMock()
@@ -306,7 +308,7 @@ async def test_cleanup_stale_devices_removes_old_host():
         "custom_components.ecostream.async_get_device_registry",
         return_value=mock_dev_reg,
     ):
-        await _cleanup_stale_devices(hass, entry, current_host)
+        await cleanup_stale_devices(hass, entry, current_host)
 
     # Old device should be removed
     mock_dev_reg.async_remove_device.assert_called_once_with(
@@ -317,7 +319,6 @@ async def test_cleanup_stale_devices_removes_old_host():
 @pytest.mark.asyncio
 async def test_cleanup_stale_devices_keeps_current_host():
     """Test that devices with current host are not removed."""
-    from custom_components.ecostream import _cleanup_stale_devices
     from homeassistant.helpers.device_registry import DeviceRegistry
 
     hass = MagicMock()
@@ -338,7 +339,7 @@ async def test_cleanup_stale_devices_keeps_current_host():
         "custom_components.ecostream.async_get_device_registry",
         return_value=mock_dev_reg,
     ):
-        await _cleanup_stale_devices(hass, entry, current_host)
+        await cleanup_stale_devices(hass, entry, current_host)
 
     # Should not remove any devices
     mock_dev_reg.async_remove_device.assert_not_called()
@@ -352,7 +353,6 @@ async def test_cleanup_stale_devices_keeps_current_host():
 @pytest.mark.asyncio
 async def test_options_updated_with_filter_override_enabled():
     """Test options update when filter override is enabled."""
-    from custom_components.ecostream import _async_options_updated
 
     hass = MagicMock()
     entry = MagicMock()
@@ -370,7 +370,7 @@ async def test_options_updated_with_filter_override_enabled():
     with patch(
         "custom_components.ecostream.time.time", return_value=1000
     ):
-        await _async_options_updated(hass, entry)
+        await async_options_updated(hass, entry)
 
     assert coordinator.boost_duration_minutes == 30
     coordinator.ws.send_json.assert_called_once()
@@ -384,7 +384,6 @@ async def test_options_updated_with_filter_override_enabled():
 @pytest.mark.asyncio
 async def test_options_updated_with_filter_override_disabled():
     """Test options update when filter override is disabled."""
-    from custom_components.ecostream import _async_options_updated
 
     hass = MagicMock()
     entry = MagicMock()
@@ -398,7 +397,7 @@ async def test_options_updated_with_filter_override_disabled():
     coordinator.ws.send_json = AsyncMock()
     entry.runtime_data = coordinator
 
-    await _async_options_updated(hass, entry)
+    await async_options_updated(hass, entry)
 
     assert coordinator.boost_duration_minutes == 15
     # Should not send JSON when override is disabled
@@ -408,7 +407,6 @@ async def test_options_updated_with_filter_override_disabled():
 @pytest.mark.asyncio
 async def test_options_updated_with_ws_disconnected():
     """Test options update when WebSocket is disconnected."""
-    from custom_components.ecostream import _async_options_updated
 
     hass = MagicMock()
     entry = MagicMock()
@@ -422,7 +420,7 @@ async def test_options_updated_with_ws_disconnected():
     coordinator.ws = None  # Disconnected
     entry.runtime_data = coordinator
 
-    await _async_options_updated(hass, entry)
+    await async_options_updated(hass, entry)
 
     assert coordinator.boost_duration_minutes == 20
     # No exception should be raised
@@ -431,7 +429,6 @@ async def test_options_updated_with_ws_disconnected():
 @pytest.mark.asyncio
 async def test_options_updated_uses_defaults():
     """Test options update with default values."""
-    from custom_components.ecostream import _async_options_updated
 
     hass = MagicMock()
     entry = MagicMock()
@@ -441,7 +438,7 @@ async def test_options_updated_uses_defaults():
     coordinator.ws = None
     entry.runtime_data = coordinator
 
-    await _async_options_updated(hass, entry)
+    await async_options_updated(hass, entry)
 
     # Should use default boost duration (15 minutes)
     assert coordinator.boost_duration_minutes == 15

@@ -17,8 +17,8 @@ from custom_components.ecostream.sensor import (
     SENSOR_DESCRIPTIONS,
     EcostreamBaseSensor,
     EcostreamSensorDescription,
-    _calc_efficiency,  # pyright: ignore[reportPrivateUsage]
     _bool_value,  # pyright: ignore[reportPrivateUsage]
+    _calc_efficiency,  # pyright: ignore[reportPrivateUsage]
     _deep_get,  # pyright: ignore[reportPrivateUsage]
     _format_uptime,  # pyright: ignore[reportPrivateUsage]
     _int_value,  # pyright: ignore[reportPrivateUsage]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -22,8 +23,11 @@ from custom_components.ecostream.const import (
 
 
 def _make_reset_filter_button(
-    data=None, ws=True, options=None, use_async_send=False
-):
+    data: dict[str, Any] | None = None,
+    ws: bool = True,
+    options: dict[str, Any] | None = None,
+    use_async_send: bool = False,
+) -> tuple[EcostreamResetFilterButton, MagicMock]:
     """Helper to create a reset filter button for testing."""
     coordinator = MagicMock()
     coordinator.data = data or {}
@@ -48,7 +52,7 @@ def _make_reset_filter_button(
     with patch.object(
         CoordinatorEntity,
         "__init__",
-        lambda self, c: setattr(self, "coordinator", c),
+        lambda self, c: setattr(self, "coordinator", c),  # type: ignore[misc]
     ):
         entity = EcostreamResetFilterButton(coordinator, entry)
 

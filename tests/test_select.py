@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import cast
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -20,7 +21,7 @@ from custom_components.ecostream.select import (
 )
 
 
-def _make_select(coordinator_boost_duration=None):
+def _make_select(coordinator_boost_duration: int | None = None):
     """Helper to create a boost duration select for testing."""
     coordinator = MagicMock()
     coordinator.host = "192.168.1.1"
@@ -34,13 +35,20 @@ def _make_select(coordinator_boost_duration=None):
     with patch.object(
         CoordinatorEntity,
         "__init__",
-        lambda self, c: setattr(self, "coordinator", c),
+        lambda self, c: setattr(self, "coordinator", c),  # type: ignore[misc]
     ):
         entity = EcostreamBoostDurationSelect(coordinator, entry)
 
     entity.async_write_ha_state = MagicMock()
 
     return entity, coordinator
+
+
+def _async_write_state_mock(
+    entity: EcostreamBoostDurationSelect,
+) -> MagicMock:
+    """Return async_write_ha_state as a MagicMock for typed assertions."""
+    return cast(MagicMock, entity.async_write_ha_state)
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +130,7 @@ async def test_select_option_writes_state():
 
     await entity.async_select_option("15")
 
-    entity.async_write_ha_state.assert_called_once()
+    _async_write_state_mock(entity).assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -144,7 +152,7 @@ async def test_select_option_invalid_value_returns_early():
 
     # Should not change the value
     assert coordinator.boost_duration_minutes == initial_value
-    entity.async_write_ha_state.assert_not_called()
+    _async_write_state_mock(entity).assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -156,7 +164,7 @@ async def test_select_option_non_numeric_string():
 
     # Should not change the value
     assert coordinator.boost_duration_minutes == 20
-    entity.async_write_ha_state.assert_not_called()
+    _async_write_state_mock(entity).assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -168,7 +176,7 @@ async def test_select_option_empty_string():
 
     # Should not change the value
     assert coordinator.boost_duration_minutes == 25
-    entity.async_write_ha_state.assert_not_called()
+    _async_write_state_mock(entity).assert_not_called()
 
 
 @pytest.mark.asyncio

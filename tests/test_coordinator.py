@@ -14,20 +14,22 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.ecostream.const import (
     DOMAIN,
-    FAST_KEYS,
     FAST_MODE_SECONDS,
-    SLOW_KEYS,
     SLOW_PUSH_INTERVAL,
 )
 from custom_components.ecostream.coordinator import (
-    EcostreamDataUpdateCoordinator,
     RECONNECT_INTERVAL,
     RECONNECT_JITTER,
     RECONNECT_MIN_SLEEP,
+    EcostreamDataUpdateCoordinator,
 )
 
 
-def _make_coordinator(hass=None, host="192.168.1.1", options=None):
+def _make_coordinator(
+    hass: HomeAssistant | None = None,
+    host: str = "192.168.1.1",
+    options: dict[str, Any] | None = None,
+) -> tuple[EcostreamDataUpdateCoordinator, HomeAssistant]:
     """Helper to create a coordinator for testing."""
     if hass is None:
         hass = MagicMock(spec=HomeAssistant)
@@ -41,7 +43,7 @@ def _make_coordinator(hass=None, host="192.168.1.1", options=None):
         options=options or {},
     )
 
-    return coordinator, hass
+    return coordinator, hass  # type: ignore[return-value]
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +93,7 @@ def test_coordinator_initial_timestamps():
 
 @pytest.mark.asyncio
 async def test_async_start_creates_websocket():
-    coordinator, hass = _make_coordinator()
+    coordinator, _ = _make_coordinator()
 
     with patch.object(
         coordinator, "_ensure_ws_started", new_callable=AsyncMock
@@ -113,7 +115,7 @@ async def test_async_start_registers_event_listeners():
         await coordinator.async_start()
 
         # Should register two event listeners
-        assert hass.bus.async_listen_once.call_count == 2
+        assert hass.bus.async_listen_once.call_count == 2  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio
@@ -263,7 +265,7 @@ async def test_start_background_tasks_creates_task():
     coordinator._reconnect_task = None
     fake_task = MagicMock()
 
-    def _consume_task(coro, name=None):
+    def _consume_task(coro: Any, name: Any = None) -> MagicMock:
         coro.close()
         return fake_task
 
@@ -280,7 +282,7 @@ async def test_reconnect_loop_handles_cancelled_error():
     coordinator, _ = _make_coordinator()
     coordinator._stopping = False
 
-    async def _raise_cancelled(_sleep_s):
+    async def _raise_cancelled(_sleep_s: Any) -> None:
         raise asyncio.CancelledError()
 
     with patch("asyncio.sleep", new=_raise_cancelled):
@@ -293,7 +295,7 @@ async def test_reconnect_loop_handles_generic_exception():
     coordinator, _ = _make_coordinator()
     coordinator._stopping = False
 
-    async def _raise_error(_sleep_s):
+    async def _raise_error(_sleep_s: Any) -> None:
         raise RuntimeError("boom")
 
     with patch("asyncio.sleep", new=_raise_error):
@@ -308,7 +310,7 @@ async def test_reconnect_loop_calls_force_reconnect_once():
         side_effect=lambda: setattr(coordinator, "_stopping", True)
     )
 
-    async def _noop_sleep(_sleep_s):
+    async def _noop_sleep(_sleep_s: Any) -> None:
         return None
 
     with patch("asyncio.sleep", new=_noop_sleep):
@@ -408,9 +410,7 @@ async def test_handle_ws_message_merges_payload():
 
     message = {"status": {"qset": 100}}
 
-    with patch.object(
-        coordinator, "async_set_updated_data"
-    ) as mock_update:
+    with patch.object(coordinator, "async_set_updated_data"):
         with patch.object(coordinator, "_update_filter_issue"):
             with patch("time.time", return_value=1000.0):
                 await coordinator.handle_ws_message(message)
@@ -529,7 +529,11 @@ async def test_handle_ws_message_preset_expiry_restores_schedule():
     coordinator._last_override_active = True
     coordinator._restore_schedule_after_override = True
     coordinator.data = {
-        "config": {"schedule_enabled": False},
+        "config": {
+            "schedule_enabled": False,
+            "schedule_0_time": "08:00",
+            "schedule_0_value": 120,
+        },
         "status": {"override_set_time_left": 10},
     }
     coordinator.async_send_config = AsyncMock(return_value=True)
@@ -578,7 +582,11 @@ async def test_preset_click_then_expiry_reenables_schedule_end_to_end():
     coordinator.ws = MagicMock()
     coordinator.ws.send_json = AsyncMock()
     coordinator.data = {
-        "config": {"schedule_enabled": False},
+        "config": {
+            "schedule_enabled": False,
+            "schedule_0_time": "08:00",
+            "schedule_0_value": 120,
+        },
         "status": {"override_set_time_left": 10},
     }
 
@@ -600,6 +608,108 @@ async def test_preset_click_then_expiry_reenables_schedule_end_to_end():
         {"config": {"schedule_enabled": True}}
     )
     assert coordinator._restore_schedule_after_override is False
+
+
+@pytest.mark.asyncio
+async def test_preset_expiry_skips_restore_when_no_schedule_exists():
+    """Test that schedule is NOT enabled if no schedule is configured."""
+    coordinator, _ = _make_coordinator()
+    coordinator._last_override_active = True
+    coordinator._restore_schedule_after_override = True
+    coordinator.data = {
+        "config": {
+            "schedule_enabled": False,
+            # No schedule_X_time or schedule_X_value fields
+        },
+        "status": {"override_set_time_left": 10},
+    }
+    coordinator.async_send_config = AsyncMock(return_value=True)
+
+    with patch.object(coordinator, "_update_filter_issue"):
+        with patch("time.time", return_value=1000.0):
+            await coordinator.handle_ws_message(
+                {"status": {"override_set_time_left": 0}}
+            )
+
+    # Should NOT call async_send_config because no schedule exists
+    coordinator.async_send_config.assert_not_called()
+    assert coordinator._restore_schedule_after_override is False
+
+
+@pytest.mark.asyncio
+async def test_preset_expiry_restores_when_schedule_exists():
+    """Test that schedule IS enabled when valid schedule exists."""
+    coordinator, _ = _make_coordinator()
+    coordinator._last_override_active = True
+    coordinator._restore_schedule_after_override = True
+    coordinator.data = {
+        "config": {
+            "schedule_enabled": False,
+            "schedule_0_time": "08:00",
+            "schedule_0_value": 120,
+            "schedule_1_time": "18:00",
+            "schedule_1_value": 180,
+        },
+        "status": {"override_set_time_left": 10},
+    }
+    coordinator.async_send_config = AsyncMock(return_value=True)
+
+    with patch.object(coordinator, "_update_filter_issue"):
+        with patch("time.time", return_value=1000.0):
+            await coordinator.handle_ws_message(
+                {"status": {"override_set_time_left": 0}}
+            )
+
+    # Should call async_send_config because valid schedule exists
+    coordinator.async_send_config.assert_awaited_once_with(
+        {"schedule_enabled": True},
+        "schedule restore after preset",
+    )
+    assert coordinator._restore_schedule_after_override is False
+
+
+def test_has_valid_schedule_with_valid_entries():
+    """Test _has_valid_schedule returns True when schedule exists."""
+    coordinator, _ = _make_coordinator()
+    config = {
+        "schedule_0_time": "08:00",
+        "schedule_0_value": 120,
+        "schedule_1_time": "18:00",
+        "schedule_1_value": 180,
+    }
+    assert coordinator._has_valid_schedule(config) is True
+
+
+def test_has_valid_schedule_with_no_entries():
+    """Test _has_valid_schedule returns False when no schedule exists."""
+    coordinator, _ = _make_coordinator()
+    config = {
+        "schedule_enabled": False,
+        "setpoint_low": 90,
+        "setpoint_mid": 180,
+    }
+    assert coordinator._has_valid_schedule(config) is False
+
+
+def test_has_valid_schedule_with_incomplete_entries():
+    """Test _has_valid_schedule returns False when schedule is incomplete."""
+    coordinator, _ = _make_coordinator()
+    # Only time, no value
+    config = {
+        "schedule_0_time": "08:00",
+    }
+    assert coordinator._has_valid_schedule(config) is False
+
+
+def test_has_valid_schedule_with_partial_valid_entries():
+    """Test _has_valid_schedule returns True when at least one complete entry exists."""
+    coordinator, _ = _make_coordinator()
+    config = {
+        "schedule_0_time": "08:00",  # incomplete
+        "schedule_1_time": "18:00",
+        "schedule_1_value": 180,  # complete
+    }
+    assert coordinator._has_valid_schedule(config) is True
 
 
 # ---------------------------------------------------------------------------
@@ -652,7 +762,7 @@ def test_merge_payload_replaces_non_dict_with_dict():
 
 
 def test_update_filter_issue_creates_warning_when_overdue():
-    coordinator, hass = _make_coordinator()
+    coordinator, _ = _make_coordinator()
     coordinator.data = {"config": {"filter_datetime": 1000.0}}
 
     with patch(
@@ -670,7 +780,7 @@ def test_update_filter_issue_creates_warning_when_overdue():
 
 
 def test_update_filter_issue_deletes_when_not_overdue():
-    coordinator, hass = _make_coordinator()
+    coordinator, _ = _make_coordinator()
     coordinator.data = {"config": {"filter_datetime": 2000.0}}
 
     with patch(
@@ -688,7 +798,7 @@ def test_update_filter_issue_deletes_when_not_overdue():
 
 
 def test_update_filter_issue_deletes_when_no_filter_datetime():
-    coordinator, hass = _make_coordinator()
+    coordinator, _ = _make_coordinator()
     coordinator.data = {"config": {}}
 
     with patch("custom_components.ecostream.coordinator.ir") as mock_ir:
@@ -698,7 +808,7 @@ def test_update_filter_issue_deletes_when_no_filter_datetime():
 
 
 def test_update_filter_issue_deletes_when_filter_datetime_zero():
-    coordinator, hass = _make_coordinator()
+    coordinator, _ = _make_coordinator()
     coordinator.data = {"config": {"filter_datetime": 0}}
 
     with patch("custom_components.ecostream.coordinator.ir") as mock_ir:

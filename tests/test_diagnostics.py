@@ -1,22 +1,38 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 import json
 from pathlib import Path
 import sys
+from typing import Any, TypedDict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from custom_components.ecostream import const as ecostream_const
+from custom_components.ecostream import diagnostics
 from custom_components.ecostream.diagnostics import (
-    _validate_icons,
     async_get_config_entry_diagnostics,
 )
+
+
+class IconsFileData(TypedDict):
+    """Type for icons.json data."""
+
+    icons: dict[str, str]
+    entities: dict[str, dict[str, Any]]
+
+
+def _call_validate_icons():
+    """Call _validate_icons without direct private attribute access."""
+    validate_icons: Callable[[], dict[str, Any]] = diagnostics.__dict__[
+        "_validate_icons"
+    ]
+    return validate_icons()
 
 
 class TestValidateIcons:
@@ -25,7 +41,7 @@ class TestValidateIcons:
     def test_icons_file_missing(self):
         """Test when icons.json file does not exist."""
         with patch("pathlib.Path.exists", return_value=False):
-            result = _validate_icons()
+            result = _call_validate_icons()
             assert result["ok"] is False
             assert result["error"] == "icons_file_missing"
 
@@ -36,7 +52,7 @@ class TestValidateIcons:
                 "pathlib.Path.read_text",
                 side_effect=json.JSONDecodeError("msg", "doc", 0),
             ):
-                result = _validate_icons()
+                result = _call_validate_icons()
                 assert result["ok"] is False
                 assert "icons_json_error" in result["error"]
 
@@ -47,7 +63,7 @@ class TestValidateIcons:
                 "pathlib.Path.read_text",
                 side_effect=OSError("read error"),
             ):
-                result = _validate_icons()
+                result = _call_validate_icons()
                 assert result["ok"] is False
                 assert "icons_read_error" in result["error"]
 
@@ -58,7 +74,7 @@ class TestValidateIcons:
                 "pathlib.Path.read_text",
                 return_value='{"other": "data"}',
             ):
-                result = _validate_icons()
+                result = _call_validate_icons()
                 assert result["ok"] is False
                 assert result["error"] == "icons_schema_invalid"
                 assert result["has_icons_dict"] is False
@@ -71,13 +87,13 @@ class TestValidateIcons:
                 "pathlib.Path.read_text",
                 return_value='{"icons": [], "entities": "invalid"}',
             ):
-                result = _validate_icons()
+                result = _call_validate_icons()
                 assert result["ok"] is False
                 assert result["error"] == "icons_schema_invalid"
 
     def test_icons_validation_success(self):
         """Test successful icons.json validation."""
-        test_data = {
+        test_data: IconsFileData = {
             "icons": {"icon1": "data1", "icon2": "data2"},
             "entities": {"entity1": {}, "entity2": {}, "entity3": {}},
         }
@@ -86,7 +102,7 @@ class TestValidateIcons:
                 "pathlib.Path.read_text",
                 return_value=json.dumps(test_data),
             ):
-                result = _validate_icons()
+                result = _call_validate_icons()
                 assert result["ok"] is True
                 assert result["error"] is None
                 assert result["icons_count"] == 2

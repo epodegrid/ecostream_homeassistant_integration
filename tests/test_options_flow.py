@@ -1,6 +1,7 @@
 from homeassistant.const import CONF_HOST
 from pathlib import Path
 import sys
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -21,11 +22,22 @@ from custom_components.ecostream.options_flow import (
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 
-def _make_entry(data=None, options=None):
+def _make_entry(
+    data: dict[str, Any] | None = None,
+    options: dict[str, Any] | None = None,
+):
     entry = MagicMock()
     entry.data = data or {}
     entry.options = options or {}
     return entry
+
+
+def _mock_show_form(**kwargs: Any) -> dict[str, Any]:
+    return {"type": "form", **kwargs}
+
+
+def _mock_create_entry(**kwargs: Any) -> dict[str, Any]:
+    return {"type": "create_entry", **kwargs}
 
 
 @pytest.mark.asyncio
@@ -41,9 +53,7 @@ async def test_async_step_init_shows_form_with_existing_defaults():
     )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(
-        side_effect=lambda **kwargs: {"type": "form", **kwargs}
-    )
+    flow.async_show_form = MagicMock(side_effect=_mock_show_form)
 
     result = await flow.async_step_init()
 
@@ -56,7 +66,7 @@ async def test_async_step_init_shows_form_with_existing_defaults():
 
     data_schema = result.get("data_schema")
     assert callable(data_schema)
-    defaults = data_schema({})
+    defaults = cast(dict[str, Any], data_schema({}))
     assert defaults[CONF_FILTER_REPLACEMENT_DAYS] == 90
     assert defaults[CONF_PRESET_OVERRIDE_MINUTES] == 30
     assert defaults[CONF_BOOST_DURATION] == 20
@@ -68,9 +78,7 @@ async def test_async_step_init_shows_form_with_hardcoded_defaults_when_missing()
     entry = _make_entry(data={}, options={})
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(
-        side_effect=lambda **kwargs: {"type": "form", **kwargs}
-    )
+    flow.async_show_form = MagicMock(side_effect=_mock_show_form)
 
     result = await flow.async_step_init()
 
@@ -81,7 +89,7 @@ async def test_async_step_init_shows_form_with_hardcoded_defaults_when_missing()
 
     data_schema = result.get("data_schema")
     assert callable(data_schema)
-    defaults = data_schema({})
+    defaults = cast(dict[str, Any], data_schema({}))
     assert (
         defaults[CONF_FILTER_REPLACEMENT_DAYS]
         == DEFAULT_FILTER_REPLACEMENT_DAYS
@@ -104,9 +112,7 @@ async def test_async_step_init_valid_input_creates_entry_and_updates_options():
     )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_create_entry = MagicMock(
-        side_effect=lambda **kwargs: {"type": "create_entry", **kwargs}
-    )
+    flow.async_create_entry = MagicMock(side_effect=_mock_create_entry)
 
     result = await flow.async_step_init(
         {
@@ -139,9 +145,7 @@ async def test_async_step_init_filter_days_too_short_returns_error():
     )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(
-        side_effect=lambda **kwargs: {"type": "form", **kwargs}
-    )
+    flow.async_show_form = MagicMock(side_effect=_mock_show_form)
 
     result = await flow.async_step_init(
         {
@@ -167,9 +171,7 @@ async def test_async_step_init_preset_override_too_short_returns_error():
     )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(
-        side_effect=lambda **kwargs: {"type": "form", **kwargs}
-    )
+    flow.async_show_form = MagicMock(side_effect=_mock_show_form)
 
     result = await flow.async_step_init(
         {
@@ -195,9 +197,7 @@ async def test_async_step_init_boost_duration_too_short_returns_error():
     )
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(
-        side_effect=lambda **kwargs: {"type": "form", **kwargs}
-    )
+    flow.async_show_form = MagicMock(side_effect=_mock_show_form)
 
     result = await flow.async_step_init(
         {
@@ -217,9 +217,7 @@ async def test_async_step_init_invalid_number_returns_error():
     entry = _make_entry(options={})
     flow = EcostreamOptionsFlow(entry)
 
-    flow.async_show_form = MagicMock(
-        side_effect=lambda **kwargs: {"type": "form", **kwargs}
-    )
+    flow.async_show_form = MagicMock(side_effect=_mock_show_form)
 
     result = await flow.async_step_init(
         {

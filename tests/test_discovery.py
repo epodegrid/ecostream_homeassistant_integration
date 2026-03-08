@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Coroutine, Sequence
 from pathlib import Path
 import sys
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -25,7 +26,7 @@ def _make_hass(configured_hosts: Sequence[str] | None = None):
     hass.config_entries.async_entries.return_value = entries
     hass.config_entries.flow.async_init = AsyncMock()
 
-    def _consume_task(coro):
+    def _consume_task(coro: Coroutine[Any, Any, Any]) -> MagicMock:
         try:
             coro.close()
         except Exception:
