@@ -110,6 +110,10 @@ async def async_setup_entry(
         options=options,
     )
 
+    coordinator.boost_duration_minutes = int(
+        options.get(CONF_BOOST_DURATION, DEFAULT_BOOST_DURATION_MINUTES)
+    )
+
     # Start WebSocket listener
     await coordinator.async_start()
 
