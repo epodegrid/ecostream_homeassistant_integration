@@ -21,17 +21,23 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from custom_components.ecostream.const import (
     CONF_SUMMER_COMFORT_TEMP,
+    CONF_PRESET_OVERRIDE_MINUTES,
     DEFAULT_BOOST_DURATION_MINUTES,
+    DEFAULT_PRESET_OVERRIDE_MINUTES,
+    PRESET_HIGH,
+    PRESET_LOW,
+    PRESET_MID,
 )
 from custom_components.ecostream.switch import (
     EcostreamBoostSwitch,
+    EcostreamPresetSwitch,
     EcostreamScheduleSwitch,
     EcostreamSummerComfortSwitch,
 )
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 
-def _make_entity(EntityClass, data=None, ws=True):
+def _make_entity(EntityClass, data=None, ws=True, **kwargs):
     coordinator = MagicMock()
     coordinator.data = data or {}
     coordinator.host = "192.168.1.1"
@@ -47,7 +53,7 @@ def _make_entity(EntityClass, data=None, ws=True):
         "__init__",
         lambda self, c: setattr(self, "coordinator", c),
     ):
-        entity = EntityClass(coordinator, entry)
+        entity = EntityClass(coordinator, entry, **kwargs)
     entity.async_write_ha_state = AsyncMock()
     return entity, coordinator
 
@@ -292,6 +298,79 @@ async def test_boost_turn_on_marks_control_action():
     coordinator.boost_duration_minutes = 15
     await entity.async_turn_on()
     coordinator.mark_control_action.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# EcostreamPresetSwitch
+# ---------------------------------------------------------------------------
+
+
+def test_preset_switch_unique_id_low():
+    entity, _ = _make_entity(EcostreamPresetSwitch, preset=PRESET_LOW)
+    assert entity.unique_id == "test_entry_preset_low"
+
+
+def test_preset_switch_is_on_matches_qset():
+    entity, _ = _make_entity(
+        EcostreamPresetSwitch,
+        {
+            "config": {"setpoint_mid": 180},
+            "status": {"qset": 180},
+        },
+        preset=PRESET_MID,
+    )
+    assert entity.is_on is True
+
+
+@pytest.mark.asyncio
+async def test_preset_switch_turn_on_sends_payload():
+    entity, coordinator = _make_entity(
+        EcostreamPresetSwitch,
+        {"config": {"setpoint_high": 270}},
+        preset=PRESET_HIGH,
+    )
+    entity._entry.options = {CONF_PRESET_OVERRIDE_MINUTES: 30}
+    await entity.async_turn_on()
+    coordinator.ws.send_json.assert_called_once_with(
+        {
+            "config": {
+                "man_override_set": 270.0,
+                "man_override_set_time": 1800,
+            }
+        }
+    )
+
+
+@pytest.mark.asyncio
+async def test_preset_switch_turn_on_uses_default_minutes():
+    entity, coordinator = _make_entity(
+        EcostreamPresetSwitch,
+        {"config": {"setpoint_low": 90}},
+        preset=PRESET_LOW,
+    )
+    await entity.async_turn_on()
+    coordinator.ws.send_json.assert_called_once_with(
+        {
+            "config": {
+                "man_override_set": 90.0,
+                "man_override_set_time": DEFAULT_PRESET_OVERRIDE_MINUTES
+                * 60,
+            }
+        }
+    )
+
+
+@pytest.mark.asyncio
+async def test_preset_switch_turn_off_clears_override():
+    entity, coordinator = _make_entity(
+        EcostreamPresetSwitch,
+        {"config": {"setpoint_low": 90}},
+        preset=PRESET_LOW,
+    )
+    await entity.async_turn_off()
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"man_override_set_time": 0}}
+    )
 
 
 # ---------------------------------------------------------------------------

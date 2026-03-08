@@ -154,6 +154,15 @@
       }
     },
     "switch": {
+      "preset_low": {
+        "name": "Preset Laag"
+      },
+      "preset_mid": {
+        "name": "Preset Middel"
+      },
+      "preset_high": {
+        "name": "Preset Hoog"
+      },
       "schedule_enabled": {
         "name": "Schema ingeschakeld"
       },

@@ -131,6 +131,15 @@
             }
         },
         "switch": {
+            "preset_low": {
+                "name": "Preset Low"
+            },
+            "preset_mid": {
+                "name": "Preset Mid"
+            },
+            "preset_high": {
+                "name": "Preset High"
+            },
             "schedule_enabled": {
                 "name": "Schedule Enabled"
             },

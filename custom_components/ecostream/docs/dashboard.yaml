@@ -168,14 +168,18 @@ views:
           - type: horizontal-stack
             cards:
               - type: custom:button-card
-                entity: button.ecostream_low
-                name: Mid
+                entity: switch.ecostream_preset_low
+                name: Low
                 icon: mdi:fan-speed-1
                 tap_action:
-                  action: call-service
-                  service: button.press
-                  target:
-                    entity_id: button.ecostream_low
+                  action: toggle
+                state:
+                  - value: 'on'
+                    styles:
+                      card:
+                        - box-shadow: 0 8px 20px rgba(52,199,89,0.35)
+                      icon:
+                        - color: '#34c759'
                 styles:
                   card:
                     - border-radius: 22px
@@ -188,14 +192,18 @@ views:
                   name:
                     - font-weight: 100
               - type: custom:button-card
-                entity: button.ecostream_mid
+                entity: switch.ecostream_preset_mid
                 name: Mid
                 icon: mdi:fan-speed-2
                 tap_action:
-                  action: call-service
-                  service: button.press
-                  target:
-                    entity_id: button.ecostream_mid
+                  action: toggle
+                state:
+                  - value: 'on'
+                    styles:
+                      card:
+                        - box-shadow: 0 8px 20px rgba(255,204,0,0.35)
+                      icon:
+                        - color: '#ffcc00'
                 styles:
                   card:
                     - border-radius: 22px
@@ -208,14 +216,18 @@ views:
                   name:
                     - font-weight: 100
               - type: custom:button-card
-                entity: button.ecostream_high
+                entity: switch.ecostream_preset_high
                 name: High
                 icon: mdi:fan-speed-3
                 tap_action:
-                  action: call-service
-                  service: button.press
-                  target:
-                    entity_id: button.ecostream_high
+                  action: toggle
+                state:
+                  - value: 'on'
+                    styles:
+                      card:
+                        - box-shadow: 0 8px 20px rgba(255,59,48,0.35)
+                      icon:
+                        - color: '#ff3b30'
                 styles:
                   card:
                     - border-radius: 22px

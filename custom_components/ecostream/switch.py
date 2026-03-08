@@ -11,12 +11,17 @@ import logging
 from typing import Any
 
 from .const import (
+    CONF_PRESET_OVERRIDE_MINUTES,
     CONF_SUMMER_COMFORT_TEMP,
     DEFAULT_BOOST_DURATION_MINUTES,
+    DEFAULT_PRESET_OVERRIDE_MINUTES,
     DEFAULT_SUMMER_COMFORT_TEMP,
     DEVICE_MODEL,
     DEVICE_NAME,
     DOMAIN,
+    PRESET_HIGH,
+    PRESET_LOW,
+    PRESET_MID,
 )
 from .coordinator import EcostreamDataUpdateCoordinator
 
@@ -41,6 +46,9 @@ async def async_setup_entry(
         EcostreamScheduleSwitch(coordinator, entry),
         EcostreamSummerComfortSwitch(coordinator, entry),
         EcostreamBoostSwitch(coordinator, entry),
+        EcostreamPresetSwitch(coordinator, entry, PRESET_LOW),
+        EcostreamPresetSwitch(coordinator, entry, PRESET_MID),
+        EcostreamPresetSwitch(coordinator, entry, PRESET_HIGH),
     ]
 
     async_add_entities(entities, update_before_add=True)
@@ -344,3 +352,90 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         _LOGGER.debug("Boost → OFF (clear man_override_set_time)")
 
         await self._apply_config(payload["config"], "boost")
+
+
+# ==========================================================================
+# Preset switches
+# ==========================================================================
+
+
+class EcostreamPresetSwitch(EcostreamBaseEntity, SwitchEntity):
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:fan"
+
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+        preset: str,
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self._preset = preset
+        self._attr_translation_key = f"preset_{preset}"
+        self._attr_unique_id = f"{entry.entry_id}_preset_{preset}"
+        self._attr_is_on = self._is_active()
+
+    def _get_setpoint(self) -> float | None:
+        config = self._get_config()
+        key = {
+            PRESET_LOW: "setpoint_low",
+            PRESET_MID: "setpoint_mid",
+            PRESET_HIGH: "setpoint_high",
+        }.get(self._preset)
+        if key is None:
+            return None
+        try:
+            value = config.get(key)
+            if value is None:
+                return None
+            return float(value)
+        except TypeError, ValueError:
+            return None
+
+    def _is_active(self) -> bool:
+        qset_raw = self._get_status().get("qset")
+        setpoint = self._get_setpoint()
+        if qset_raw is None or setpoint is None:
+            return False
+        try:
+            qset = float(qset_raw)
+        except TypeError, ValueError:
+            return False
+        return abs(qset - setpoint) <= 0.1
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._attr_is_on = self._is_active()
+        self.async_write_ha_state()
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        qset = self._get_setpoint()
+        if qset is None:
+            _LOGGER.warning(
+                "EcoStream setpoint for preset %s not available in config data",
+                self._preset,
+            )
+            return
+
+        opts = getattr(self._entry, "options", {}) or {}
+        override_minutes = int(
+            opts.get(
+                CONF_PRESET_OVERRIDE_MINUTES,
+                DEFAULT_PRESET_OVERRIDE_MINUTES,
+            )
+        )
+
+        payload = {
+            "man_override_set": qset,
+            "man_override_set_time": override_minutes * 60,
+        }
+
+        _LOGGER.debug(
+            "EcoStream preset %s → Qset %.1f", self._preset, qset
+        )
+        await self._apply_config(payload, f"preset {self._preset}")
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._apply_config(
+            {"man_override_set_time": 0}, f"preset {self._preset}"
+        )
