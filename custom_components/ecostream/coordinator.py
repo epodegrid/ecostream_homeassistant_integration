@@ -79,6 +79,8 @@ class EcostreamDataUpdateCoordinator(
 
         self.boost_duration_minutes: int = 0
         self.boost_remaining_seconds: int = 0
+        self._last_override_active: bool = False
+        self._restore_schedule_after_override: bool = False
 
     # ==========================================================
     # Lifecycle
@@ -219,7 +221,59 @@ class EcostreamDataUpdateCoordinator(
 
         self.mark_control_action()
         await self.ws.send_json({"config": cfg})
+
+        override_seconds = self._parse_override_seconds(
+            cfg.get("man_override_set_time")
+        )
+        if override_seconds is not None:
+            if override_seconds > 0:
+                self._last_override_active = True
+                self._restore_schedule_after_override = (
+                    action.startswith("preset")
+                )
+            else:
+                self._last_override_active = False
+                self._restore_schedule_after_override = False
+
         return True
+
+    @staticmethod
+    def _parse_override_seconds(value: Any) -> int | None:
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return None
+
+    def _config_payload(self) -> dict[str, Any]:
+        config = self.data.get("config")
+        if isinstance(config, dict):
+            return cast(dict[str, Any], config)
+        return {}
+
+    def _status_payload(self) -> dict[str, Any]:
+        status = self.data.get("status")
+        if isinstance(status, dict):
+            return cast(dict[str, Any], status)
+        return {}
+
+    async def _maybe_restore_schedule_after_override(self) -> None:
+        if not self._restore_schedule_after_override:
+            return
+
+        config = self._config_payload()
+        if bool(config.get("schedule_enabled", False)):
+            self._restore_schedule_after_override = False
+            return
+
+        ok = await self.async_send_config(
+            {"schedule_enabled": True},
+            "schedule restore after preset",
+        )
+        if ok:
+            _LOGGER.debug(
+                "Preset override expired; re-enabled schedule"
+            )
+            self._restore_schedule_after_override = False
 
     # ==========================================================
     # Message Handling
@@ -229,6 +283,17 @@ class EcostreamDataUpdateCoordinator(
         if not isinstance(message, dict):
             return
         self._merge_payload(cast(dict[str, Any], message))
+
+        status = self._status_payload()
+        override_seconds = self._parse_override_seconds(
+            status.get("override_set_time_left")
+        )
+        override_active = (
+            override_seconds is not None and override_seconds > 0
+        )
+        if self._last_override_active and not override_active:
+            await self._maybe_restore_schedule_after_override()
+        self._last_override_active = override_active
 
         now = time.time()
 

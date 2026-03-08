@@ -342,6 +342,34 @@ async def test_async_send_config_sends_payload_with_ws():
     )
 
 
+@pytest.mark.asyncio
+async def test_async_send_config_marks_preset_restore_flag():
+    coordinator, _ = _make_coordinator()
+    coordinator.ws = MagicMock()
+    coordinator.ws.send_json = AsyncMock()
+
+    await coordinator.async_send_config(
+        {"man_override_set_time": 600}, "preset mid"
+    )
+
+    assert coordinator._restore_schedule_after_override is True
+    assert coordinator._last_override_active is True
+
+
+@pytest.mark.asyncio
+async def test_async_send_config_non_preset_override_disables_restore_flag():
+    coordinator, _ = _make_coordinator()
+    coordinator.ws = MagicMock()
+    coordinator.ws.send_json = AsyncMock()
+
+    await coordinator.async_send_config(
+        {"man_override_set_time": 600}, "boost"
+    )
+
+    assert coordinator._restore_schedule_after_override is False
+    assert coordinator._last_override_active is True
+
+
 # ---------------------------------------------------------------------------
 # Fast Mode
 # ---------------------------------------------------------------------------
@@ -493,6 +521,85 @@ async def test_handle_ws_message_fast_mode_uses_shorter_interval():
                 await coordinator.handle_ws_message(message)
 
     mock_update.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_handle_ws_message_preset_expiry_restores_schedule():
+    coordinator, _ = _make_coordinator()
+    coordinator._last_override_active = True
+    coordinator._restore_schedule_after_override = True
+    coordinator.data = {
+        "config": {"schedule_enabled": False},
+        "status": {"override_set_time_left": 10},
+    }
+    coordinator.async_send_config = AsyncMock(return_value=True)
+
+    with patch.object(
+        coordinator, "async_set_updated_data"
+    ) as mock_update:
+        with patch.object(coordinator, "_update_filter_issue"):
+            with patch("time.time", return_value=1000.0):
+                await coordinator.handle_ws_message(
+                    {"status": {"override_set_time_left": 0}}
+                )
+
+    coordinator.async_send_config.assert_awaited_once_with(
+        {"schedule_enabled": True},
+        "schedule restore after preset",
+    )
+    assert coordinator._restore_schedule_after_override is False
+    mock_update.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_handle_ws_message_preset_expiry_skips_restore_when_schedule_on():
+    coordinator, _ = _make_coordinator()
+    coordinator._last_override_active = True
+    coordinator._restore_schedule_after_override = True
+    coordinator.data = {
+        "config": {"schedule_enabled": True},
+        "status": {"override_set_time_left": 10},
+    }
+    coordinator.async_send_config = AsyncMock(return_value=True)
+
+    with patch.object(coordinator, "_update_filter_issue"):
+        with patch("time.time", return_value=1000.0):
+            await coordinator.handle_ws_message(
+                {"status": {"override_set_time_left": 0}}
+            )
+
+    coordinator.async_send_config.assert_not_called()
+    assert coordinator._restore_schedule_after_override is False
+
+
+@pytest.mark.asyncio
+async def test_preset_click_then_expiry_reenables_schedule_end_to_end():
+    coordinator, _ = _make_coordinator()
+    coordinator.ws = MagicMock()
+    coordinator.ws.send_json = AsyncMock()
+    coordinator.data = {
+        "config": {"schedule_enabled": False},
+        "status": {"override_set_time_left": 10},
+    }
+
+    # Simulate clicking a preset button.
+    ok = await coordinator.async_send_config(
+        {"man_override_set": 180, "man_override_set_time": 600},
+        "preset mid",
+    )
+    assert ok is True
+    coordinator.ws.send_json.reset_mock()
+
+    with patch.object(coordinator, "_update_filter_issue"):
+        with patch("time.time", return_value=1000.0):
+            await coordinator.handle_ws_message(
+                {"status": {"override_set_time_left": 0}}
+            )
+
+    coordinator.ws.send_json.assert_called_once_with(
+        {"config": {"schedule_enabled": True}}
+    )
+    assert coordinator._restore_schedule_after_override is False
 
 
 # ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import inspect
 import logging
 from typing import Any
 
@@ -175,12 +176,21 @@ class EcostreamVentilationFan(
         }
 
         self._attr_preset_mode = preset_mode
-        self.coordinator.mark_control_action()
         _LOGGER.debug(
             "EcoStream preset %s → Qset %.1f", preset_mode, qset
         )
 
-        await self.coordinator.ws.send_json(payload)
+        sender = getattr(self.coordinator, "async_send_config", None)
+        if sender is not None:
+            result = sender(payload["config"], f"preset {preset_mode}")
+            if inspect.isawaitable(result):
+                await result
+            else:
+                self.coordinator.mark_control_action()
+                await self.coordinator.ws.send_json(payload)
+        else:
+            self.coordinator.mark_control_action()
+            await self.coordinator.ws.send_json(payload)
         self.async_write_ha_state()
 
     @callback
