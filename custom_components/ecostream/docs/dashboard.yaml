@@ -11,8 +11,8 @@ views:
             name: Efficiëntie (%)
             icon: mdi:percent
             entities:
-              - sensor.ecostream_efficiency
-            hours_to_show: 8
+              - sensor.ecostream_heat_recovery_efficiency
+            hours_to_show: 24
             line_width: 3
             points_per_hour: 8
             color_thresholds:
@@ -148,12 +148,20 @@ views:
                   name:
                     - font-weight: 100
               - type: custom:button-card
-                entity: valve.ecostream_bypass_valve
+                entity: switch.ecostream_bypass_valve
                 name: Bypass
                 icon: mdi:valve
                 show_state: true
+                show_label: true
                 tap_action:
-                  action: none
+                  action: toggle
+                state:
+                  - value: 'on'
+                    styles:
+                      card:
+                        - box-shadow: 0 8px 20px rgba(0,122,255,0.35)
+                      icon:
+                        - color: '#007aff'
                 styles:
                   card:
                     - border-radius: 22px
@@ -168,14 +176,20 @@ views:
           - type: horizontal-stack
             cards:
               - type: custom:button-card
-                entity: button.ecostream_low
+                entity: switch.ecostream_preset_low
                 name: Low
                 icon: mdi:fan-speed-1
+                show_state: true
+                show_label: true
                 tap_action:
-                  action: call-service
-                  service: button.press
-                  target:
-                    entity_id: button.ecostream_low
+                  action: toggle
+                state:
+                  - value: 'on'
+                    styles:
+                      card:
+                        - box-shadow: 0 8px 20px rgba(0,122,255,0.35)
+                      icon:
+                        - color: '#007aff'
                 styles:
                   card:
                     - border-radius: 22px
@@ -188,14 +202,20 @@ views:
                   name:
                     - font-weight: 100
               - type: custom:button-card
-                entity: button.ecostream_mid
+                entity: switch.ecostream_preset_mid
                 name: Mid
                 icon: mdi:fan-speed-2
+                show_state: true
+                show_label: true
                 tap_action:
-                  action: call-service
-                  service: button.press
-                  target:
-                    entity_id: button.ecostream_mid
+                  action: toggle
+                state:
+                  - value: 'on'
+                    styles:
+                      card:
+                        - box-shadow: 0 8px 20px rgba(0,122,255,0.35)
+                      icon:
+                        - color: '#007aff'
                 styles:
                   card:
                     - border-radius: 22px
@@ -208,14 +228,20 @@ views:
                   name:
                     - font-weight: 100
               - type: custom:button-card
-                entity: button.ecostream_high
+                entity: switch.ecostream_preset_high
                 name: High
                 icon: mdi:fan-speed-3
+                show_state: true
+                show_label: true
                 tap_action:
-                  action: call-service
-                  service: button.press
-                  target:
-                    entity_id: button.ecostream_high
+                  action: toggle
+                state:
+                  - value: 'on'
+                    styles:
+                      card:
+                        - box-shadow: 0 8px 20px rgba(0,122,255,0.35)
+                      icon:
+                        - color: '#007aff'
                 styles:
                   card:
                     - border-radius: 22px
@@ -234,7 +260,7 @@ views:
             icon: mdi:molecule-co2
             entities:
               - sensor.ecostream_eco2_return
-            hours_to_show: 8
+            hours_to_show: 24
             line_width: 3
             points_per_hour: 8
             color_thresholds:
@@ -249,7 +275,7 @@ views:
             icon: mdi:chemical-weapon
             entities:
               - sensor.ecostream_tvoc_return
-            hours_to_show: 8
+            hours_to_show: 24
             line_width: 3
             points_per_hour: 8
             color_thresholds:
@@ -264,7 +290,7 @@ views:
             icon: mdi:water-percent
             entities:
               - sensor.ecostream_humidity_return
-            hours_to_show: 8
+            hours_to_show: 24
             line_width: 3
             points_per_hour: 8
             color: '#32ade6'
@@ -274,8 +300,8 @@ views:
             entities:
               - entity: sensor.ecostream_uptime
               - entity: sensor.ecostream_wifi_ssid
-              - entity: sensor.ecostream_wifi_ip
-              - entity: sensor.ecostream_wifi_rssi
+              - entity: sensor.ecostream_wifi_ip_adres
+              - entity: sensor.ecostream_wifi_signaalsterkte
             title: 🛠 Systeemstatus
           - type: gauge
             entity: sensor.ecostream_qset
