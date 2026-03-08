@@ -12,15 +12,15 @@ views:
             icon: mdi:percent
             entities:
               - sensor.ecostream_efficiency
-            hours_to_show: 8
+            hours_to_show: 24
             line_width: 3
             points_per_hour: 8
             color_thresholds:
               - value: 90
                 color: '#34c759'
-              - value: 82
+              - value: 85
                 color: '#ffcc00'
-              - value: 74
+              - value: 80
                 color: '#ff3b30'
           - type: horizontal-stack
             cards:
@@ -169,7 +169,7 @@ views:
             cards:
               - type: custom:button-card
                 entity: button.ecostream_low
-                name: Low
+                name: Mid
                 icon: mdi:fan-speed-1
                 tap_action:
                   action: call-service
@@ -234,7 +234,7 @@ views:
             icon: mdi:molecule-co2
             entities:
               - sensor.ecostream_eco2_return
-            hours_to_show: 8
+            hours_to_show: 24
             line_width: 3
             points_per_hour: 8
             color_thresholds:
@@ -249,7 +249,7 @@ views:
             icon: mdi:chemical-weapon
             entities:
               - sensor.ecostream_tvoc_return
-            hours_to_show: 8
+            hours_to_show: 24
             line_width: 3
             points_per_hour: 8
             color_thresholds:
@@ -264,7 +264,7 @@ views:
             icon: mdi:water-percent
             entities:
               - sensor.ecostream_humidity_return
-            hours_to_show: 8
+            hours_to_show: 24
             line_width: 3
             points_per_hour: 8
             color: '#32ade6'
