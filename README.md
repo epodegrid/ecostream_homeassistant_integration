@@ -359,6 +359,24 @@ action:
       entity_id: switch.ecostream_preset_low
 ```
 
+### Set custom Qset from automation
+
+```yaml
+alias: EcoStream - Set custom Qset
+trigger:
+  - platform: time
+    at: "18:00:00"
+action:
+  - service: fan.set_qset
+    target:
+      entity_id: fan.ecostream_ventilation
+    data:
+      qset: 140
+      override_minutes: 30
+```
+
+Use `override_minutes` only when you want to override the default preset override duration from integration options.
+
 ---
 
 ## 🛠 Diagnostics

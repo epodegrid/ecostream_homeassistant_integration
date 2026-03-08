@@ -4,11 +4,16 @@ from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import (
+    AddEntitiesCallback,
+    current_platform,
+)
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 import inspect
 import logging
 from typing import Any
+
+import voluptuous as vol
 
 from .const import (
     CONF_PRESET_OVERRIDE_MINUTES,
@@ -25,6 +30,7 @@ from .coordinator import EcostreamDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 0
+_qset_service_registered = False
 
 
 async def async_setup_entry(
@@ -39,6 +45,27 @@ async def async_setup_entry(
         [EcostreamVentilationFan(coordinator, entry)],
         update_before_add=True,
     )
+
+    global _qset_service_registered
+    if not _qset_service_registered:
+        platform = current_platform.get()
+        if platform is None:
+            _LOGGER.error(
+                "EcoStream fan platform unavailable; set_qset service not registered"
+            )
+            return
+
+        platform.async_register_entity_service(
+            "set_qset",
+            {
+                vol.Required("qset"): vol.Coerce(float),
+                vol.Optional("override_minutes"): vol.All(
+                    vol.Coerce(int), vol.Range(min=0)
+                ),
+            },
+            "async_set_qset",
+        )
+        _qset_service_registered = True
 
 
 class EcostreamVentilationFan(
@@ -191,6 +218,59 @@ class EcostreamVentilationFan(
         else:
             self.coordinator.mark_control_action()
             await self.coordinator.ws.send_json(payload)
+        self.async_write_ha_state()
+
+    async def async_set_qset(
+        self, qset: float, override_minutes: int | None = None
+    ) -> None:
+        """Set a manual Qset override for automations.
+
+        This exposes fan.set_qset without requiring a NumberEntity slider.
+        """
+        if not self.coordinator.ws:
+            _LOGGER.error(
+                "EcoStream WebSocket not connected → cannot set qset"
+            )
+            return
+
+        opts = self._entry.options or {}
+        minutes = (
+            int(override_minutes)
+            if override_minutes is not None
+            else int(
+                opts.get(
+                    CONF_PRESET_OVERRIDE_MINUTES,
+                    DEFAULT_PRESET_OVERRIDE_MINUTES,
+                )
+            )
+        )
+
+        payload = {
+            "config": {
+                "man_override_set": float(qset),
+                "man_override_set_time": minutes * 60,
+            }
+        }
+
+        _LOGGER.debug(
+            "EcoStream manual qset override → Qset %.1f (%sm)",
+            qset,
+            minutes,
+        )
+
+        sender = getattr(self.coordinator, "async_send_config", None)
+        if sender is not None:
+            result = sender(payload["config"], "manual qset")
+            if inspect.isawaitable(result):
+                await result
+            else:
+                self.coordinator.mark_control_action()
+                await self.coordinator.ws.send_json(payload)
+        else:
+            self.coordinator.mark_control_action()
+            await self.coordinator.ws.send_json(payload)
+
+        self._attr_preset_mode = self._calculate_preset(float(qset))
         self.async_write_ha_state()
 
     @callback

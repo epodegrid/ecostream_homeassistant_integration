@@ -42,6 +42,7 @@ def _make_fan(
     data: dict[str, Any] | None = None,
     ws: bool = True,
     last_update_success: bool = True,
+    entry_options: dict[str, Any] | None = None,
 ) -> tuple[EcostreamVentilationFan, MagicMock]:
     coordinator = MagicMock()
     coordinator.data = data or {}
@@ -53,7 +54,7 @@ def _make_fan(
     coordinator.mark_control_action = MagicMock()
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry"
-    entry.options = {}
+    entry.options = entry_options or {}
 
     def mock_init(self: CoordinatorEntity, c: Any) -> None:
         self.coordinator = c
@@ -295,6 +296,44 @@ async def test_set_preset_mode_writes_state():
     )
     await fan.async_set_preset_mode(PRESET_MID)
     cast(MagicMock, fan.async_write_ha_state).assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_set_qset_uses_default_override_minutes():
+    fan, coordinator = _make_fan()
+    await fan.async_set_qset(150)
+    payload = coordinator.ws.send_json.call_args[0][0]
+    assert payload["config"]["man_override_set"] == 150.0
+    assert payload["config"]["man_override_set_time"] == 3600
+
+
+@pytest.mark.asyncio
+async def test_set_qset_uses_entry_override_minutes():
+    fan, coordinator = _make_fan(
+        entry_options={"preset_override_minutes": 45}
+    )
+    await fan.async_set_qset(175)
+    payload = coordinator.ws.send_json.call_args[0][0]
+    assert payload["config"]["man_override_set"] == 175.0
+    assert payload["config"]["man_override_set_time"] == 2700
+
+
+@pytest.mark.asyncio
+async def test_set_qset_uses_explicit_override_minutes():
+    fan, coordinator = _make_fan(
+        entry_options={"preset_override_minutes": 45}
+    )
+    await fan.async_set_qset(200, override_minutes=10)
+    payload = coordinator.ws.send_json.call_args[0][0]
+    assert payload["config"]["man_override_set"] == 200.0
+    assert payload["config"]["man_override_set_time"] == 600
+
+
+@pytest.mark.asyncio
+async def test_set_qset_no_ws_returns_early():
+    fan, _ = _make_fan(ws=False)
+    await fan.async_set_qset(120)
+    cast(MagicMock, fan.async_write_ha_state).assert_not_called()
 
 
 def test_get_qset_with_string_value():
