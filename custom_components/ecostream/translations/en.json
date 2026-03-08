@@ -148,7 +148,8 @@
                     "5": "5 minutes",
                     "10": "10 minutes",
                     "15": "15 minutes",
-                    "30": "30 minutes"
+                    "30": "30 minutes",
+                    "60": "60 minutes"
                 }
             }
         },
