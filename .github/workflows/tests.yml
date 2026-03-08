@@ -2,7 +2,17 @@ name: coverage report
 
 on:
   push:
+    paths:
+      - '**.py'
+      - 'requirements*.txt'
+      - 'pytest.ini'
+      - '.github/workflows/tests.yml'
   pull_request:
+    paths:
+      - '**.py'
+      - 'requirements*.txt'
+      - 'pytest.ini'
+      - '.github/workflows/tests.yml'
   workflow_dispatch:
 
 jobs:
