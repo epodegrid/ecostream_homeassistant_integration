@@ -184,10 +184,10 @@ async def test_zeroconf_step_already_configured(
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
-        context={\"source\": config_entries.SOURCE_ZEROCONF},
+        context={"source": config_entries.SOURCE_ZEROCONF},
         data=_make_zeroconf_service_info(
             host=MOCK_HOST,
-            name=f\"{MOCK_SYSTEM_NAME}._http._tcp.local.\",
+            name=f"{MOCK_SYSTEM_NAME}._http._tcp.local.",
         ),
     )
     assert result["type"] == FlowResultType.ABORT
