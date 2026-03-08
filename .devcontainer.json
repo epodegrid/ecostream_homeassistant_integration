@@ -1,6 +1,9 @@
 {
     "name": "uber1337nl/ecostream-hass-integration",
     "image": "mcr.microsoft.com/devcontainers/python:3.14",
+    "mounts": [
+        "source=${localWorkspaceFolderBasename}-venv,target=${containerWorkspaceFolder}/.venv,type=volume"
+    ],
     "postCreateCommand": "scripts/setup",
     "forwardPorts": [
         8123
