@@ -1,4 +1,10 @@
-colorlog==6.10.1
-homeassistant==2026.01.1
-pip>=21.3.1
-ruff==0.15.4
+colorlog
+homeassistant==2026.03
+pip
+ruff
+pylint
+pytest
+pytest-cov
+pytest-asyncio
+pytest-mock
+
