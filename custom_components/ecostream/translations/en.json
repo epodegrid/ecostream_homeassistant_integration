@@ -97,9 +97,6 @@
             "filter_replacement_date": {
                 "name": "Filter Replacement Date"
             },
-            "filter_replacement_warning": {
-                "name": "Filter Replacement"
-            },
             "uptime": {
                 "name": "Uptime"
             },

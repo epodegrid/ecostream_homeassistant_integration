@@ -120,9 +120,6 @@
       "filter_replacement_date": {
         "name": "Filtervervangingsdatum"
       },
-      "filter_replacement_warning": {
-        "name": "Filter vervangen"
-      },
       "uptime": {
         "name": "Uptime"
       },
