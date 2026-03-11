@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 import sys
+import time
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -339,6 +340,41 @@ def test_sensor_unique_id():
         key="my_sensor", value_fn=lambda d: None
     )
     assert _make_sensor(desc).unique_id == "test_entry_my_sensor"
+
+
+def test_filter_replacement_warning_sensor_is_ok_when_not_due():
+    desc = next(
+        description
+        for description in SENSOR_DESCRIPTIONS
+        if description.key == "filter_replacement_warning"
+    )
+    sensor = _make_sensor(
+        desc,
+        {"config": {"filter_datetime": int(time.time()) + 3600}},
+    )
+    assert sensor.native_value == "OK"
+
+
+def test_filter_replacement_warning_sensor_is_replace_when_due():
+    desc = next(
+        description
+        for description in SENSOR_DESCRIPTIONS
+        if description.key == "filter_replacement_warning"
+    )
+    sensor = _make_sensor(
+        desc,
+        {"config": {"filter_datetime": int(time.time()) - 10}},
+    )
+    assert sensor.native_value == "Replace"
+
+
+def test_filter_replacement_warning_sensor_defaults_to_ok():
+    desc = next(
+        description
+        for description in SENSOR_DESCRIPTIONS
+        if description.key == "filter_replacement_warning"
+    )
+    assert _make_sensor(desc, {}).native_value == "OK"
 
 
 def test_sensor_descriptions_count():

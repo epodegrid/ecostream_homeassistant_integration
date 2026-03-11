@@ -16,6 +16,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 import logging
+import time
 from typing import Any, cast
 
 from .const import (
@@ -101,6 +102,17 @@ def _bool_value(
         return bool(_deep_get(data, path, default))
 
     return _fn
+
+
+def _filter_replacement_warning_state(
+    data: Mapping[str, Any],
+) -> str:
+    ts = _deep_get(data, ["config", "filter_datetime"])
+
+    if not isinstance(ts, (int, float)) or ts <= 0:
+        return "OK"
+
+    return "Replace" if time.time() >= float(ts) else "OK"
 
 
 # ---------------------------------------------------------------------------
@@ -268,13 +280,7 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         key="filter_replacement_warning",
         name="Filter Replacement Warning",
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda d: (
-            lambda ts: (
-                isinstance(ts, (int, float))
-                and ts > 0
-                and __import__("time").time() >= float(ts)
-            )
-        )(_deep_get(d, ["config", "filter_datetime"])),
+        value_fn=_filter_replacement_warning_state,
     ),
     # -------------------------------------------------------------------
     # SYSTEM
