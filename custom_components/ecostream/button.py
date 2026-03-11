@@ -37,7 +37,7 @@ async def async_setup_entry(
     )
 
 
-class EcostreamResetFilterButton(
+class EcostreamResetFilterButton(  # type: ignore[misc]
     CoordinatorEntity[EcostreamDataUpdateCoordinator], ButtonEntity
 ):
     """Button to reset the filter replacement date."""

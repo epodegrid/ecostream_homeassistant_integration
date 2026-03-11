@@ -33,7 +33,7 @@ async def async_setup_entry(
     )
 
 
-class EcostreamBoostDurationSelect(
+class EcostreamBoostDurationSelect(  # type: ignore[misc]
     CoordinatorEntity[EcostreamDataUpdateCoordinator], SelectEntity
 ):
     _attr_has_entity_name = True
@@ -57,7 +57,7 @@ class EcostreamBoostDurationSelect(
         )
 
     @property
-    def current_option(self) -> str | None:
+    def current_option(self) -> str | None:  # type: ignore[override]
         minutes = getattr(
             self.coordinator,
             "boost_duration_minutes",

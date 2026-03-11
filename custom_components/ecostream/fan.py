@@ -70,7 +70,7 @@ async def async_setup_entry(
         _qset_service_registered = True
 
 
-class EcostreamVentilationFan(
+class EcostreamVentilationFan(  # type: ignore[misc]
     CoordinatorEntity[EcostreamDataUpdateCoordinator], FanEntity
 ):
     """EcoStream main ventilation fan."""

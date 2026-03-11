@@ -430,13 +430,13 @@ class EcostreamBaseSensor(
         )
 
     @property
-    def available(self) -> bool:
+    def available(self) -> bool:  # type: ignore[override]
         data = cast(dict[str, Any], self.coordinator.data or {})
         status = cast(dict[str, Any], data.get("status") or {})
         return bool(status.get("connect_status", 1) == 1)
 
     @property
-    def native_value(self) -> Any:
+    def native_value(self) -> Any:  # type: ignore[override]
         desc = self.entity_description
         data = self.coordinator.data or {}
 
