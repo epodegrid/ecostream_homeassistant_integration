@@ -8,6 +8,7 @@ DOMAIN = "ecostream"
 
 PLATFORMS: list[str] = [
     "button",
+    "binary_sensor",
     "sensor",
     "fan",
     "select",
