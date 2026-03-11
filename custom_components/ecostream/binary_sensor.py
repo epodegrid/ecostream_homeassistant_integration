@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
     BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
@@ -44,7 +43,6 @@ class EcostreamFilterReplacementWarningBinarySensor(
 
     _attr_has_entity_name = True
     _attr_name = "Filter Replacement Warning"
-    _attr_device_class = BinarySensorDeviceClass.PROBLEM
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(
