@@ -1,4 +1,4 @@
-title: EcoStream
+sensor.ecostream_tvoc_retourtitle: EcoStream
 theme: ios-light-mode
 views:
   - title: EcoStream
@@ -18,10 +18,27 @@ views:
             color_thresholds:
               - value: 90
                 color: '#34c759'
-              - value: 82
+              - value: 85
                 color: '#ffcc00'
-              - value: 74
+              - value: 80
                 color: '#ff3b30'
+          - type: horizontal-stack
+            cards:
+              - type: gauge
+                entity: sensor.ecostream_temperature_eta
+                name: ETA (retour)
+                min: 0
+                max: 30
+              - type: gauge
+                entity: sensor.ecostream_temperature_eha
+                name: EHA (uitlaat)
+                min: 0
+                max: 30
+              - type: gauge
+                entity: sensor.ecostream_temperature_oda
+                name: ODA (inlaat)
+                min: -10
+                max: 35
           - type: horizontal-stack
             cards:
               - type: custom:button-card
@@ -76,23 +93,6 @@ views:
                   name:
                     - font-size: 1.2rem
                     - font-weight: 100
-          - type: horizontal-stack
-            cards:
-              - type: gauge
-                entity: sensor.ecostream_temperature_eta
-                name: ETA (retour)
-                min: 0
-                max: 30
-              - type: gauge
-                entity: sensor.ecostream_temperature_eha
-                name: EHA (uitlaat)
-                min: 0
-                max: 30
-              - type: gauge
-                entity: sensor.ecostream_temperature_oda
-                name: ODA (inlaat)
-                min: -10
-                max: 35
           - type: horizontal-stack
             cards:
               - type: custom:button-card
@@ -179,7 +179,7 @@ views:
                 entity: switch.ecostream_preset_low
                 name: Low
                 icon: mdi:fan-speed-1
-                show_state: true
+                show_state: false
                 show_label: true
                 tap_action:
                   action: toggle
@@ -205,7 +205,7 @@ views:
                 entity: switch.ecostream_preset_mid
                 name: Mid
                 icon: mdi:fan-speed-2
-                show_state: true
+                show_state: false
                 show_label: true
                 tap_action:
                   action: toggle
@@ -216,6 +216,7 @@ views:
                         - box-shadow: 0 8px 20px rgba(0,122,255,0.35)
                       icon:
                         - color: '#007aff'
+                        - height: 40px
                 styles:
                   card:
                     - border-radius: 22px
@@ -231,7 +232,7 @@ views:
                 entity: switch.ecostream_preset_high
                 name: High
                 icon: mdi:fan-speed-3
-                show_state: true
+                show_state: false
                 show_label: true
                 tap_action:
                   action: toggle
@@ -256,10 +257,10 @@ views:
       - type: grid
         cards:
           - type: custom:mini-graph-card
-            name: Co² (ppm)
+            name: CO² (ppm)
             icon: mdi:molecule-co2
             entities:
-              - sensor.ecostream_eco2_return
+              - sensor.ecostream_external_co2
             hours_to_show: 24
             line_width: 3
             points_per_hour: 8
@@ -283,7 +284,7 @@ views:
                 color: '#34c759'
               - value: 200
                 color: '#ffcc00'
-              - value: 610
+              - value: 500
                 color: '#ff3b30'
           - type: custom:mini-graph-card
             name: Luchtvochtigheid (%)
@@ -300,8 +301,8 @@ views:
             entities:
               - entity: sensor.ecostream_uptime
               - entity: sensor.ecostream_wifi_ssid
-              - entity: sensor.ecostream_wifi_ip
-              - entity: sensor.ecostream_wifi_rssi
+              - entity: sensor.ecostream_wifi_ip_adres
+              - entity: sensor.ecostream_wifi_signaalsterkte
             title: 🛠 Systeemstatus
           - type: gauge
             entity: sensor.ecostream_qset
@@ -310,7 +311,7 @@ views:
             needle: false
             grid_options:
               columns: 6
-              rows: 2
+              rows: 2.2
             tap_action:
               action: none
             name: Debiet
@@ -319,7 +320,7 @@ views:
             name: Resterende tijd
             grid_options:
               columns: 3
-              rows: 2
+              rows: 2.2
             tap_action:
               action: none
             card_mod:
