@@ -94,15 +94,6 @@ def _int_value(path: list[str]) -> Callable[[Mapping[str, Any]], Any]:
     return _fn
 
 
-def _bool_value(
-    path: list[str], default: Any = False
-) -> Callable[[Mapping[str, Any]], Any]:
-    def _fn(data: Mapping[str, Any]) -> Any:
-        return bool(_deep_get(data, path, default))
-
-    return _fn
-
-
 # ---------------------------------------------------------------------------
 # Extended EntityDescription
 # ---------------------------------------------------------------------------
@@ -220,11 +211,6 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
         native_unit_of_measurement="s",
         value_fn=_int_value(["status", "override_set_time_left"]),
     ),
-    EcostreamSensorDescription(
-        key="frost_protection_active",
-        name="Frost Protection Active",
-        value_fn=_bool_value(["status", "frost_protection"], False),
-    ),
     # -------------------------------------------------------------------
     # HEAT RECOVERY EFFICIENCY (NEW)
     # -------------------------------------------------------------------
@@ -238,16 +224,6 @@ SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
     # -------------------------------------------------------------------
     # CONFIG
     # -------------------------------------------------------------------
-    EcostreamSensorDescription(
-        key="schedule_enabled",
-        name="Schedule Enabled",
-        value_fn=_bool_value(["config", "schedule_enabled"], False),
-    ),
-    EcostreamSensorDescription(
-        key="summer_comfort_enabled",
-        name="Summer Comfort Enabled",
-        value_fn=_bool_value(["config", "sum_com_enabled"], False),
-    ),
     EcostreamSensorDescription(
         key="summer_comfort_temp",
         name="Summer Comfort Temp",

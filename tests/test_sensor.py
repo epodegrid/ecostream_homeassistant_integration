@@ -17,7 +17,6 @@ from custom_components.ecostream.sensor import (
     SENSOR_DESCRIPTIONS,
     EcostreamBaseSensor,
     EcostreamSensorDescription,
-    _bool_value,  # pyright: ignore[reportPrivateUsage]
     _calc_efficiency,  # pyright: ignore[reportPrivateUsage]
     _deep_get,  # pyright: ignore[reportPrivateUsage]
     _format_uptime,  # pyright: ignore[reportPrivateUsage]
@@ -135,11 +134,6 @@ def test_int_value_none_returns_none():
 def test_int_value_converts():
     fn = _int_value(["a"])
     assert fn({"a": "12"}) == 12
-
-
-def test_bool_value_uses_default():
-    fn = _bool_value(["x"], default=True)
-    assert fn({}) is True
 
 
 # ---------------------------------------------------------------------------

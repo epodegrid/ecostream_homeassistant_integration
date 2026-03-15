@@ -83,34 +83,30 @@ Supports *live push updates*, *fan control*, *boost automation*,
 
 ### Sensors
 
-| Entity                     | Unit | Description                             | Enabled by default |
-| -------------------------- | ---- | --------------------------------------- | ------------------ |
-| eCO₂ Return                | ppm  | CO₂ level in return air                 | ✅                  |
-| TVOC Return                | ppb  | Total VOC in return air                 | ✅                  |
-| Humidity Return            | %    | Relative humidity in return air         | ✅                  |
-| Temperature ETA            | °C   | Extract air temperature                 | ✅                  |
-| Temperature EHA            | °C   | Exhaust air temperature                 | ✅                  |
-| Temperature ODA            | °C   | Outside air temperature                 | ✅                  |
-| Bypass Position            | %    | Current bypass valve position           | ✅                  |
-| Qset                       | m³/h | Active ventilation flow setpoint        | ✅                  |
-| Heat Recovery Efficiency   | %    | Calculated heat recovery efficiency     | ✅                  |
-| Mode Time Left             | s    | Remaining time for active override mode | ✅                  |
-| Frost Protection Active    | -    | Whether frost protection is active      | ✅                  |
-| Fan Exhaust Speed          | rpm  | Exhaust fan speed                       | ✅                  |
-| Fan Supply Speed           | rpm  | Supply fan speed                        | ✅                  |
-| Schedule Enabled           | -    | Whether a schedule is active            | ✅                  |
-| Summer Comfort Enabled     | -    | Whether summer comfort mode is active   | ✅                  |
-| Summer Comfort Temp        | °C   | Summer comfort temperature threshold    | ✅                  |
-| Filter Replacement Date    | date | Date of last filter reset               | ✅ (diagnostic)     |
-| Filter Replacement Warning | -    | Overdue status (sensor compatibility mirror) | ✅ (diagnostic)     |
-| Uptime                     | -    | Device uptime formatted as `Xd Yh Zm`   | ✅ (diagnostic)     |
-| WiFi IP                    | -    | Device IP address                       | ✅                  |
-| WiFi SSID                  | -    | Connected WiFi network name             | ✅                  |
-| WiFi RSSI                  | dBm  | WiFi signal strength                    | ✅                  |
-| Setpoint Low               | m³/h | Configured low airflow preset           | ✅ (diagnostic)     |
-| Setpoint Mid               | m³/h | Configured mid airflow preset           | ✅ (diagnostic)     |
-| Setpoint High              | m³/h | Configured high airflow preset          | ✅ (diagnostic)     |
-| External CO₂               | ppm  | External CO₂ sensor value               | ✅                  |
+| Entity                   | Unit | Description                             | Enabled by default |
+| ------------------------ | ---- | --------------------------------------- | ------------------ |
+| eCO₂ Return              | ppm  | CO₂ level in return air                 | ✅                  |
+| TVOC Return              | ppb  | Total VOC in return air                 | ✅                  |
+| Humidity Return          | %    | Relative humidity in return air         | ✅                  |
+| Temperature ETA          | °C   | Extract air temperature                 | ✅                  |
+| Temperature EHA          | °C   | Exhaust air temperature                 | ✅                  |
+| Temperature ODA          | °C   | Outside air temperature                 | ✅                  |
+| Bypass Position          | %    | Current bypass valve position           | ✅                  |
+| Qset                     | m³/h | Active ventilation flow setpoint        | ✅                  |
+| Heat Recovery Efficiency | %    | Calculated heat recovery efficiency     | ✅                  |
+| Mode Time Left           | s    | Remaining time for active override mode | ✅                  |
+| Fan Exhaust Speed        | rpm  | Exhaust fan speed                       | ✅                  |
+| Fan Supply Speed         | rpm  | Supply fan speed                        | ✅                  |
+| Summer Comfort Temp      | °C   | Summer comfort temperature threshold    | ✅                  |
+| Filter Replacement Date  | date | Date of last filter reset               | ✅ (diagnostic)     |
+| Uptime                   | -    | Device uptime formatted as `Xd Yh Zm`   | ✅ (diagnostic)     |
+| WiFi IP                  | -    | Device IP address                       | ✅                  |
+| WiFi SSID                | -    | Connected WiFi network name             | ✅                  |
+| WiFi RSSI                | dBm  | WiFi signal strength                    | ✅                  |
+| Setpoint Low             | m³/h | Configured low airflow preset           | ✅ (diagnostic)     |
+| Setpoint Mid             | m³/h | Configured mid airflow preset           | ✅ (diagnostic)     |
+| Setpoint High            | m³/h | Configured high airflow preset          | ✅ (diagnostic)     |
+| External CO₂             | ppm  | External CO₂ sensor value               | ✅                  |
 
 ### Controls
 
@@ -132,6 +128,9 @@ Supports *live push updates*, *fan control*, *boost automation*,
 | Entity                     | Device class | Description                                | Enabled by default |
 | -------------------------- | ------------ | ------------------------------------------ | ------------------ |
 | Filter Replacement Warning | problem      | Primary trigger entity for overdue filters | ✅ (diagnostic)     |
+| Frost Protection Active    | -            | Whether frost protection is active         | ✅                  |
+| Schedule Enabled           | -            | Whether a schedule is active               | ✅                  |
+| Summer Comfort Enabled     | -            | Whether summer comfort mode is active      | ✅                  |
 
 ---
 

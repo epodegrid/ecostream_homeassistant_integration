@@ -560,6 +560,64 @@ async def test_async_setup_entry_registers_service():
 
 
 @pytest.mark.asyncio
+async def test_async_setup_entry_platform_none_returns_early():
+    """Test service registration exits when no current platform is available."""
+    import custom_components.ecostream.fan as fan_module
+    from custom_components.ecostream.fan import async_setup_entry
+
+    fan_module._qset_service_registered = False
+
+    coordinator = MagicMock()
+    entry = MagicMock(spec=ConfigEntry)
+    entry.runtime_data = coordinator
+    entry.entry_id = "test_entry"
+
+    add_entities = MagicMock()
+
+    with patch(
+        "custom_components.ecostream.fan.current_platform"
+    ) as mock_platform_module:
+        mock_platform_module.get.return_value = None
+
+        await async_setup_entry(MagicMock(), entry, add_entities)
+
+    add_entities.assert_called_once()
+    assert fan_module._qset_service_registered is False
+
+
+@pytest.mark.asyncio
+async def test_set_preset_mode_without_async_send_config_falls_back_to_ws():
+    """Test async_set_preset_mode fallback when async_send_config is absent."""
+    fan, coordinator = _make_fan(
+        {
+            "config": {
+                "setpoint_low": 90,
+                "setpoint_mid": 180,
+                "setpoint_high": 270,
+            }
+        }
+    )
+    coordinator.async_send_config = None
+
+    await fan.async_set_preset_mode(PRESET_MID)
+
+    coordinator.mark_control_action.assert_called_once()
+    coordinator.ws.send_json.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_set_qset_without_async_send_config_falls_back_to_ws():
+    """Test async_set_qset fallback when async_send_config is absent."""
+    fan, coordinator = _make_fan()
+    coordinator.async_send_config = None
+
+    await fan.async_set_qset(210)
+
+    coordinator.mark_control_action.assert_called_once()
+    coordinator.ws.send_json.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_turn_off_marks_control_action():
     fan, coordinator = _make_fan(
         {

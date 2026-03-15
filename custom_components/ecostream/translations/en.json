@@ -79,17 +79,8 @@
             "mode_time_left": {
                 "name": "Override Time Remaining"
             },
-            "frost_protection_active": {
-                "name": "Frost Protection Active"
-            },
             "efficiency": {
                 "name": "Heat Recovery Efficiency"
-            },
-            "schedule_enabled": {
-                "name": "Schedule Enabled"
-            },
-            "summer_comfort_enabled": {
-                "name": "Summer Comfort Enabled"
             },
             "summer_comfort_temp": {
                 "name": "Summer Comfort Temperature"
@@ -125,6 +116,20 @@
         "button": {
             "reset_filter": {
                 "name": "Reset Filter"
+            }
+        },
+        "binary_sensor": {
+            "filter_replacement_warning_binary": {
+                "name": "Filter Replacement Warning"
+            },
+            "frost_protection_active": {
+                "name": "Frost Protection Active"
+            },
+            "schedule_enabled": {
+                "name": "Schedule Enabled"
+            },
+            "summer_comfort_enabled": {
+                "name": "Summer Comfort Enabled"
             }
         },
         "switch": {

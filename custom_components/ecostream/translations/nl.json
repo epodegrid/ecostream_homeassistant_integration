@@ -102,17 +102,8 @@
       "mode_time_left": {
         "name": "Resterende override tijd"
       },
-      "frost_protection_active": {
-        "name": "Vorstbeveiliging actief"
-      },
       "efficiency": {
         "name": "WTW efficiëntie"
-      },
-      "schedule_enabled": {
-        "name": "Schema ingeschakeld"
-      },
-      "summer_comfort_enabled": {
-        "name": "Zomercomfort ingeschakeld"
       },
       "summer_comfort_temp": {
         "name": "Zomercomfort temperatuur"
@@ -148,6 +139,20 @@
     "button": {
       "reset_filter": {
         "name": "Filter resetten"
+      }
+    },
+    "binary_sensor": {
+      "filter_replacement_warning_binary": {
+        "name": "Filtervervanging waarschuwing"
+      },
+      "frost_protection_active": {
+        "name": "Vorstbeveiliging actief"
+      },
+      "schedule_enabled": {
+        "name": "Schema ingeschakeld"
+      },
+      "summer_comfort_enabled": {
+        "name": "Zomercomfort ingeschakeld"
       }
     },
     "switch": {

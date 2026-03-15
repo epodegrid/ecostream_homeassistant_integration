@@ -19,6 +19,8 @@ from custom_components.ecostream.const import (
 )
 from custom_components.ecostream.websocket_api import EcostreamWebsocket
 
+pytestmark = pytest.mark.timeout(30)
+
 
 def _make_ws(host: str = "192.168.1.1"):
     hass = MagicMock()
@@ -442,30 +444,87 @@ async def test_run_ignores_binary_message():
 async def test_run_breaks_on_close_message():
     ws, _, _ = _make_ws()
 
-    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSE)], stop_ws=ws)
+    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSE)])
     ws._session.ws_connect = MagicMock(return_value=aio_ws)
 
-    await ws._run()
+    async def stop_after_sleep(_delay: float) -> None:
+        _ = _delay
+        ws._stopping = True
+
+    with patch(
+        "custom_components.ecostream.websocket_api.asyncio.sleep",
+        new=AsyncMock(side_effect=stop_after_sleep),
+    ):
+        await ws._run()
 
 
 @pytest.mark.asyncio
 async def test_run_breaks_on_closing_message():
     ws, _, _ = _make_ws()
 
-    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSING)], stop_ws=ws)
+    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.CLOSING)])
     ws._session.ws_connect = MagicMock(return_value=aio_ws)
 
-    await ws._run()
+    async def stop_after_sleep(_delay: float) -> None:
+        _ = _delay
+        ws._stopping = True
+
+    with patch(
+        "custom_components.ecostream.websocket_api.asyncio.sleep",
+        new=AsyncMock(side_effect=stop_after_sleep),
+    ):
+        await ws._run()
 
 
 @pytest.mark.asyncio
 async def test_run_breaks_on_error_message():
     ws, _, _ = _make_ws()
 
-    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.ERROR)], stop_ws=ws)
+    aio_ws = _make_aiohttp_ws([_msg(WSMsgType.ERROR)])
     ws._session.ws_connect = MagicMock(return_value=aio_ws)
 
+    async def stop_after_sleep(_delay: float) -> None:
+        _ = _delay
+        ws._stopping = True
+
+    with patch(
+        "custom_components.ecostream.websocket_api.asyncio.sleep",
+        new=AsyncMock(side_effect=stop_after_sleep),
+    ):
+        await ws._run()
+
+
+@pytest.mark.asyncio
+async def test_run_handles_cancelled_error_from_connect():
+    ws, _, _ = _make_ws()
+    ws._session.ws_connect = MagicMock(
+        side_effect=asyncio.CancelledError()
+    )
+
     await ws._run()
+
+
+@pytest.mark.asyncio
+async def test_run_unexpected_exception_creates_issue_once():
+    ws, _, _ = _make_ws()
+
+    ws._session.ws_connect = MagicMock(side_effect=RuntimeError("boom"))
+
+    async def stop_after_sleep(_delay: float) -> None:
+        _ = _delay
+        ws._stopping = True
+
+    with patch(
+        "custom_components.ecostream.websocket_api.ir.async_create_issue"
+    ) as create_issue:
+        with patch(
+            "custom_components.ecostream.websocket_api.asyncio.sleep",
+            new=AsyncMock(side_effect=stop_after_sleep),
+        ):
+            await ws._run()
+
+    create_issue.assert_called_once()
+    assert ws._logged_unavailable is True
 
 
 @pytest.mark.asyncio

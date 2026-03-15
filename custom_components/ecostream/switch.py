@@ -60,8 +60,9 @@ async def async_setup_entry(
 # ============================================================================
 
 
-class EcostreamBaseEntity(
-    CoordinatorEntity[EcostreamDataUpdateCoordinator]
+class EcostreamBaseEntity(  # pyright: ignore[reportIncompatibleVariableOverride]
+    CoordinatorEntity[EcostreamDataUpdateCoordinator],
+    SwitchEntity,
 ):
     """Shared device info for EcoStream entities."""
 
@@ -110,7 +111,7 @@ class EcostreamBaseEntity(
         await self.coordinator.ws.send_json({"config": cfg})
 
 
-class EcostreamConfigSwitch(EcostreamBaseEntity, SwitchEntity):
+class EcostreamConfigSwitch(EcostreamBaseEntity):
     _config_key: str
     _log_action: str
 
@@ -159,10 +160,9 @@ class EcostreamScheduleSwitch(EcostreamConfigSwitch):
         entry: ConfigEntry,
     ) -> None:
         super().__init__(coordinator, entry)
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._entry.entry_id}_schedule_enabled"
+        self._attr_unique_id = (
+            f"{self._entry.entry_id}_schedule_enabled"
+        )
 
 
 # ============================================================================
@@ -182,10 +182,7 @@ class EcostreamSummerComfortSwitch(EcostreamConfigSwitch):
         entry: ConfigEntry,
     ) -> None:
         super().__init__(coordinator, entry)
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._entry.entry_id}_summer_comfort"
+        self._attr_unique_id = f"{self._entry.entry_id}_summer_comfort"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         opts = getattr(self._entry, "options", {}) or {}
@@ -221,7 +218,7 @@ class EcostreamSummerComfortSwitch(EcostreamConfigSwitch):
 # ============================================================================
 
 
-class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
+class EcostreamBoostSwitch(EcostreamBaseEntity):
     """Boost: tijdelijk hoge Qset met timer (default: 15 minuten)."""
 
     _attr_name = "Boost"
@@ -233,16 +230,13 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
         entry: ConfigEntry,
     ) -> None:
         super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{self._entry.entry_id}_boost"
         status = self._get_status()
         val = status.get("override_set_time_left")
         try:
             self._attr_is_on = val is not None and int(float(val)) > 0
         except (TypeError, ValueError):
             self._attr_is_on = False
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._entry.entry_id}_boost"
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -360,7 +354,7 @@ class EcostreamBoostSwitch(EcostreamBaseEntity, SwitchEntity):
 # ============================================================================
 
 
-class EcostreamBypassSwitch(EcostreamBaseEntity, SwitchEntity):
+class EcostreamBypassSwitch(EcostreamBaseEntity):
     _attr_name = "Bypass Valve"
     _attr_icon = "mdi:valve"
 
@@ -370,11 +364,8 @@ class EcostreamBypassSwitch(EcostreamBaseEntity, SwitchEntity):
         entry: ConfigEntry,
     ) -> None:
         super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{self._entry.entry_id}_bypass_valve"
         self._attr_is_on = self._is_bypass_open()
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._entry.entry_id}_bypass_valve"
 
     def _is_bypass_open(self) -> bool:
         pos_raw = self._get_status().get("bypass_pos")
@@ -402,7 +393,7 @@ class EcostreamBypassSwitch(EcostreamBaseEntity, SwitchEntity):
 # ==========================================================================
 
 
-class EcostreamPresetSwitch(EcostreamBaseEntity, SwitchEntity):
+class EcostreamPresetSwitch(EcostreamBaseEntity):
     _attr_has_entity_name = True
     _attr_icon = "mdi:fan"
 

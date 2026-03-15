@@ -1,4 +1,4 @@
-sensor.ecostream_tvoc_retourtitle: EcoStream
+title: EcoStream
 theme: ios-light-mode
 views:
   - title: EcoStream
@@ -300,8 +300,8 @@ views:
             entities:
               - entity: sensor.ecostream_uptime
               - entity: sensor.ecostream_wifi_ssid
-              - entity: sensor.ecostream_wifi_ip_adres
-              - entity: sensor.ecostream_wifi_signaalsterkte
+              - entity: sensor.ecostream_wifi_ip
+              - entity: sensor.ecostream_wifi_rssi
             title: 🛠 Systeemstatus
           - type: gauge
             entity: sensor.ecostream_qset
@@ -329,7 +329,7 @@ views:
                   --card-secondary-font-size: 40px;
                 }
           - type: tile
-            entity: sensor.ecostream_schedule_enabled
+            entity: binary_sensor.ecostream_schedule_enabled
             name: Schema actief
             icon: mdi:fan-clock
             color: deep-purple
@@ -345,7 +345,7 @@ views:
             vertical: true
             features_position: bottom
           - type: tile
-            entity: sensor.ecostream_summer_comfort_enabled
+            entity: binary_sensor.ecostream_summer_comfort_enabled
             name: Zomercomfort
             icon: far:sun
             color: amber
@@ -353,7 +353,7 @@ views:
             vertical: true
             features_position: bottom
           - type: tile
-            entity: sensor.ecostream_frost_protection_active
+            entity: binary_sensor.ecostream_frost_protection_active
             name: Vorstbescherming
             icon: mdi:snowflake-thermometer
             color: primary
