@@ -1,0 +1,26 @@
+set_qset:
+  name: Set QSET
+  description: Set the QSET value for the EcoStream ventilation fan
+  target:
+    entity:
+      domain: fan
+  fields:
+    qset:
+      name: QSET Value
+      description: The QSET value to set for the fan (whole numbers only)
+      required: true
+      example: 150
+      selector:
+        number:
+          min: 60
+          max: 350
+          step: 1
+    override_minutes:
+      name: Override Minutes
+      description: Optional number of minutes to override the setting (minimum 0)
+      required: false
+      example: 30
+      selector:
+        number:
+          min: 0
+          step: 1

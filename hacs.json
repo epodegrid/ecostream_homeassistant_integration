@@ -1,4 +1,5 @@
 {
   "name": "Buva Ecostream",
-  "content_in_root": false
+  "content_in_root": false,
+  "country": ["NL", "BE"]
 }

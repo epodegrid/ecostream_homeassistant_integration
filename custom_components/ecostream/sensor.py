@@ -1,689 +1,461 @@
-"""Sensor platform for the ecostream integration."""
 from __future__ import annotations
-from datetime import datetime
 
-from homeassistant.helpers.entity import Entity # type: ignore
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.config_entries import ConfigEntry # type: ignore
-from homeassistant.core import HomeAssistant # type: ignore
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity # type: ignore
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity,SensorStateClass
-from homeassistant.const import (
-    CONCENTRATION_PARTS_PER_BILLION,
-    CONCENTRATION_PARTS_PER_MILLION,
-    REVOLUTIONS_PER_MINUTE,
-    UnitOfTemperature,
-    UnitOfTime,
-    UnitOfVolumeFlowRate,
-    EntityCategory,
-    PERCENTAGE,
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import logging
+from typing import Any, cast
+
+from .const import (
+    DEVICE_MODEL,
+    DEVICE_NAME,
+    DOMAIN,
+)
+from .coordinator import EcostreamDataUpdateCoordinator
+
+_LOGGER = logging.getLogger(__name__)
+
+PARALLEL_UPDATES = 0
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _deep_get(
+    data: Mapping[str, Any], path: list[str], default: Any = None
+) -> Any:
+    cur: Any = data
+    for key in path:
+        if not isinstance(cur, dict) or key not in cur:
+            return default
+        cur = cast(dict[str, Any], cur)[key]
+    return cur
+
+
+def _format_uptime(seconds: int) -> str:
+    if seconds < 0:
+        return "0m"
+
+    days = seconds // 86400
+    rem = seconds % 86400
+    hours = rem // 3600
+    rem %= 3600
+    minutes = rem // 60
+
+    parts: list[str] = []
+    if days:
+        parts.append(f"{days}d")
+    if hours or days:
+        parts.append(f"{hours}h")
+    parts.append(f"{minutes}m")
+    return " ".join(parts)
+
+
+def _number_value(
+    path: list[str],
+    decimals: int | None = None,
+    round_int: bool = False,
+) -> Callable[[Mapping[str, Any]], Any]:
+    def _fn(data: Mapping[str, Any]) -> Any:
+        v = _deep_get(data, path)
+        if v is None:
+            return None
+        val = float(v)
+        if decimals is not None:
+            return round(val, decimals)
+        if round_int:
+            return round(val)
+        return val
+
+    return _fn
+
+
+def _int_value(path: list[str]) -> Callable[[Mapping[str, Any]], Any]:
+    def _fn(data: Mapping[str, Any]) -> Any:
+        v = _deep_get(data, path)
+        if v is None:
+            return None
+        return int(v)
+
+    return _fn
+
+
+# ---------------------------------------------------------------------------
+# Extended EntityDescription
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class EcostreamSensorDescription(SensorEntityDescription):
+    value_fn: Callable[[Mapping[str, Any]], Any] | None = None
+    is_date: bool = False
+
+
+# ---------------------------------------------------------------------------
+# Base + Predefined Sensor Descriptions
+# ---------------------------------------------------------------------------
+
+SENSOR_DESCRIPTIONS: tuple[EcostreamSensorDescription, ...] = (
+    # -------------------------------------------------------------------
+    # STATUS
+    # -------------------------------------------------------------------
+    EcostreamSensorDescription(
+        key="bypass_position",
+        name="Bypass Position",
+        native_unit_of_measurement="%",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: _deep_get(d, ["status", "bypass_pos"]),
+    ),
+    EcostreamSensorDescription(
+        key="eco2_return",
+        name="eCO₂ Return",
+        device_class=SensorDeviceClass.CO2,
+        native_unit_of_measurement="ppm",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(
+            ["status", "sensor_eco2_eta"], round_int=True
+        ),
+    ),
+    EcostreamSensorDescription(
+        key="tvoc_return",
+        name="TVOC Return",
+        icon="mdi:chemical-weapon",
+        native_unit_of_measurement="ppb",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(
+            ["status", "sensor_tvoc_eta"], round_int=True
+        ),
+    ),
+    EcostreamSensorDescription(
+        key="humidity_return",
+        name="Humidity Return",
+        device_class=SensorDeviceClass.HUMIDITY,
+        native_unit_of_measurement="%",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(
+            ["status", "sensor_rh_eta"], round_int=True
+        ),
+    ),
+    EcostreamSensorDescription(
+        key="temperature_eha",
+        name="Temperature EHA",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(
+            ["status", "sensor_temp_eha"], decimals=1
+        ),
+    ),
+    EcostreamSensorDescription(
+        key="temperature_eta",
+        name="Temperature ETA",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(
+            ["status", "sensor_temp_eta"], decimals=1
+        ),
+    ),
+    EcostreamSensorDescription(
+        key="temperature_oda",
+        name="Temperature ODA",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(
+            ["status", "sensor_temp_oda"], decimals=1
+        ),
+    ),
+    EcostreamSensorDescription(
+        key="fan_exhaust_speed",
+        name="Fan Exhaust Speed",
+        native_unit_of_measurement="rpm",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(
+            ["status", "fan_eha_speed"], round_int=True
+        ),
+    ),
+    EcostreamSensorDescription(
+        key="fan_supply_speed",
+        name="Fan Supply Speed",
+        native_unit_of_measurement="rpm",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(
+            ["status", "fan_sup_speed"], round_int=True
+        ),
+    ),
+    EcostreamSensorDescription(
+        key="qset",
+        name="Qset",
+        native_unit_of_measurement="m³/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(["status", "qset"], round_int=True),
+    ),
+    EcostreamSensorDescription(
+        key="mode_time_left",
+        name="Mode Time Left",
+        native_unit_of_measurement="s",
+        value_fn=_int_value(["status", "override_set_time_left"]),
+    ),
+    # -------------------------------------------------------------------
+    # HEAT RECOVERY EFFICIENCY (NEW)
+    # -------------------------------------------------------------------
+    EcostreamSensorDescription(
+        key="efficiency",
+        name="Heat Recovery Efficiency",
+        native_unit_of_measurement="%",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: _calc_efficiency(d),
+    ),
+    # -------------------------------------------------------------------
+    # CONFIG
+    # -------------------------------------------------------------------
+    EcostreamSensorDescription(
+        key="summer_comfort_temp",
+        name="Summer Comfort Temp",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement="°C",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(["config", "sum_com_temp"], decimals=1),
+    ),
+    EcostreamSensorDescription(
+        key="filter_replacement_date",
+        name="Filter Replacement Date",
+        device_class=SensorDeviceClass.DATE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_date=True,
+        value_fn=lambda d: _deep_get(d, ["config", "filter_datetime"]),
+    ),
+    # -------------------------------------------------------------------
+    # SYSTEM
+    # -------------------------------------------------------------------
+    EcostreamSensorDescription(
+        key="uptime",
+        name="Uptime",
+        translation_key="uptime",
+        icon="mdi:timer-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: _deep_get(d, ["system", "uptime"]),
+    ),
+    # -------------------------------------------------------------------
+    # WIFI
+    # -------------------------------------------------------------------
+    EcostreamSensorDescription(
+        key="wifi_ip",
+        name="WiFi IP",
+        translation_key="wifi_ip",
+        icon="mdi:wifi",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: _deep_get(d, ["comm_wifi", "wifi_ip"]),
+    ),
+    EcostreamSensorDescription(
+        key="wifi_ssid",
+        name="WiFi SSID",
+        translation_key="wifi_ssid",
+        icon="mdi:wifi",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: _deep_get(d, ["comm_wifi", "ssid"]),
+    ),
+    EcostreamSensorDescription(
+        key="wifi_rssi",
+        name="WiFi RSSI",
+        native_unit_of_measurement="dBm",
+        state_class=SensorStateClass.MEASUREMENT,
+        translation_key="wifi_rssi",
+        icon="mdi:wifi-strength-2",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_int_value(["comm_wifi", "rssi"]),
+    ),
+    # -------------------------------------------------------------------
+    # SETPOINTS (from config, set via app)
+    # -------------------------------------------------------------------
+    EcostreamSensorDescription(
+        key="setpoint_low",
+        name="Setpoint Low",
+        native_unit_of_measurement="m³/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:fan-speed-1",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_number_value(["config", "setpoint_low"], decimals=1),
+    ),
+    EcostreamSensorDescription(
+        key="setpoint_mid",
+        name="Setpoint Mid",
+        native_unit_of_measurement="m³/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:fan-speed-2",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_number_value(["config", "setpoint_mid"], decimals=1),
+    ),
+    EcostreamSensorDescription(
+        key="setpoint_high",
+        name="Setpoint High",
+        native_unit_of_measurement="m³/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:fan-speed-3",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=_number_value(["config", "setpoint_high"], decimals=1),
+    ),
+    # -------------------------------------------------------------------
+    # EXTERNAL CO2
+    # -------------------------------------------------------------------
+    EcostreamSensorDescription(
+        key="ext_co2",
+        name="External CO₂",
+        device_class=SensorDeviceClass.CO2,
+        native_unit_of_measurement="ppm",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_number_value(
+            ["status", "sensor_ext_co2"], round_int=True
+        ),
+    ),
 )
 
-from . import EcostreamDataUpdateCoordinator
-from .const import DOMAIN
 
-async def async_setup_entry(
-    hass: HomeAssistant, 
-    entry: ConfigEntry[EcostreamDataUpdateCoordinator], 
-    async_add_entities: AddEntitiesCallback,
+# ---------------------------------------------------------------------------
+# Efficiency calculation function
+# ---------------------------------------------------------------------------
+
+
+def _calc_efficiency(data: Mapping[str, Any]) -> float | None:
+    """η = (ETA - EHA) / (ETA - ODA) x 100."""
+
+    try:
+        eta = float(_deep_get(data, ["status", "sensor_temp_eta"]))
+        eha = float(_deep_get(data, ["status", "sensor_temp_eha"]))
+        oda = float(_deep_get(data, ["status", "sensor_temp_oda"]))
+    except Exception:
+        return None
+
+    denominator = eta - oda
+    numerator = eta - eha
+
+    if denominator <= 0:
+        return None
+
+    eff = (numerator / denominator) * 100.0
+
+    if eff < 0:
+        eff = 0.0
+    if eff > 100:
+        eff = 100.0
+
+    return round(eff, 1)
+
+
+# ---------------------------------------------------------------------------
+# Sensor entity implementation
+# ---------------------------------------------------------------------------
+
+
+class EcostreamBaseSensor(
+    CoordinatorEntity[EcostreamDataUpdateCoordinator], SensorEntity
 ):
-    """Set up ecostream sensors from a config entry."""
-    coordinator = entry.runtime_data
+    _attr_has_entity_name = True
 
-    sensors = [
-        EcostreamFilterReplacementWarningSensor(coordinator, entry),
-        EcostreamFrostProtectionSensor(coordinator, entry),
-        EcostreamQsetSensor(coordinator, entry),
-        EcostreamModeTimeLeftSensor(coordinator, entry),
-        EcostreamFanEHASpeed(coordinator, entry),
-        EcostreamFanSUPSpeed(coordinator, entry),
-        EcostreamEco2EtaSensor(coordinator, entry),
-        EcostreamRhEtaSensor(coordinator, entry),
-        EcostreamTempEhaSensor(coordinator, entry),
-        EcostreamTempEtaSensor(coordinator, entry),
-        EcostreamTempOdaSensor(coordinator, entry),
-        EcostreamTvocEtaSensor(coordinator, entry),
-        EcostreamScheduledEnabledSensor(coordinator, entry),
-        EcostreamSummerComfortEnabledSensor(coordinator, entry),
-        EcostreamSummerComfortTemperatureSensor(coordinator, entry),
-        EcostreamBypassPositionSensor(coordinator, entry),
-        EcostreamBypassOverridePosition(coordinator, entry),
-        EcostreamBypassOverrideTimeLeftSensor(coordinator, entry),
-        EcostreamFilterReplacementDateSensor(coordinator, entry),
-        EcostreamWifiSSID(coordinator, entry),
-        EcostreamWifiRSSI(coordinator, entry),
-        EcostreamWifiIP(coordinator, entry),
-        EcostreamUptime(coordinator, entry),
-    ]
-
-    async_add_entities(sensors, update_before_add=True)
-
-class EcostreamSensorBase(CoordinatorEntity, SensorEntity):
-    """Base class for ecostream sensors."""
-
-    def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
-        """Initialize the sensor."""
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+        description: EcostreamSensorDescription,
+    ) -> None:
+        """Initialize the Ecostream sensor entity."""
         super().__init__(coordinator)
-        self._entry_id = entry.entry_id
 
-    @property
-    def should_poll(self):
-        """No polling needed, coordinator will handle updates."""
-        return False
+        self.entity_description = description
+        self._entry = entry
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.api._host)},
-            name="EcoStream",
-            manufacturer="Buva",
-            model="EcoStream",
+        self._attr_unique_id = f"{entry.entry_id}_{description.key}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.host)},
+            manufacturer="BUVA",
+            name=DEVICE_NAME,
+            model=DEVICE_MODEL,
         )
 
-class EcostreamFrostProtectionSensor(EcostreamSensorBase):
-    """Sensor for frost protection status."""
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_frost_protection"
-
-    @property
-    def name(self):
-        return "Ecostream Frost Protection"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("frost_protection")
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:snowflake-melt"
-
-class EcostreamFilterReplacementWarningSensor(EcostreamSensorBase):
-    """Sensor for the filter replacement warning."""
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_filter_replacement_warning"
-
-    @property
-    def name(self):
-        return "Ecostream Filter Replacement"
-
-    @property
-    def state(self):
-        errors = self.coordinator.data.get("status", {}).get("errors", [])
-
-        return any(error["type"] == "ERROR_FILTER" for error in errors)
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:air-filter"
-
-class EcostreamFilterReplacementDateSensor(EcostreamSensorBase):
-    """Sensor for Filter Replacement Date."""
-
-    def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
-        """Initialize the sensor."""
-        super().__init__(coordinator, entry)
-        self._last_valid_filter_replacement_date = None
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_filter_replacement_date"
-
-    @property
-    def name(self):
-        return "Ecostream Filter Replacement Date"
-
-    @property
-    def state(self):
-
-        # Try to get the timestamp from the received JSON message.
-        # It appears that this isn't sent with every update, but is is there in the initial message and after the filter has been reset
-        timestamp = self.coordinator.data.get("config", {}).get("filter_datetime")
-
-        # Check if we received a valid timestamp, otherwise return the last valid value
-        if timestamp is None:
-            return self._last_valid_filter_replacement_date
-
-        # convert timestamp in unix seconds to usable datetime
-        filter_replacement_date = datetime.fromtimestamp(timestamp)
-
-        # update the last valid value for future use
-        self._last_valid_filter_replacement_date = filter_replacement_date
-
-        return filter_replacement_date
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:air-filter"
-
-class EcostreamQsetSensor(EcostreamSensorBase):
-    """Sensor for Qset status."""
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_qset"
-
-    @property
-    def name(self):
-        return "Ecostream Qset"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("qset")
-    
-    @property
-    def device_class(self):
-        return SensorDeviceClass.VOLUME_FLOW_RATE
-
-    @property
-    def unit_of_measurement(self):
-        return UnitOfVolumeFlowRate.CUBIC_METERS_PER_HOUR
-
-class EcostreamModeTimeLeftSensor(EcostreamSensorBase):
-    """Sensor for mode time left."""
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_mode_time_left"
-
-    @property
-    def name(self):
-        return "Ecostream Mode Time Left"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("override_set_time_left")
-
-    @property
-    def unit_of_measurement(self):
-        return UnitOfTime.SECONDS
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:timer-play"
-
-class EcostreamFanEHASpeed(EcostreamSensorBase): 
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_fan_eha_speed"
-
-    @property
-    def name(self):
-        return "Ecostream Fan Exhaust Speed"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("fan_eha_speed")
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:fan"
-
-    @property
-    def unit_of_measurement(self):
-        return REVOLUTIONS_PER_MINUTE
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-    
-class EcostreamFanSUPSpeed(EcostreamSensorBase):
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_fan_sup_speed"
-
-    @property
-    def name(self):
-        return "Ecostream Fan Supply Speed"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("fan_sup_speed")
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:fan"
-
-    @property
-    def unit_of_measurement(self):
-        return REVOLUTIONS_PER_MINUTE
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-class EcostreamEco2EtaSensor(EcostreamSensorBase):
-    """Sensor for eCO2 Return."""
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_eco2_eta"
-
-    @property
-    def name(self):
-        return "Ecostream eCO2 Return"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("sensor_eco2_eta")
-
-    @property
-    def device_class(self):
-        return SensorDeviceClass.CO2
-
-    @property
-    def unit_of_measurement(self):
-        return CONCENTRATION_PARTS_PER_MILLION
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:molecule-co2"
-
-class EcostreamTempEhaSensor(EcostreamSensorBase):
-    """Sensor for Exhaust Air Temperature."""
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_temp_eha"
-
-    @property
-    def name(self):
-        return "Ecostream Exhaust Air Temperature"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("sensor_temp_eha")
-
-    @property
-    def device_class(self):
-        return SensorDeviceClass.TEMPERATURE
-
-    @property
-    def unit_of_measurement(self):
-        return UnitOfTemperature.CELSIUS
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:temperature-celsius"
-    
-class EcostreamTempEtaSensor(EcostreamSensorBase):
-    """Sensor for Return Air Temperature."""
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_temp_eta"
-
-    @property
-    def name(self):
-        return "Ecostream Return Air Temperature"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("sensor_temp_eta")
-
-    @property   
-    def device_class(self):
-        return SensorDeviceClass.TEMPERATURE
-
-    @property
-    def unit_of_measurement(self):
-        return UnitOfTemperature.CELSIUS
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:temperature-celsius"
-
-class EcostreamTempOdaSensor(EcostreamSensorBase):
-    """Sensor for Outside Air Temperature."""
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_temp_oda"
-
-    @property
-    def name(self):
-        return "Ecostream Outside Air Temperature"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("sensor_temp_oda")
-
-    @property   
-    def device_class(self):
-        return SensorDeviceClass.TEMPERATURE
-
-    @property
-    def unit_of_measurement(self):
-        return UnitOfTemperature.CELSIUS
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:temperature-celsius"
-    
-class EcostreamTvocEtaSensor(EcostreamSensorBase):
-    """Sensor for Total Volatile Organic Compounds Outside Air."""
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_tvoc_eta"
-
-    @property
-    def name(self):
-        return "Ecostream Total Volatile Organic Compounds Outside Air"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("sensor_tvoc_eta")
-
-    @property   
-    def device_class(self):
-        return SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS_PARTS
-
-    @property
-    def unit_of_measurement(self):
-        return CONCENTRATION_PARTS_PER_BILLION
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:air-purifier"
-
-class EcostreamScheduledEnabledSensor(EcostreamSensorBase):
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_schedule_enabled"
-    
-    @property
-    def name(self):
-        return "Ecostream Schedule Enabled"
-
-    @property
-    def state(self):
-        return self.coordinator.data["config"]["schedule_enabled"]
-
-    @property
-    def icon(self):
-        return "mdi:toggle-switch-variant" if self.state else "mdi:toggle-switch-variant-off"
-
-class EcostreamSummerComfortEnabledSensor(EcostreamSensorBase):
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_summer_comfort_enabled"
-    
-    @property
-    def name(self):
-        return "Ecostream Summer Comfort Enabled"
-
-    @property
-    def state(self):
-        return self.coordinator.data["config"]["sum_com_enabled"]
-
-    @property
-    def icon(self):
-        return "mdi:toggle-switch-variant" if self.state else "mdi:toggle-switch-variant-off"
-
-class EcostreamSummerComfortTemperatureSensor(EcostreamSensorBase):
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_summer_comfort_temperature"
-    
-    @property
-    def name(self):
-        return "Ecostream Summer Comfort Temperature"
-
-    @property
-    def state(self):
-        return self.coordinator.data["config"]["sum_com_temp"]
-    
-    @property   
-    def device_class(self):
-        return SensorDeviceClass.TEMPERATURE
-
-    @property
-    def unit_of_measurement(self):
-        return UnitOfTemperature.CELSIUS
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def icon(self):
-        return "mdi:temperature-celsius"
-
-class EcostreamBypassPositionSensor(EcostreamSensorBase):
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_bypass_pos"
-    
-    @property
-    def name(self):
-        return "Ecostream Bypass Position"
-
-    @property
-    def state(self):
-        return self.coordinator.data["status"]["bypass_pos"]
-    
-    @property
-    def unit_of_measurement(self):
-        return PERCENTAGE
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-class EcostreamBypassOverridePosition(EcostreamSensorBase):
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_bypass_override_pos"
-    
-    @property
-    def name(self):
-        return "Ecostream Bypass Override Position"
-
-    @property
-    def state(self):
-        return self.coordinator.data["config"]["man_override_bypass"]
-    
-    @property
-    def unit_of_measurement(self):
-        return PERCENTAGE
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-class EcostreamBypassOverrideTimeLeftSensor(EcostreamSensorBase):
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_override_bypass_time_left"
-    
-    @property
-    def name(self):
-        return "Ecostream Bypass Override Time Left"
-
-    @property
-    def state(self):
-        return self.coordinator.data["status"]["override_bypass_time_left"]
-
-    @property
-    def unit_of_measurement(self):
-        return UnitOfTime.SECONDS
-    
-    @property
-    def icon(self):
-        return "mdi:timer-play"
-    
-class EcostreamRhEtaSensor(EcostreamSensorBase):
-    """Sensor for Relative Humidity Return."""
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_rh_eta"
-
-    @property
-    def name(self):
-        return "Ecostream Relative Humidity Return"
-
-    @property
-    def state(self):
-        return self.coordinator.data.get("status", {}).get("sensor_rh_eta")
-
-    @property   
-    def device_class(self):
-        return SensorDeviceClass.HUMIDITY
-
-    @property
-    def unit_of_measurement(self):
-        return PERCENTAGE
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:water-percent"
-
-class EcostreamWifiSSID(EcostreamSensorBase):
-    @property
-    def entity_category(self):
-        return EntityCategory.DIAGNOSTIC
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_wifi_ssid"
-
-    @property
-    def name(self):
-        return "Ecostream Wifi SSID"
-
-    @property
-    def state(self):
-        return self.coordinator.data["comm_wifi"]["ssid"]
-
-    @property
-    def icon(self):
-        return "mdi:wifi"
-
-class EcostreamWifiRSSI(EcostreamSensorBase):
-    @property
-    def entity_category(self):
-        return EntityCategory.DIAGNOSTIC
-
-    @property
-    def device_class(self):
-        return SensorDeviceClass.SIGNAL_STRENGTH
-
-    @property
-    def unit_of_measurement(self):
-        return "dBm"
-
-    @property
-    def state_class(self) -> SensorStateClass:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_wifi_rssi"
-
-    @property
-    def name(self):
-        return "Ecostream Wifi RSSI"
-
-    @property
-    def state(self):
-        return int(self.coordinator.data["comm_wifi"]["rssi"])
-
-    @property
-    def icon(self):
-        return "mdi:wifi"
-
-class EcostreamWifiIP(EcostreamSensorBase):
-    @property
-    def entity_category(self):
-        return EntityCategory.DIAGNOSTIC
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_wifi_ip"
-
-    @property
-    def name(self):
-        return "Ecostream Wifi IP"
-
-    @property
-    def state(self):
-        return self.coordinator.data["comm_wifi"]["wifi_ip"]
-
-    @property
-    def icon(self):
-        return "mdi:network-outline"
-
-class EcostreamUptime(EcostreamSensorBase):
-    @property
-    def entity_category(self):
-        return EntityCategory.DIAGNOSTIC
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_uptime"
-
-    @property
-    def name(self):
-        return "Ecostream uptime"
-
-    @property
-    def state(self):
-        return self.coordinator.data["system"]["uptime"]
-
-    @property
-    def icon(self):
-        return "mdi:progress-clock"
-    
     @property
-    def unit_of_measurement(self):
-        return UnitOfTime.SECONDS
+    def available(self) -> bool:  # type: ignore[override]
+        data = cast(dict[str, Any], self.coordinator.data or {})
+        status = cast(dict[str, Any], data.get("status") or {})
+        return bool(status.get("connect_status", 1) == 1)
+
+    @property
+    def native_value(self) -> Any:  # type: ignore[override]
+        desc = self.entity_description
+        data = self.coordinator.data or {}
+
+        try:
+            raw = (
+                desc.value_fn(data)
+                if isinstance(desc, EcostreamSensorDescription)
+                and desc.value_fn
+                else None
+            )
+        except Exception as err:
+            _LOGGER.debug("Value error in %s: %s", desc.key, err)
+            return None
+
+        if raw is None:
+            return None
+
+        # Date parsing
+        if (
+            isinstance(desc, EcostreamSensorDescription)
+            and desc.is_date
+        ):
+            try:
+                if isinstance(raw, (int, float)):
+                    return datetime.fromtimestamp(raw, tz=UTC).date()
+                if isinstance(raw, datetime):
+                    return raw.date()
+                return raw
+            except Exception:
+                return None
+
+        # Uptime formatting
+        if desc.key == "uptime":
+            try:
+                return _format_uptime(int(raw))
+            except Exception:
+                return None
+
+        return raw
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self.async_write_ha_state()
+
+
+# ---------------------------------------------------------------------------
+# Setup
+# ---------------------------------------------------------------------------
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+
+    coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
+
+    entities: list[Any] = [
+        EcostreamBaseSensor(coordinator, entry, desc)
+        for desc in SENSOR_DESCRIPTIONS
+    ]
+
+    async_add_entities(entities, update_before_add=True)

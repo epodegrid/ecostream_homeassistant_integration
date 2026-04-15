@@ -1,0 +1,157 @@
+blueprint:
+  name: EcoStream Intelligent Ventilation Control
+  description: >
+    Automatische regeling voor BUVA EcoStream op basis van CO₂, RV%, en TVOC,
+    met dag/nachtprofielen. Schakelt tussen Low, Mid en High presets op basis
+    van luchtkwaliteit scores.
+    Filters zijn ingesteld op de 'ecostream' integratie voor makkelijk selecteren.
+  domain: automation
+  input:
+    co2_sensor:
+      name: eCO₂ Return sensor
+      description: De eCO₂ sensor in de retourlucht (sensor.ecostream_eco2_return).
+      selector:
+        entity:
+          domain: sensor
+          device_class: carbon_dioxide
+          integration: ecostream
+
+    humidity_sensor:
+      name: Humidity Return sensor
+      description: De luchtvochtigheid sensor in de retourlucht (sensor.ecostream_humidity_return).
+      selector:
+        entity:
+          domain: sensor
+          device_class: humidity
+          integration: ecostream
+
+    tvoc_sensor:
+      name: TVOC Return sensor
+      description: De TVOC sensor in de retourlucht (sensor.ecostream_tvoc_return).
+      selector:
+        entity:
+          domain: sensor
+          integration: ecostream
+
+    ventilation_fan:
+      name: EcoStream Ventilatie Fan
+      description: De fan entity van de EcoStream ventilatie unit (fan.ecostream_ventilation).
+      selector:
+        entity:
+          domain: fan
+          integration: ecostream
+
+    day_start:
+      name: Start dagmodus
+      default: '07:00'
+      selector:
+        time: {}
+
+    night_start:
+      name: Start nachtmodus
+      default: '23:00'
+      selector:
+        time: {}
+
+    low_threshold:
+      name: Drempel voor Low preset
+      description: Score onder deze waarde → Low (0.0 - 1.0)
+      default: 0.30
+      selector:
+        number:
+          min: 0.0
+          max: 1.0
+          step: 0.05
+          mode: slider
+
+    high_threshold:
+      name: Drempel voor High preset
+      description: Score boven deze waarde → High (0.0 - 1.0)
+      default: 0.70
+      selector:
+        number:
+          min: 0.0
+          max: 1.0
+          step: 0.05
+          mode: slider
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: time_pattern
+    minutes: '/1'
+
+variables:
+  # Mapping inputs naar variabelen (geen templates hier!)
+  co2_ent: !input co2_sensor
+  rv_ent: !input humidity_sensor
+  tvoc_ent: !input tvoc_sensor
+  fan_ent: !input ventilation_fan
+  day_start_val: !input day_start
+  night_start_val: !input night_start
+  low_thresh: !input low_threshold
+  high_thresh: !input high_threshold
+
+  # Sensorwaarden ophalen
+  co2: '{{ states(co2_ent) | float(400) }}'
+  rv: '{{ states(rv_ent) | float(40) }}'
+  tvoc: '{{ states(tvoc_ent) | float(0) }}'
+
+  now_time: "{{ now().strftime('%H:%M') }}"
+
+  # Dag/Nacht logica
+  is_day: >
+    {{
+      (now_time >= day_start_val and now_time < night_start_val)
+      if day_start_val < night_start_val
+      else not (now_time >= night_start_val and now_time < day_start_val)
+    }}
+
+  # Normalisatie (Fix voor 'float object is not iterable')
+  # We gebruiken de [waarde, limiet] | min/max syntax
+  co2_norm: '{{ [[(co2 - 400) / 1600, 0] | max, 1] | min }}'
+  rv_norm: '{{ [[(rv - 35) / 35, 0] | max, 1] | min }}'
+  tvoc_norm: '{{ [[(tvoc / 600), 0] | max, 1] | min }}'
+
+  # Gewichtsfactoren (totaal = 1.0)
+  w_co2: 0.60
+  w_rv: 0.30
+  w_tvoc: 0.10
+
+  score: >
+    {{
+      (co2_norm * w_co2) +
+      (rv_norm * w_rv) +
+      (tvoc_norm * w_tvoc)
+    }}
+
+  # Overdag mag hij harder boosten (gain 1.4), 's nachts rustiger (gain 0.7)
+  profile_gain: '{{ 1.4 if is_day else 0.7 }}'
+  final_score: '{{ [score * profile_gain, 1] | min }}'
+
+  # Bepaal gewenste preset op basis van score
+  target_preset: >
+    {%- if final_score < low_thresh -%}
+      low
+    {%- elif final_score > high_thresh -%}
+      high
+    {%- else -%}
+      mid
+    {%- endif -%}
+
+action:
+  - variables:
+      # Lees huidige preset van de fan
+      current_preset: '{{ state_attr(fan_ent, "preset_mode") }}'
+      target: '{{ target_preset }}'
+
+  # Alleen aanpassen als de gewenste preset anders is dan de huidige
+  - condition: template
+    value_template: '{{ current_preset != target }}'
+
+  - service: fan.set_preset_mode
+    target:
+      entity_id: '{{ fan_ent }}'
+    data:
+      preset_mode: '{{ target }}'

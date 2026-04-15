@@ -1,93 +1,109 @@
 from __future__ import annotations
-from dateutil.relativedelta import relativedelta
-from homeassistant.util import dt
 
 from homeassistant.components.button import ButtonEntity
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.config_entries import ConfigEntry # type: ignore
-from homeassistant.core import HomeAssistant # type: ignore
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity # type: ignore
-from homeassistant.const import UnitOfTime # type: ignore
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import inspect
+import logging
 
-from . import EcostreamDataUpdateCoordinator, EcostreamWebsocketsAPI
-from .const import DOMAIN
+from .const import (
+    CONF_ALLOW_OVERRIDE_FILTER_DATE,
+    CONF_FILTER_REPLACEMENT_DAYS,
+    DEFAULT_FILTER_REPLACEMENT_DAYS,
+    DEVICE_MODEL,
+    DEVICE_NAME,
+    DOMAIN,
+)
+from .coordinator import EcostreamDataUpdateCoordinator
+
+_LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry[EcostreamDataUpdateCoordinator],
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the button platform."""
-    coordinator = entry.runtime_data
-    
-    buttons = [
-        FilterResetButton(coordinator, entry)
-    ]
+    coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
 
-    # Add your button entity
-    async_add_entities(buttons)
+    async_add_entities(
+        [
+            EcostreamResetFilterButton(coordinator, entry),
+        ]
+    )
 
-class EcostreamButtonBase(CoordinatorEntity, ButtonEntity):
-    """Base class for ecostream buttons."""
-    def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
-        """Initialize the sensor."""
+
+class EcostreamResetFilterButton(  # type: ignore[misc]
+    CoordinatorEntity[EcostreamDataUpdateCoordinator], ButtonEntity
+):
+    """Button to reset the filter replacement date."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "reset_filter"
+    _attr_icon = "mdi:air-filter"
+
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
         super().__init__(coordinator)
-        self._entry_id = entry.entry_id
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.api._host)},
-            name="EcoStream",
-            manufacturer="Buva",
-            model="EcoStream",
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_reset_filter"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.host)},
+            manufacturer="BUVA",
+            name=DEVICE_NAME,
+            model=DEVICE_MODEL,
         )
 
-class FilterResetButton(EcostreamButtonBase):
-    """Button that resets the filter replacement date."""
-
-    def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
-        """Initialize the button"""
-        super().__init__(coordinator, entry)
-        self._last_pressed = None
-
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_reset_filter"
-
-    @property
-    def name(self):
-        return "Ecostream Reset Filter"
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return "mdi:air-filter"
-
-    @property
-    def extra_state_attributes(self):
-        """Return additional state attributes."""
-        return {
-            "last_pressed": self._last_pressed
-        }
-
     async def async_press(self) -> None:
-        """Handle the button press."""
-        
-        # Get current date and time
-        now = dt.utcnow()
-        self._last_pressed = now
+        """Reset the filter replacement date."""
+        if not self.coordinator.ws:
+            _LOGGER.error(
+                "EcoStream WebSocket not connected, cannot reset filter"
+            )
+            return
 
-        # Add 3 months (which seems to correspond with what the ecostream app does)
-        nextReplacementDate = now + relativedelta(months=3)
-        nextReplacementTimestamp = int(nextReplacementDate.timestamp())
+        # Check if override is allowed
+        opts = self._entry.options or {}
+        allow_override = opts.get(
+            CONF_ALLOW_OVERRIDE_FILTER_DATE, False
+        )
 
-        # Send the new filter replacement date to the unit
-        payload = {
-            "config": {
-                "filter_datetime": nextReplacementTimestamp
-            }
-        }
-        await self.coordinator.send_json(payload)
+        if not allow_override:
+            _LOGGER.warning(
+                "Filter date override is disabled. Enable 'Allow Override Filter Date' in integration options."
+            )
+            return
+
+        import time
+
+        filter_days = int(
+            opts.get(
+                CONF_FILTER_REPLACEMENT_DAYS,
+                DEFAULT_FILTER_REPLACEMENT_DAYS,
+            )
+        )
+        new_filter_datetime = int(time.time() + filter_days * 86400)
+
+        payload = {"config": {"filter_datetime": new_filter_datetime}}
+
+        _LOGGER.info(
+            "EcoStream filter reset: new date in %s days (timestamp %s)",
+            filter_days,
+            new_filter_datetime,
+        )
+        sender = getattr(self.coordinator, "async_send_config", None)
+        if sender is not None:
+            result = sender(payload["config"], "reset_filter")
+            if inspect.isawaitable(result):
+                await result
+                return
+
+        self.coordinator.mark_control_action()
+        await self.coordinator.ws.send_json(payload)

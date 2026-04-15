@@ -1,156 +1,284 @@
 from __future__ import annotations
 
-import math
-from typing import Any, Optional
-
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.components.fan import (
-    FanEntity,
-    FanEntityFeature,
-)
+from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.percentage import (
-    percentage_to_ranged_value,
-    ranged_value_to_percentage,
-    int_states_in_range,
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import (
+    AddEntitiesCallback,
+    current_platform,
 )
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import inspect
+import logging
+from typing import Any
 
-from . import EcostreamDataUpdateCoordinator, EcostreamWebsocketsAPI
-from .const import DOMAIN
+import voluptuous as vol
 
-PRESET_MODE_LOW = "low"
-PRESET_MODE_MID = "mid"
-PRESET_MODE_HIGH = "high"
+from .const import (
+    CONF_PRESET_OVERRIDE_MINUTES,
+    DEFAULT_PRESET_OVERRIDE_MINUTES,
+    DEVICE_MODEL,
+    DEVICE_NAME,
+    DOMAIN,
+    PRESET_HIGH,
+    PRESET_LOW,
+    PRESET_MID,
+    PRESET_MODES,
+)
+from .coordinator import EcostreamDataUpdateCoordinator
+
+_LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 0
+_qset_service_registered = False
+
 
 async def async_setup_entry(
-    hass: HomeAssistant, 
-    entry: ConfigEntry[EcostreamDataUpdateCoordinator], 
+    hass: HomeAssistant,
+    entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
-):
-    """Set up the fan entity."""
-    coordinator = entry.runtime_data
+) -> None:
+    """Set up the EcoStream fan platform."""
+    coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
 
-    async_add_entities([EcoStreamFan(coordinator, entry)], update_before_add=True)
-
-
-class EcoStreamFan(CoordinatorEntity, FanEntity):
-    """Ecostream fan component."""
-
-    _attr_supported_features = (
-        FanEntityFeature.PRESET_MODE
-        | FanEntityFeature.SET_SPEED
-        | FanEntityFeature.TURN_OFF
-        | FanEntityFeature.TURN_ON
+    async_add_entities(
+        [EcostreamVentilationFan(coordinator, entry)],
+        update_before_add=True,
     )
 
-    _attr_preset_modes = [
-        PRESET_MODE_LOW,
-        PRESET_MODE_MID,
-        PRESET_MODE_HIGH,
-    ]
-    
-    _attr_translation_key = "ecostream_fan"
+    global _qset_service_registered
+    if not _qset_service_registered:
+        platform = current_platform.get()
+        if platform is None:
+            _LOGGER.error(
+                "EcoStream fan platform unavailable; set_qset service not registered"
+            )
+            return
 
-    current_speed: float | None = None
+        platform.async_register_entity_service(
+            "set_qset",
+            {
+                vol.Required("qset"): vol.All(
+                    vol.Coerce(int), vol.Range(min=60, max=350)
+                ),
+                vol.Optional("override_minutes"): vol.All(
+                    vol.Coerce(int), vol.Range(min=0)
+                ),
+            },
+            "async_set_qset",
+        )
+        _qset_service_registered = True
 
-    def __init__(self, coordinator: EcostreamDataUpdateCoordinator, entry: ConfigEntry):
-        """Initialize the sensor."""
+
+class EcostreamVentilationFan(  # type: ignore[misc]
+    CoordinatorEntity[EcostreamDataUpdateCoordinator], FanEntity
+):
+    """EcoStream main ventilation fan."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Ventilation"
+    _attr_should_poll = False
+    _attr_icon = "mdi:fan"
+    coordinator: EcostreamDataUpdateCoordinator
+
+    def __init__(
+        self,
+        coordinator: EcostreamDataUpdateCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        """Initialize the EcoStream ventilation fan entity."""
         super().__init__(coordinator)
-        self._entry_id = entry.entry_id
+        self._entry = entry
 
-        self.current_speed = self.coordinator.data.get("status", {}).get("qset")
-
-        self._speed_range = (
-            self.coordinator.api._data["config"]["capacity_min"], 
-            self.coordinator.api._data["config"]["capacity_max"],
+        self._attr_unique_id = f"{entry.entry_id}_ventilation"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, coordinator.host)},
+            manufacturer="BUVA",
+            name=DEVICE_NAME,
+            model=DEVICE_MODEL,
         )
 
-        self._preset_speeds = {
-            PRESET_MODE_LOW: self.coordinator.api._data["config"]["setpoint_low"],
-            PRESET_MODE_MID: self.coordinator.api._data["config"]["setpoint_mid"],
-            PRESET_MODE_HIGH: self.coordinator.api._data["config"]["setpoint_high"],
-        }
-    
-    @property
-    def unique_id(self):
-        return f"{self._entry_id}_fan_control"
+        features = FanEntityFeature(0)
+        for name in ("TURN_ON", "TURN_OFF", "PRESET_MODE"):
+            val = getattr(FanEntityFeature, name, None)
+            if val is not None:
+                features |= val
+        self._attr_supported_features = features
+        self._attr_preset_modes = PRESET_MODES
+        self._attr_preset_mode: str | None = None
 
-    @property
-    def name(self):
-        """Return the name of the fan."""
-        return "Ecostream Fan"
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _status(self) -> dict[str, Any]:
+        return (self.coordinator.data or {}).get("status", {}) or {}
 
+    def _config(self) -> dict[str, Any]:
+        return (self.coordinator.data or {}).get("config", {}) or {}
+
+    def _get_qset(self) -> float:
+        try:
+            return float(self._status().get("qset", 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _get_setpoint(self, preset: str) -> float | None:
+        config = self._config()
+        key = {
+            PRESET_LOW: "setpoint_low",
+            PRESET_MID: "setpoint_mid",
+            PRESET_HIGH: "setpoint_high",
+        }.get(preset)
+        if key is None:
+            return None
+        try:
+            value = config.get(key)
+            if value is None:
+                return None
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _calculate_preset(self, qset: float) -> str | None:
+        low = self._get_setpoint(PRESET_LOW)
+        mid = self._get_setpoint(PRESET_MID)
+        high = self._get_setpoint(PRESET_HIGH)
+        if low is None or mid is None or high is None:
+            return None
+        if abs(qset - low) <= abs(qset - mid) and abs(
+            qset - low
+        ) <= abs(qset - high):
+            return PRESET_LOW
+        if abs(qset - mid) <= abs(qset - high):
+            return PRESET_MID
+        return PRESET_HIGH
+
+    # ------------------------------------------------------------------
+    # State → Home Assistant
+    # ------------------------------------------------------------------
     @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.api._host)},
-            name="EcoStream",
-            manufacturer="Buva",
-            model="EcoStream",
+    def is_on(self) -> bool:
+        return self._get_qset() > 0
+
+    # ------------------------------------------------------------------
+    # Commands
+    # ------------------------------------------------------------------
+    async def async_turn_on(
+        self,
+        percentage: int | None = None,
+        preset_mode: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        del percentage
+        await self.async_set_preset_mode(preset_mode or PRESET_MID)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self.async_set_preset_mode(PRESET_LOW)
+
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        qset = self._get_setpoint(preset_mode)
+        if qset is None:
+            _LOGGER.error(
+                "EcoStream: no setpoint available for preset %s",
+                preset_mode,
+            )
+            return
+
+        if not self.coordinator.ws:
+            _LOGGER.error(
+                "EcoStream WebSocket not connected → cannot set preset"
+            )
+            return
+
+        opts = self._entry.options or {}
+        override_minutes = int(
+            opts.get(
+                CONF_PRESET_OVERRIDE_MINUTES,
+                DEFAULT_PRESET_OVERRIDE_MINUTES,
+            )
         )
-
-    async def set_speed(self, speed: int, preset_mode: Optional[str] = None):
-        """Set the speed of the fan."""
         payload = {
             "config": {
-                "man_override_set": speed,
-                "man_override_set_time": 1800
+                "man_override_set": qset,
+                "man_override_set_time": override_minutes * 60,
             }
         }
-        await self.coordinator.send_json(payload)
-        self.current_speed = speed
-        self.preset_mode = preset_mode
 
+        self._attr_preset_mode = preset_mode
+        _LOGGER.debug(
+            "EcoStream preset %s → Qset %.1f", preset_mode, qset
+        )
+
+        sender = getattr(self.coordinator, "async_send_config", None)
+        if sender is not None:
+            result = sender(payload["config"], f"preset {preset_mode}")
+            if inspect.isawaitable(result):
+                await result
+            else:
+                self.coordinator.mark_control_action()
+                await self.coordinator.ws.send_json(payload)
+        else:
+            self.coordinator.mark_control_action()
+            await self.coordinator.ws.send_json(payload)
         self.async_write_ha_state()
 
-    async def async_set_percentage(self, percentage: int) -> None:
-        """Set the speed percentage of the fan."""
-        await self.set_speed(math.ceil(percentage_to_ranged_value(self._speed_range, percentage)))
+    async def async_set_qset(
+        self, qset: float, override_minutes: int | None = None
+    ) -> None:
+        """Set a manual Qset override for automations.
 
-    async def async_turn_on(self, speed: Optional[str] = None, percentage: Optional[int] = None, **kwargs: Any) -> None:
-        """Set the speed percentage of the fan to the provided percentage or """
-        await self.set_speed(math.ceil(percentage_to_ranged_value(self._speed_range, percentage or 100)))
+        This exposes fan.set_qset without requiring a NumberEntity slider.
+        """
+        if not self.coordinator.ws:
+            _LOGGER.error(
+                "EcoStream WebSocket not connected → cannot set qset"
+            )
+            return
 
-    async def async_turn_off(self, **kwargs):
-        """Turn the speed to the minimum value"""
-        await self.set_speed(math.ceil(percentage_to_ranged_value(self._speed_range, 0)))
+        opts = self._entry.options or {}
+        minutes = (
+            int(override_minutes)
+            if override_minutes is not None
+            else int(
+                opts.get(
+                    CONF_PRESET_OVERRIDE_MINUTES,
+                    DEFAULT_PRESET_OVERRIDE_MINUTES,
+                )
+            )
+        )
 
-    @property
-    def percentage(self) -> int | None:
-        """Return the current speed percentage."""
-        if self.current_speed is None:
-            return None
-        return ranged_value_to_percentage(self._speed_range, self.current_speed)
+        payload = {
+            "config": {
+                "man_override_set": float(qset),
+                "man_override_set_time": minutes * 60,
+            }
+        }
 
-    @property
-    def speed_count(self) -> int:
-        """Return the number of speeds the fan supports."""
-        return int_states_in_range(self._speed_range)
-    
-    async def async_set_preset_mode(self, preset_mode: str):
-        """Set the preset mode of the fan."""
-        speed = self._preset_speeds.get(preset_mode)
+        _LOGGER.debug(
+            "EcoStream manual qset override → Qset %.1f (%sm)",
+            qset,
+            minutes,
+        )
 
-        if speed is None:
-            raise Exception("Unknown preset mode")
+        sender = getattr(self.coordinator, "async_send_config", None)
+        if sender is not None:
+            result = sender(payload["config"], "manual qset")
+            if inspect.isawaitable(result):
+                await result
+            else:
+                self.coordinator.mark_control_action()
+                await self.coordinator.ws.send_json(payload)
+        else:
+            self.coordinator.mark_control_action()
+            await self.coordinator.ws.send_json(payload)
 
-        await self.set_speed(speed, preset_mode)
+        self._attr_preset_mode = self._calculate_preset(float(qset))
+        self.async_write_ha_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        new_speed = self.coordinator.data.get("status", {}).get("qset")
-
-        if new_speed is None:
-            return
-
-        if new_speed != self.current_speed:
-            self.preset_mode = None
-
-        self.current_speed = new_speed
-
+        qset = self._get_qset()
+        self._attr_preset_mode = (
+            self._calculate_preset(qset) if qset > 0 else None
+        )
         self.async_write_ha_state()

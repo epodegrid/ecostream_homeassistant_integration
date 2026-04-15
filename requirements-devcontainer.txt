@@ -1,0 +1,11 @@
+colorlog
+homeassistant==2026.1.0
+pip
+ruff
+pylint
+pytest
+pytest-cov
+pytest-asyncio
+pytest-mock
+pytest-homeassistant-custom-component
+
