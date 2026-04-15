@@ -23,7 +23,7 @@
   ],
   "quality_scale": "platinum",
   "requirements": [],
-  "version": "2.1",
+  "version": "2.2",
   "zeroconf": [
     {
       "type": "_http._tcp.local.",

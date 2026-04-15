@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'custom_components/ecostream/manifest.json'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from manifest
+        id: manifest
+        run: |
+          VERSION=$(jq -r '.version' custom_components/ecostream/manifest.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if release already exists
+        id: check
+        run: |
+          TAG="v${{ steps.manifest.outputs.version }}"
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG$"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create integration zip
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          cd custom_components
+          zip -r ../ecostream.zip ecostream/
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.manifest.outputs.version }}"
+          name: "v${{ steps.manifest.outputs.version }}"
+          files: ecostream.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
