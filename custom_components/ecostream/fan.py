@@ -79,6 +79,7 @@ class EcostreamVentilationFan(  # type: ignore[misc]
     _attr_name = "Ventilation"
     _attr_should_poll = False
     _attr_icon = "mdi:fan"
+    _attr_translation_key = "ventilation"
     coordinator: EcostreamDataUpdateCoordinator
 
     def __init__(
