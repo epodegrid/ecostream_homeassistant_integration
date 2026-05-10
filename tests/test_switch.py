@@ -24,6 +24,7 @@ from custom_components.ecostream.const import (
     CONF_PRESET_OVERRIDE_MINUTES,
     CONF_SUMMER_COMFORT_TEMP,
     DEFAULT_BOOST_DURATION_MINUTES,
+    DEFAULT_BYPASS_DURATION_MINUTES,
     DEFAULT_PRESET_OVERRIDE_MINUTES,
     PRESET_HIGH,
     PRESET_LOW,
@@ -53,6 +54,9 @@ def _make_entity(
         coordinator.ws.send_json = AsyncMock()
     coordinator.mark_control_action = MagicMock()
     coordinator.boost_duration_minutes = DEFAULT_BOOST_DURATION_MINUTES
+    coordinator.bypass_duration_minutes = (
+        DEFAULT_BYPASS_DURATION_MINUTES
+    )
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry"
 
@@ -254,7 +258,28 @@ async def test_bypass_switch_turn_on_sends_payload():
     entity, coordinator = _make_entity(EcostreamBypassSwitch)
     await entity.async_turn_on()
     coordinator.ws.send_json.assert_called_once_with(
-        {"config": {"man_override_bypass": 100}}
+        {
+            "config": {
+                "man_override_bypass": 100,
+                "man_override_bypass_time": DEFAULT_BYPASS_DURATION_MINUTES
+                * 60,
+            }
+        }
+    )
+
+
+@pytest.mark.asyncio
+async def test_bypass_switch_turn_on_custom_duration():
+    entity, coordinator = _make_entity(EcostreamBypassSwitch)
+    coordinator.bypass_duration_minutes = 30
+    await entity.async_turn_on()
+    coordinator.ws.send_json.assert_called_once_with(
+        {
+            "config": {
+                "man_override_bypass": 100,
+                "man_override_bypass_time": 1800,
+            }
+        }
     )
 
 
@@ -263,7 +288,12 @@ async def test_bypass_switch_turn_off_sends_payload():
     entity, coordinator = _make_entity(EcostreamBypassSwitch)
     await entity.async_turn_off()
     coordinator.ws.send_json.assert_called_once_with(
-        {"config": {"man_override_bypass": 0}}
+        {
+            "config": {
+                "man_override_bypass": 0,
+                "man_override_bypass_time": 0,
+            }
+        }
     )
 
 
