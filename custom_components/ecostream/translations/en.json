@@ -185,6 +185,7 @@
                     "filter_replacement_days": "Filter replacement interval (days)",
                     "preset_override_minutes": "Preset override duration (minutes)",
                     "boost_duration": "Boost duration (minutes)",
+                    "bypass_duration": "Bypass override duration (minutes)",
                     "allow_override_filter_date": "Allow override filter date",
                     "summer_comfort_temp": "Summer comfort target temperature (C)"
                 },

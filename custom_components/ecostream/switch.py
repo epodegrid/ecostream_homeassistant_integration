@@ -14,6 +14,7 @@ from .const import (
     CONF_PRESET_OVERRIDE_MINUTES,
     CONF_SUMMER_COMFORT_TEMP,
     DEFAULT_BOOST_DURATION_MINUTES,
+    DEFAULT_BYPASS_DURATION_MINUTES,
     DEFAULT_PRESET_OVERRIDE_MINUTES,
     DEFAULT_SUMMER_COMFORT_TEMP,
     DEVICE_MODEL,
@@ -382,10 +383,24 @@ class EcostreamBypassSwitch(EcostreamBaseEntity):
         self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self._apply_config({"man_override_bypass": 100}, "bypass")
+        minutes = getattr(
+            self.coordinator,
+            "bypass_duration_minutes",
+            DEFAULT_BYPASS_DURATION_MINUTES,
+        )
+        await self._apply_config(
+            {
+                "man_override_bypass": 100,
+                "man_override_bypass_time": minutes * 60,
+            },
+            "bypass",
+        )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self._apply_config({"man_override_bypass": 0}, "bypass")
+        await self._apply_config(
+            {"man_override_bypass": 0, "man_override_bypass_time": 0},
+            "bypass",
+        )
 
 
 # ==========================================================================

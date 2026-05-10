@@ -64,13 +64,19 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
-                _LOGGER.exception("Unexpected error during EcoStream validation")
+                _LOGGER.exception(
+                    "Unexpected error during EcoStream validation"
+                )
                 errors["base"] = "unknown"
             else:
-                system_name = info.get("system_name") or f"EcoStream ({host})"
+                system_name = (
+                    info.get("system_name") or f"EcoStream ({host})"
+                )
 
                 await self.async_set_unique_id(system_name)
-                self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+                self._abort_if_unique_id_configured(
+                    updates={CONF_HOST: host}
+                )
 
                 return self.async_create_entry(
                     title=system_name,
@@ -169,7 +175,9 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
-                _LOGGER.exception("Unexpected error while validating EcoStream")
+                _LOGGER.exception(
+                    "Unexpected error while validating EcoStream"
+                )
                 errors["base"] = "unknown"
             else:
                 system_name = (
@@ -179,7 +187,9 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
                 await self.async_set_unique_id(system_name)
-                self._abort_if_unique_id_configured(updates={CONF_HOST: self._host})
+                self._abort_if_unique_id_configured(
+                    updates={CONF_HOST: self._host}
+                )
 
                 return self.async_create_entry(
                     title=system_name,
@@ -223,7 +233,9 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
-                _LOGGER.exception("Unexpected error during EcoStream reconfigure")
+                _LOGGER.exception(
+                    "Unexpected error during EcoStream reconfigure"
+                )
                 errors["base"] = "unknown"
             else:
                 return self.async_update_reload_and_abort(
@@ -234,7 +246,11 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=vol.Schema(
-                {vol.Required(CONF_HOST, default=entry.data.get(CONF_HOST, "")): str}
+                {
+                    vol.Required(
+                        CONF_HOST, default=entry.data.get(CONF_HOST, "")
+                    ): str
+                }
             ),
             errors=errors,
         )
@@ -264,8 +280,12 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if not isinstance(payload, dict):
                     raise CannotConnect("Invalid payload")
 
-                typed_payload: dict[str, Any] = cast(dict[str, Any], payload)
-                system: dict[str, Any] = cast(dict[str, Any], typed_payload.get("system") or {})
+                typed_payload: dict[str, Any] = cast(
+                    dict[str, Any], payload
+                )
+                system: dict[str, Any] = cast(
+                    dict[str, Any], typed_payload.get("system") or {}
+                )
                 system_name: str | None = system.get("system_name")
 
                 return {"system_name": system_name}
@@ -290,7 +310,9 @@ class EcostreamConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ======================================================================
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
         from .options_flow import EcostreamOptionsFlow
 
         return EcostreamOptionsFlow(config_entry)

@@ -12,6 +12,9 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from custom_components.ecostream.const import (
+    DEFAULT_BYPASS_DURATION_MINUTES,
+)
 from custom_components.ecostream.switch import EcostreamBypassSwitch
 
 
@@ -25,6 +28,9 @@ def _make_bypass_switch(
     if ws:
         coordinator.ws.send_json = AsyncMock()
     coordinator.mark_control_action = MagicMock()
+    coordinator.bypass_duration_minutes = (
+        DEFAULT_BYPASS_DURATION_MINUTES
+    )
 
     entry = MagicMock(spec=ConfigEntry)
     entry.entry_id = "test_entry"
@@ -75,7 +81,28 @@ async def test_turn_on_sends_open_payload():
     bypass, coordinator = _make_bypass_switch()
     await bypass.async_turn_on()
     coordinator.ws.send_json.assert_called_once_with(
-        {"config": {"man_override_bypass": 100}}
+        {
+            "config": {
+                "man_override_bypass": 100,
+                "man_override_bypass_time": DEFAULT_BYPASS_DURATION_MINUTES
+                * 60,
+            }
+        }
+    )
+
+
+@pytest.mark.asyncio
+async def test_turn_on_custom_duration():
+    bypass, coordinator = _make_bypass_switch()
+    coordinator.bypass_duration_minutes = 30
+    await bypass.async_turn_on()
+    coordinator.ws.send_json.assert_called_once_with(
+        {
+            "config": {
+                "man_override_bypass": 100,
+                "man_override_bypass_time": 1800,
+            }
+        }
     )
 
 
@@ -84,7 +111,12 @@ async def test_turn_off_sends_close_payload():
     bypass, coordinator = _make_bypass_switch()
     await bypass.async_turn_off()
     coordinator.ws.send_json.assert_called_once_with(
-        {"config": {"man_override_bypass": 0}}
+        {
+            "config": {
+                "man_override_bypass": 0,
+                "man_override_bypass_time": 0,
+            }
+        }
     )
 
 
