@@ -10,13 +10,11 @@ from homeassistant.helpers.device_registry import (
     async_get as async_get_device_registry,
 )
 import logging
-import time
 from typing import Any
 
 from aiohttp import ClientError, WSMsgType
 
 from .const import (
-    CONF_ALLOW_OVERRIDE_FILTER_DATE,
     CONF_BOOST_DURATION,
     CONF_FILTER_REPLACEMENT_DAYS,
     CONF_PRESET_OVERRIDE_MINUTES,
@@ -145,7 +143,6 @@ async def _async_options_updated(
     """Update device configuration when options change."""
     coordinator: EcostreamDataUpdateCoordinator = entry.runtime_data
 
-    # Update boost duration
     boost_duration = int(
         entry.options.get(
             CONF_BOOST_DURATION, DEFAULT_BOOST_DURATION_MINUTES
@@ -153,41 +150,10 @@ async def _async_options_updated(
     )
     coordinator.boost_duration_minutes = boost_duration
 
-    # Only update filter date if override is allowed
-    allow_override = entry.options.get(
-        CONF_ALLOW_OVERRIDE_FILTER_DATE, False
+    _LOGGER.debug(
+        "EcoStream options updated: boost_duration=%sm",
+        boost_duration,
     )
-
-    if allow_override:
-        if not coordinator.ws:
-            _LOGGER.debug(
-                "EcoStream options updated locally (boost_duration=%sm), skipping filter_datetime update because WS is disconnected",
-                boost_duration,
-            )
-            return
-
-        filter_days = int(
-            entry.options.get(
-                CONF_FILTER_REPLACEMENT_DAYS,
-                DEFAULT_FILTER_REPLACEMENT_DAYS,
-            )
-        )
-        filter_datetime = int(time.time() + filter_days * 86400)
-
-        await coordinator.ws.send_json(
-            {"config": {"filter_datetime": filter_datetime}}
-        )
-        _LOGGER.debug(
-            "EcoStream filter_datetime updated: %s days → timestamp %s, boost_duration=%sm",
-            filter_days,
-            filter_datetime,
-            boost_duration,
-        )
-    else:
-        _LOGGER.debug(
-            "EcoStream options updated: boost_duration=%sm (filter override disabled)",
-            boost_duration,
-        )
 
 
 async def async_unload_entry(
