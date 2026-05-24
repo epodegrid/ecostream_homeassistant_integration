@@ -351,8 +351,8 @@ async def test_cleanup_stale_devices_keeps_current_host():
 
 
 @pytest.mark.asyncio
-async def test_options_updated_with_filter_override_enabled():
-    """Test options update when filter override is enabled."""
+async def test_options_updated_sets_boost_duration():
+    """Test options update sets boost_duration_minutes and never touches filter_datetime."""
 
     hass = MagicMock()
     entry = MagicMock()
@@ -367,40 +367,9 @@ async def test_options_updated_with_filter_override_enabled():
     coordinator.ws.send_json = AsyncMock()
     entry.runtime_data = coordinator
 
-    with patch(
-        "custom_components.ecostream.time.time", return_value=1000
-    ):
-        await async_options_updated(hass, entry)
-
-    assert coordinator.boost_duration_minutes == 30
-    coordinator.ws.send_json.assert_called_once()
-    call_args = coordinator.ws.send_json.call_args[0][0]
-    assert "config" in call_args
-    assert "filter_datetime" in call_args["config"]
-    expected_timestamp = 1000 + (90 * 86400)
-    assert call_args["config"]["filter_datetime"] == expected_timestamp
-
-
-@pytest.mark.asyncio
-async def test_options_updated_with_filter_override_disabled():
-    """Test options update when filter override is disabled."""
-
-    hass = MagicMock()
-    entry = MagicMock()
-    entry.options = {
-        "boost_duration": 15,
-        "allow_override_filter_date": False,
-    }
-
-    coordinator = MagicMock()
-    coordinator.ws = MagicMock()
-    coordinator.ws.send_json = AsyncMock()
-    entry.runtime_data = coordinator
-
     await async_options_updated(hass, entry)
 
-    assert coordinator.boost_duration_minutes == 15
-    # Should not send JSON when override is disabled
+    assert coordinator.boost_duration_minutes == 30
     coordinator.ws.send_json.assert_not_called()
 
 
@@ -423,7 +392,6 @@ async def test_options_updated_with_ws_disconnected():
     await async_options_updated(hass, entry)
 
     assert coordinator.boost_duration_minutes == 20
-    # No exception should be raised
 
 
 @pytest.mark.asyncio
